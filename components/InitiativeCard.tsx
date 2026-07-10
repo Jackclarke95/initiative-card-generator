@@ -10,7 +10,7 @@ import {
   Chevron,
   Shield,
   Heart,
-  Eye,
+  Star,
   Orb,
   NameScroll,
   DragonScroll,
@@ -55,6 +55,24 @@ const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
   lineHeight: 1.3,
 });
 
+/** Fixed-width centering slot: lets two badges with different natural
+ *  widths (e.g. Heart vs. Star) share one alignment axis between rows,
+ *  by centering each inside the same-width box rather than relying on
+ *  their raw widths to match. */
+function Slot({
+  width,
+  children,
+}: {
+  width: number;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div style={{ width, display: "flex", justifyContent: "center" }}>
+      {children}
+    </div>
+  );
+}
+
 // ── DM-facing side ────────────────────────────────────────────────────
 
 function DmFace({ card }: { card: CardData }) {
@@ -65,18 +83,25 @@ function DmFace({ card }: { card: CardData }) {
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
   const S = compact
-    ? { row: 26, sqH: 48, shW: 54, shH: 62, gap: 4 }
-    : { row: 28, sqH: 52, shW: 52, shH: 60, gap: 4 };
-  // Heart/Shield/Book are drawn 20% larger than the base shield size.
+    ? { row: 26, shW: 54, shH: 62, gap: 4 }
+    : { row: 28, shW: 52, shH: 60, gap: 4 };
+  // All six stat badges share one height so both rows read as one
+  // consistent size — back to the original (pre-unification) size.
+  const iconH = S.shH;
   const badgeW = Math.round(S.shW * 1.2);
-  const badgeH = Math.round(S.shH * 1.2);
   // The hearts (HP, Save) are drawn 1.2× wider than the shield.
   const heartW = Math.round(badgeW * 1.2);
   const saveW = heartW;
-  // Eye/Orb (Perception/Insight) share the Chevron's height so the row
-  // reads as one size; each width follows its own shape's viewBox aspect.
-  const eyeW = Math.round(S.shH * 1.2162);
-  const orbW = Math.round(S.shH * 1.0);
+  // Chevron/Star/Orb widths each follow that shape's own viewBox aspect
+  // ratio at the shared height, so nothing gets stretched or letterboxed.
+  const chevronW = Math.round(iconH * (55 / 48));
+  const starW = Math.round(iconH * (56.8 / 49.83));
+  const orbW = iconH; // Orb's viewBox is a 1:1 square.
+  // HP/Perception share a slot, and DC/Insight share a slot — each
+  // shape centers inside its slot, so the two rows' differing natural
+  // widths still align on the same vertical axis. Using one slot width
+  // for both sides also keeps AC/Speed centered exactly between them.
+  const slotW = Math.max(heartW, starW, saveW, orbW);
 
   const classLine = [
     card.characterClass,
@@ -163,28 +188,30 @@ function DmFace({ card }: { card: CardData }) {
               alignItems: "center",
             }}
           >
-            <Heart
-              value={card.maxHp}
-              label={"HP"}
-              width={heartW}
-              height={badgeH}
-            />
+            <Slot width={slotW}>
+              <Heart
+                value={card.maxHp}
+                label={"HP"}
+                width={heartW}
+                height={iconH}
+              />
+            </Slot>
             <Shield
               value={card.ac}
               label={"AC"}
               width={badgeW}
-              height={badgeH}
+              height={iconH * 1.1}
             />
-            {toggles.showSpellSaveDC ? (
-              <SaveBox
-                value={card.spellSaveDC}
-                label="DC"
-                width={saveW}
-                height={badgeH}
-              />
-            ) : (
-              <div style={{ width: saveW }} />
-            )}
+            <Slot width={slotW}>
+              {toggles.showSpellSaveDC && (
+                <SaveBox
+                  value={card.spellSaveDC}
+                  label="DC"
+                  width={saveW}
+                  height={iconH}
+                />
+              )}
+            </Slot>
           </div>
           <div
             style={{
@@ -193,32 +220,32 @@ function DmFace({ card }: { card: CardData }) {
               alignItems: "center",
             }}
           >
-            {toggles.showPassives ? (
-              <Eye
-                value={card.passivePerception}
-                label="Perception"
-                width={eyeW}
-                height={S.shH}
-              />
-            ) : (
-              <div style={{ width: eyeW }} />
-            )}
+            <Slot width={slotW}>
+              {toggles.showPassives && (
+                <Star
+                  value={card.passivePerception}
+                  label="Perception"
+                  width={starW}
+                  height={iconH}
+                />
+              )}
+            </Slot>
             <Chevron
               value={card.speed}
               label="Speed"
-              width={69}
-              height={S.shH}
+              width={chevronW}
+              height={iconH * 0.9}
             />
-            {toggles.showPassives ? (
-              <Orb
-                value={card.passiveInsight}
-                label="Insight"
-                width={orbW}
-                height={S.shH}
-              />
-            ) : (
-              <div style={{ width: orbW }} />
-            )}
+            <Slot width={slotW}>
+              {toggles.showPassives && (
+                <Orb
+                  value={card.passiveInsight}
+                  label="Insight"
+                  width={orbW}
+                  height={iconH * 1.}
+                />
+              )}
+            </Slot>
           </div>
         </div>
 

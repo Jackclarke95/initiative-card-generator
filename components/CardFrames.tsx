@@ -458,22 +458,21 @@ export function Chevron({
   );
 }
 
-// ── Eye (Passive Perception) — companion piece to the Heart/Shield ────
-// A symmetric almond/vesica silhouette on the same 57.6 × 55.08 canvas as
-// the Heart and Save book, with matching corner points (2.4 / 55.2) so it
-// sits at the same scale in the row. Pointed canthi left and right, lids
-// curving away evenly top and bottom — taller than a flat almond (width
-// 52.8 : height 42.56, ≈1.24 aspect) so the label has vertical room.
-const EYE_SHAPE =
-  "M2.4,27.54C10.4,18.34,18.4,6.22,28.8,6.22C39.2,6.22,47.2,18.34,55.2,27.54C47.2,36.74,39.2,48.78,28.8,48.78C18.4,48.78,10.4,36.74,2.4,27.54Z";
+// ── Star (Passive Perception) — a six-pointed compass rose ────────────
+// Six shallow points (outer radius 26, inner radius 21.32 — an 0.82
+// ratio, close to a circle), every tip and notch opening past 100° so
+// nothing reads as a thin spike. Oriented so it stands on two of its
+// points — like feet — with a shallow concave notch between them
+// (mirrored at the top too, a consequence of the 6-fold symmetry),
+// rather than balancing on a single point.
+const STAR_SHAPE =
+  "M28.4,3.6L41.4,2.4L46.86,14.26L54.4,24.92L46.86,35.58L41.4,47.43L28.4,46.24L15.4,47.43L9.94,35.58L2.4,24.92L9.94,14.26L15.4,2.4Z";
 
-/** Eye-shaped stat frame with value + label, e.g. "15" over "Perception".
+/** Compass-star stat frame with value + label, e.g. "15" over "Perception".
  *  Cropped tight to the shape's own bounds (plus the usual 2.4-unit
- *  margin) rather than the shared 57.6 × 55.08 canvas, so its container's
- *  width/height ratio matches what's actually drawn — without this, the
- *  taller-than-wide canvas leaves the shape letterboxed and undersized,
- *  and the label overflows past its visibly-smaller edges. */
-export function Eye({
+ *  margin) rather than the shared canvas, so the container's aspect
+ *  ratio matches what's actually drawn (see the Orb's note on this). */
+export function Star({
   width,
   height,
   value,
@@ -483,16 +482,10 @@ export function Eye({
     <IconFrame
       width={width}
       height={height}
-      path={EYE_SHAPE}
-      viewBox="0 3.82 57.6 47.36"
+      path={STAR_SHAPE}
+      viewBox="0 0 56.8 49.83"
       value={value}
       label={label}
-      // The canthi taper the interior narrow near top and bottom — pull
-      // the label up off the point, into the wider zone nearer centre,
-      // and cap the value a bit smaller so it doesn't grow into the top
-      // taper once the label zone eats into its space.
-      bottomInset={Math.round(height * 0.3)}
-      maxValueSize={20}
     />
   );
 }
