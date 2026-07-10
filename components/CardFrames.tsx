@@ -1,13 +1,21 @@
-// SVG frame primitives for the black & white line-art card aesthetic.
-// Each renders an absolutely-positioned double-stroked outline sized in px
-// (the card is a fixed 2.5in × 3.5in print artifact, so px math is exact).
+// Card frames built from the official Roll20 D&D 5e sheet assets
+// (github.com/Roll20/roll20-character-sheets, DD5thEditionLegacy/images/licensedsheet).
+// Line frames are 9-slice stretched via stretchPath so corners keep their
+// size and only the straight runs grow; decorative art (AC shield, scroll)
+// scales via its viewBox instead.
+//
+// NOTE: these are Wizards of the Coast licensed-sheet assets — fine for a
+// personal print tool, not for public distribution.
+
+import Image from "next/image";
+import { stretchPath } from "@/components/svgNineSlice";
 
 interface FrameProps {
   w: number;
   h: number;
 }
 
-const STROKE = "#111";
+const INK = "#111";
 
 function Svg({ w, h, children }: FrameProps & { children: React.ReactNode }) {
   return (
@@ -23,112 +31,181 @@ function Svg({ w, h, children }: FrameProps & { children: React.ReactNode }) {
   );
 }
 
-/** Elongated octagon (45° chamfered corners). o = inset from the edge. */
-function octPath(w: number, h: number, c: number, o: number) {
-  return [
-    `M ${c + o},${o}`,
-    `L ${w - c - o},${o}`,
-    `L ${w - o},${c + o}`,
-    `L ${w - o},${h - c - o}`,
-    `L ${w - c - o},${h - o}`,
-    `L ${c + o},${h - o}`,
-    `L ${o},${h - c - o}`,
-    `L ${o},${c + o}`,
-    "Z",
-  ].join(" ");
-}
+// ── 5eBorder.svg (185 × 199.07) — the classic sheet page border ───────
 
-export function OctagonFrame({ w, h }: FrameProps) {
-  const c = Math.min(11, h * 0.34);
+const BORDER_5E =
+  "M176.87,197.82h-2.25a21.19,21.19,0,0,0,4.12-3.23,21.59,21.59,0,0,0,2.51-3.1v2.59c-1.1.41-3.9,1.65-4.38,3.74M3.75,194.08v-2.59a21.59,21.59,0,0,0,2.51,3.1,21.19,21.19,0,0,0,4.12,3.23H8.13c-.48-2.09-3.28-3.33-4.38-3.74M1,178.6a2.71,2.71,0,0,0,1.21-.94,4.78,4.78,0,0,0,.29-.44v9.64A24.07,24.07,0,0,1,1,178.6M8.13,1.25h2.51C7.37,3,5,6.4,3.75,8.63V5c1.1-.41,3.9-1.65,4.38-3.74M181.25,5V8.63C180,6.4,177.63,3,174.36,1.25h2.51c.48,2.09,3.28,3.33,4.38,3.74m0,179.7a88.36,88.36,0,0,1-.85-11.46V9.2c.4.69.68,1.25.85,1.6Zm-177.5,3.5a97.39,97.39,0,0,0,1.34-15V8.35C6.75,5.68,9.69,2,13.58,1.25H171.42c3.88.72,6.83,4.44,8.48,7.11V173.23a97.52,97.52,0,0,0,1.35,15v1.37a19.92,19.92,0,0,1-3.19,4.29,19.08,19.08,0,0,1-5.6,4H12.54a19.84,19.84,0,0,1-8.79-8.27Zm0-177.4c.16-.34.45-.9.84-1.6v164a88.22,88.22,0,0,1-.84,11.46Zm179,166.87a2.75,2.75,0,0,0,1.2.94,24,24,0,0,1-1.49,8.25v-9.63a4.78,4.78,0,0,0,.29.44m2.21.54,0-.47-.47,0s-1.56-.16-2-4V4.09L182.06,4c-1.12-.35-4-1.63-4-3.32V0H7V.63c0,1.69-2.89,3-4,3.32l-.44.14v169.6c-.45,3.85-2,4-2,4H0v.5a24.29,24.29,0,0,0,2.5,11.15V195l.44.14c1.12.35,4,1.62,4,3.32v.63h171.1v-.63c0-1.7,2.89-3,4-3.32l.44-.14v-5.63A24.42,24.42,0,0,0,185,178.2";
+
+export function PlayerFrame({ w, h }: FrameProps) {
   return (
     <Svg w={w} h={h}>
-      <path d={octPath(w, h, c, 0.75)} stroke={STROKE} strokeWidth={1.3} />
-      <path d={octPath(w, h, c, 3.2)} stroke={STROKE} strokeWidth={0.8} />
+      <path d={stretchPath(BORDER_5E, { origW: 185, origH: 199.07, w, h })} fill={INK} />
     </Svg>
   );
 }
 
-/** Rounded square with a concentric inner line — the stat boxes. */
-export function RoundedFrame({ w, h }: FrameProps) {
+// ── vital-box.svg (52.24 × 49.28) — chamfered double-line stat box ────
+
+const VITAL_BOX =
+  "M46.66,47.9H44A11.38,11.38,0,0,0,49,43.65h0v-.07a15.85,15.85,0,0,0,1.79-3.76V43.7ZM1.38,43.7V39.82a15.85,15.85,0,0,0,1.79,3.76v.07h.05A11.38,11.38,0,0,0,8.29,47.9H5.58ZM5.58,1.38H8.29A11.31,11.31,0,0,0,3.22,5.63H3.17V5.7A15.85,15.85,0,0,0,1.38,9.46V5.58ZM49.07,6.84c.16.3.34.58.49.9a17.39,17.39,0,0,1,1.3,3.94V37.55a17.37,17.37,0,0,1-1.79,4.87ZM1.38,11.73A17.37,17.37,0,0,1,3.17,6.86V42.44c-.16-.3-.34-.58-.49-.9a17.55,17.55,0,0,1-1.3-3.94ZM42,47.9H10.2a10.53,10.53,0,0,1-6.28-4.28V5.68a10.68,10.68,0,0,1,6.31-4.3H42a10.59,10.59,0,0,1,6.28,4.27v38A10.68,10.68,0,0,1,42,47.9M50.86,5.58V9.46A15.85,15.85,0,0,0,49.07,5.7V5.63h0A11.31,11.31,0,0,0,44,1.38h2.71ZM47.23,0H5L0,5V44.27l5,5H47.23l5-5V5Z";
+
+export function VitalBoxFrame({ w, h }: FrameProps) {
   return (
     <Svg w={w} h={h}>
-      <rect x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} rx={13} stroke={STROKE} strokeWidth={1.3} />
-      <rect x={3.2} y={3.2} width={w - 6.4} height={h - 6.4} rx={10.5} stroke={STROKE} strokeWidth={0.8} />
+      <path d={stretchPath(VITAL_BOX, { origW: 52.24, origH: 49.28, w, h })} fill={INK} />
     </Svg>
   );
 }
 
-/** Heater shield — used for Armor Class. */
-function shieldPath(w: number, h: number, o: number) {
-  const cx = w / 2;
-  return [
-    `M ${cx},${o + 1}`,
-    `C ${w * 0.6},${o + 5} ${w * 0.78},${o + 6} ${w - o},${o + 4}`,
-    `C ${w - o},${h * 0.42} ${w * 0.8},${h * 0.72} ${cx},${h - o}`,
-    `C ${w * 0.2},${h * 0.72} ${o},${h * 0.42} ${o},${o + 4}`,
-    `C ${w * 0.22},${o + 6} ${w * 0.4},${o + 5} ${cx},${o + 1}`,
-    "Z",
-  ].join(" ");
+// ── CharBox.svg (319.34 × 79.51) — bracketed name box ─────────────────
+
+const CHARBOX = {
+  rect: "M2.72,9.44 H316.61 V70.08 H2.72 Z",
+  swash:
+    "M24.62,70.08a103.81,103.81,0,0,1,17.21-1.92H277.51a103.81,103.81,0,0,1,17.21,1.92m0-60.64a104.88,104.88,0,0,1-17.21,1.92H41.83A104.88,104.88,0,0,1,24.62,9.44",
+  bracketL: "M.63,3.13V76.39a11.66,11.66,0,0,1,2.09-3.57V6.69A11.5,11.5,0,0,1,.63,3.13Z",
+  flourishL:
+    "M2.72,62.19s1.07,10.33,8.4,10.33h22s7.17-2.44,20.5-2.44M2.72,17.32S3.79,7,11.12,7h22s7.17,2.45,20.5,2.45",
+  bracketR: "M318.72,3.13V76.39a11.78,11.78,0,0,0-2.1-3.57V6.69A11.61,11.61,0,0,0,318.72,3.13Z",
+  flourishR:
+    "M316.62,62.19s-1.07,10.33-8.4,10.33h-22s-7.17-2.44-20.5-2.44m50.9-52.76S315.55,7,308.22,7h-22s-7.17,2.45-20.5,2.45",
+};
+
+export function CharBoxFrame({ w, h, simple }: FrameProps & { simple?: boolean }) {
+  const o = { origW: 319.34, origH: 79.51, w, h, scale: 0.45 };
+  return (
+    <Svg w={w} h={h}>
+      <path d={stretchPath(CHARBOX.rect, o)} stroke={INK} strokeWidth={1.1} />
+      <path d={stretchPath(CHARBOX.swash, o)} stroke={INK} strokeWidth={0.7} />
+      {!simple && (
+        <>
+          <path d={stretchPath(CHARBOX.bracketL, o)} stroke={INK} strokeWidth={1.1} />
+          <path d={stretchPath(CHARBOX.flourishL, o)} stroke={INK} strokeWidth={1.1} />
+          <path d={stretchPath(CHARBOX.bracketR, o)} stroke={INK} strokeWidth={1.1} />
+          <path d={stretchPath(CHARBOX.flourishR, o)} stroke={INK} strokeWidth={1.1} />
+        </>
+      )}
+    </Svg>
+  );
 }
+
+// ── SpellHeadBlock.svg (75.59 × 33.92) — hex-ended banner ─────────────
+
+const SPELLHEAD = {
+  outline:
+    "M68.56,0.69 L7.03,0.69 L0.69,8.66 L0.69,25.26 L7.02,33.24 L68.56,33.24 L74.9,25.26 L74.9,8.66 Z",
+  thinL: "M9.31.69,2.6,9m0,15.92,6.71,8.32M2.6,6.26V28",
+  thinR: "M66.27.69,73,9m0,15.92-6.72,8.32M73,6.26V28",
+  dotL: "M1.65,17a1,1,0,0,0,1.9,0,.95.95,0,0,0-1.9,0",
+  dotR: "M73.94,17A.95.95,0,1,1,73,16a.95.95,0,0,1,1,.95",
+};
+
+export function SpellHeadFrame({ w, h }: FrameProps) {
+  const o = { origW: 75.59, origH: 33.92, w, h };
+  return (
+    <Svg w={w} h={h}>
+      <path d={stretchPath(SPELLHEAD.outline, o)} stroke={INK} strokeWidth={1.3} />
+      <path d={stretchPath(SPELLHEAD.thinL, o)} stroke={INK} strokeWidth={0.6} />
+      <path d={stretchPath(SPELLHEAD.thinR, o)} stroke={INK} strokeWidth={0.6} />
+      <path d={stretchPath(SPELLHEAD.dotL, o)} fill={INK} />
+      <path d={stretchPath(SPELLHEAD.dotR, o)} fill={INK} />
+    </Svg>
+  );
+}
+
+// ── AC.svg (48 × 55.08) — the official shield, scales as one piece ────
+
+const AC_PATH =
+  "M24.85,50.52A1.1,1.1,0,0,0,24,50.1a1.08,1.08,0,0,0-.84.42C9.86,45.8,4.65,29.32,4,27.14V18.91a1.13,1.13,0,0,0,.71-1.06.76.76,0,0,0,0-.16c3.69-2.43,5.07-7,5.54-9.19L23.14,4.56A1.11,1.11,0,0,0,24,5a1.08,1.08,0,0,0,.86-.44L37.77,8.5c.47,2.19,1.85,6.76,5.54,9.19,0,0,0,.1,0,.16A1.14,1.14,0,0,0,44,18.91v8.23c-.63,2.18-5.85,18.66-19.14,23.38M38.51,8.1l0-.24L25.09,3.77a1.09,1.09,0,0,0-2.18,0L9.54,7.86l0,.24c-.39,2-1.65,6.51-5.21,8.87a1.1,1.1,0,0,0-.68-.26A1.13,1.13,0,0,0,2.5,17.85a1.15,1.15,0,0,0,.71,1.06V27.2l0,.11c.57,2,5.87,19.09,19.67,24A1.13,1.13,0,0,0,24,52.38a1.11,1.11,0,0,0,1.1-1.11c5.65-2,10.52-6.17,14.48-12.47a47.44,47.44,0,0,0,5.19-11.48l0-8.41a1.14,1.14,0,0,0,.71-1.06,1.12,1.12,0,0,0-1.11-1.14,1.1,1.1,0,0,0-.68.26c-3.55-2.36-4.82-6.92-5.2-8.87m8,19.41C46.13,29,40.41,49,24,53.52,7.59,49,1.87,29,1.47,27.51V16.35c5.06-1.48,6.27-8,6.51-9.88l16-4.9,16,4.9c.24,1.91,1.45,8.4,6.52,9.88ZM47.41,15c-5.28-1.07-6-9.11-6-9.19l0-.51L24,0,6.62,5.32l0,.51c0,.08-.71,8.12-6,9.19L0,15.14V27.61l0,.18C.08,28,5.86,50.24,23.82,55l.18,0,.18,0c18-4.79,23.74-27,23.8-27.24l0-12.65Z";
 
 export function ShieldFrame({ w, h }: FrameProps) {
   return (
-    <Svg w={w} h={h}>
-      <path d={shieldPath(w, h, 1)} stroke={STROKE} strokeWidth={1.3} />
-      <path
-        d={shieldPath(w, h, 1)}
-        stroke={STROKE}
-        strokeWidth={0.9}
-        transform={`translate(${w / 2} ${h / 2}) scale(0.87) translate(${-w / 2} ${-h / 2})`}
-      />
-    </Svg>
+    <svg width={w} height={h} viewBox="0 0 48 55.08" style={{ position: "absolute", inset: 0 }}>
+      <path d={AC_PATH} fill={INK} />
+    </svg>
   );
 }
 
-/** Rectangle with concave (scalloped) corners — the Speed badge. */
-function scallopPath(w: number, h: number, c: number, o: number) {
-  return [
-    `M ${c + o},${o}`,
-    `L ${w - c - o},${o}`,
-    `A ${c} ${c} 0 0 0 ${w - o},${c + o}`,
-    `L ${w - o},${h - c - o}`,
-    `A ${c} ${c} 0 0 0 ${w - c - o},${h - o}`,
-    `L ${c + o},${h - o}`,
-    `A ${c} ${c} 0 0 0 ${o},${h - c - o}`,
-    `L ${o},${c + o}`,
-    `A ${c} ${c} 0 0 0 ${c + o},${o}`,
-    "Z",
-  ].join(" ");
-}
+// ── CharScroll.svg — scroll banner, with/without the dragon ───────────
+// Grey background polygons and the "Dungeons & Dragons" lettering are
+// excluded. Art box: x 21..254 of the original; dragon extends to y 0.
 
-export function ScallopFrame({ w, h }: FrameProps) {
-  const c = Math.min(9, h * 0.25);
+const SCROLL = {
+  rollWhite: "M21.85,45.73 L21.85,83.23 L57.35,78.59 L57.35,41.09 Z",
+  rollThin: "M22.63,48.24l34.72-4.42M22.63,80.45l34.72-4.93",
+  rollGrey: "M57.35,41.09 L33.13,37.51 L33.13,75.01 L57.35,78.59 Z",
+  body: "M252.17,75c-61.75,11.25-157.29-11.25-219,0V37.51c61.75-11.25,157.29,11.25,219,0Z",
+  bodyThin:
+    "M252.17,40.43s-19.87,8-114-.29c-66.51-5.89-99.72-.73-104.85.17M253.05,71.39s-20.5,8.66-114.67.33c-66.51-5.89-99.72-.73-104.85.17",
+  dragon: [
+    "M78.5,5a22.83,22.83,0,0,0,.22,6.34,50.35,50.35,0,0,0-4.29-2.77,10,10,0,0,1-3.16-3.65c-.48-.85-.76-1.48-.76-1.48a6.6,6.6,0,0,0-1.1,7.27,14.23,14.23,0,0,0-7.88.19c9.18,6,4.3,6.5-1,9s-5.68,5.63-5.68,5.63c6.33-2.08,8.85.58,8.85.58-3.41,3.26-.37,8.35-.37,8.35,3.31,6.34,11.51,9,18.85,10.15a70.1,70.1,0,0,0,13.7.67l-16.72,5.2-15,3.79S49.23,52.65,43.75,40s4.09-22.57,3.13-23.22-2.07.76-2.19.91c4.16-11.91,16.69-11.78,17.19-13s-2.47-1.35-2.47-1.35C72.08-.84,78.5,5,78.5,5",
+    "M247.47,80c-.64-3.47-3.09-9.12-7.83-12.11-3.92-2.46-7.34-1.92-7.35-3.15,0-1.55,4.36-1.07,4.36-1.07-4.74-2.71-11.53.61-12.5-.94-.57-.94,3.16-2.24,3.16-2.24-5.77-.21-12.59,2.76-15.32,5.46,6.89-2.31,16.59-1,21,2.83a20.56,20.56,0,0,0-6-2.19c-7.82-1.57-16.52.76-21.76,2.94a51.1,51.1,0,0,0-10.43,5c-3.9,2.27-11.11,4.38-16,2.31h0s7.65,12.75,17.06,8.32c.69-.39,1.35-.78,2-1.17a64.25,64.25,0,0,0,10.31-7.43,52.33,52.33,0,0,1,14-6.88,10.44,10.44,0,0,1,4.42-.33c3.72.51,7,2.89,8,5.74,2.87-.5,10.14,1.9,12.88,4.94",
+    "M84.53,34.28c-.79-4.26-6.67-5-9.7-3a11.7,11.7,0,0,1,6.28-6.19,31.28,31.28,0,0,0-4.48-1.29c1.94-1.48,6.71-2.6,9.13-2.39a9.61,9.61,0,0,0-1.44-.3l.46-2.77c-.27-2.32-2.37-5-4.87-6.58-1.24-3.55,0-10,1.68-11.73C80.73,9.29,93.85,15,96.4,21.88,95,16,88.89,12.17,86.05,8.61a9.44,9.44,0,0,1,1.06-7.52C86.61,7.32,93.19,12.4,96.68,16c4.12,4.23,5.21,7.9,4.54,10.85a2.52,2.52,0,0,1,1.91,2.74,5.16,5.16,0,0,0,3.15-2.73c.53,4.66-2.35,9.47-5.44,10.84a4.25,4.25,0,0,0-.46-3.92c-1.32-1.71-5.21-1.85-6.53-1.8,0,0,1.69-2.34,1.08-3.57-.74-1.53-8.38-1.1-11.83,0a14.72,14.72,0,0,1,4.85.73c-.56.78-2.06,4.09-1.08,5.13.83.89,2-.43,2.15-.6-.11.32-1.26,3.66-.47,4.5s2.67.33,2.67.33C90,41.37,85.5,43.22,82.4,43.12a6.56,6.56,0,0,0,3.32-3.4,8.67,8.67,0,0,1-3.76.37c1-.38,3.1-2.89,2.57-5.81m10.92-8.8a7.63,7.63,0,0,0-4.29-4.66c.6,2.38,1.44,4.58,4.29,4.66",
+    "M68.17,16.82c.51-1.8-3-5-4.31-5.63a20.64,20.64,0,0,1,7.37,1A8.68,8.68,0,0,1,70.48,5c2.49,6.53,12.08,7.87,14.3,13.3l-.46,2.77c-3.79-.49-9.38.64-12.2,3.77a22.42,22.42,0,0,1,4.49.93c-4.27.64-10.15,4.4-11.91,6.21.52-2.44,1.27-4.49.74-6-.75-2.1-3.25-3.06-8.3-2.17,3.49-3.29,10.5-5.18,11-7",
+    "M40.14,33.34l1,2.22c-1.37.23-2.91,5.64-2.91,5.64-3.49-2-.55-8.48-.55-8.48Z",
+    "M32.52,32.42a12.49,12.49,0,0,1,2.78-1.55l1.59,1.41-.82.25s-1.53,5-.91,7.07l1,2.9s-3.26-.65-3.76-1.9c0,0-1-5.63.12-8.18",
+    "M30.68,34.54s.21,6.42.87,7l2.42,1L34,44.75s-4.32-1.37-4.68-3S28.72,36,28.72,36a4,4,0,0,1,2-1.44",
+  ],
+  dragonEye: "M91.16,20.82a7.63,7.63,0,0,1,4.29,4.66c-2.85-.08-3.69-2.28-4.29-4.66",
+};
+
+/** Scroll aspect helpers: source boxes within the original artwork. */
+export const SCROLL_DRAGON_BOX = { x: 21, y: 0, w: 233, h: 99 };
+export const SCROLL_PLAIN_BOX = { x: 21, y: 36, w: 233, h: 51 };
+
+export function ScrollFrame({ w, h, dragon }: FrameProps & { dragon?: boolean }) {
+  const box = dragon ? SCROLL_DRAGON_BOX : SCROLL_PLAIN_BOX;
+  const line = { stroke: INK, vectorEffect: "non-scaling-stroke" as const };
   return (
-    <Svg w={w} h={h}>
-      <path d={scallopPath(w, h, c, 0.75)} stroke={STROKE} strokeWidth={1.3} />
-      <path d={scallopPath(w, h, c - 1.2, 3)} stroke={STROKE} strokeWidth={0.8} />
-    </Svg>
+    <svg
+      width={w}
+      height={h}
+      viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+      preserveAspectRatio="none"
+      fill="none"
+      style={{ position: "absolute", inset: 0 }}
+    >
+      {dragon && <path d={SCROLL.dragon[0]} fill={INK} />}
+      <path d={SCROLL.rollWhite} fill="#fff" />
+      <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />
+      <path d={SCROLL.rollGrey} fill="#bfc0c3" />
+      <path d={SCROLL.rollGrey} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.body} fill="#fff" />
+      <path d={SCROLL.body} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.bodyThin} {...line} strokeWidth={0.75} />
+      {dragon && (
+        <>
+          {SCROLL.dragon.slice(1).map((d, i) => (
+            <path key={i} d={d} fill={INK} />
+          ))}
+          <path d={SCROLL.dragonEye} fill="#fff" />
+        </>
+      )}
+    </svg>
   );
 }
 
-/** Ornamental full-face frame for the player side: double border,
- *  plaque notches top/bottom centre, and diagonal corner accents. */
-export function PlayerFrame({ w, h }: FrameProps) {
-  const m = 7; // frame margin from the face edge
-  const notchW = w * 0.5;
-  const nx = (w - notchW) / 2;
+// ── DnD-Rolltemplate-Info PNGs (330 × 25/52/25) — 3-slice row frame ───
+
+export function InfoTemplateFrame({ w, h }: FrameProps) {
+  const cap = Math.min((25 / 330) * w, h / 2);
+  const midH = h - cap * 2;
+  const img = (src: string, top: number, ih: number) => (
+    <Image
+      src={src}
+      alt=""
+      width={330}
+      height={52}
+      unoptimized
+      style={{ position: "absolute", top, left: 0, width: w, height: ih, objectFit: "fill" }}
+    />
+  );
   return (
-    <Svg w={w} h={h}>
-      <rect x={m} y={m} width={w - m * 2} height={h - m * 2} rx={10} stroke={STROKE} strokeWidth={1.3} />
-      <rect x={m + 3.5} y={m + 3.5} width={w - (m + 3.5) * 2} height={h - (m + 3.5) * 2} rx={7} stroke={STROKE} strokeWidth={0.8} />
-      {/* top and bottom plaque notches */}
-      <path d={`M ${nx},${m} L ${nx + 9},${m + 12} L ${nx + notchW - 9},${m + 12} L ${nx + notchW},${m}`} stroke={STROKE} strokeWidth={0.9} />
-      <path d={`M ${nx},${h - m} L ${nx + 9},${h - m - 12} L ${nx + notchW - 9},${h - m - 12} L ${nx + notchW},${h - m}`} stroke={STROKE} strokeWidth={0.9} />
-      {/* diagonal corner accents */}
-      <path d={`M ${m - 4},${m + 12} L ${m + 12},${m - 4}`} stroke={STROKE} strokeWidth={0.9} />
-      <path d={`M ${w - m - 12},${m - 4} L ${w - m + 4},${m + 12}`} stroke={STROKE} strokeWidth={0.9} />
-      <path d={`M ${m - 4},${h - m - 12} L ${m + 12},${h - m + 4}`} stroke={STROKE} strokeWidth={0.9} />
-      <path d={`M ${w - m - 12},${h - m + 4} L ${w - m + 4},${h - m - 12}`} stroke={STROKE} strokeWidth={0.9} />
-    </Svg>
+    <div style={{ position: "absolute", inset: 0 }}>
+      {img("/frames/DnD-Rolltemplate-Info-Top.png", 0, cap)}
+      {midH > 0.5 && img("/frames/DnD-Rolltemplate-Info-Middle.png", cap, midH)}
+      {img("/frames/DnD-Rolltemplate-Info-Bottom.png", h - cap, cap)}
+    </div>
   );
 }

@@ -4,11 +4,14 @@ import Image from "next/image";
 import { DamageTypeIcon } from "@/components/Icons";
 import { getClassLogo } from "@/components/ClassLogos";
 import {
-  OctagonFrame,
-  RoundedFrame,
-  ShieldFrame,
-  ScallopFrame,
   PlayerFrame,
+  CharBoxFrame,
+  VitalBoxFrame,
+  SpellHeadFrame,
+  ShieldFrame,
+  ScrollFrame,
+  InfoTemplateFrame,
+  SCROLL_DRAGON_BOX,
 } from "@/components/CardFrames";
 import {
   type CardData,
@@ -26,6 +29,10 @@ const FACE_W = 240;
 const FACE_H = 336;
 const CONTENT_W = FACE_W - 2 - 16;
 
+// Name scroll on the player face keeps the artwork's natural aspect.
+const SCROLL_W = 200;
+const SCROLL_H = Math.round((SCROLL_DRAGON_BOX.h / SCROLL_DRAGON_BOX.w) * SCROLL_W);
+
 const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
   position: "relative",
   fontSize: size,
@@ -40,8 +47,18 @@ const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
 
 // ── DM-facing side ────────────────────────────────────────────────────
 
-/** Full-width chamfered row: value centred, small grey label beneath. */
-function IdentityRow({ value, name, h }: { value: string; name: string; h: number }) {
+/** Full-width row: value centred over a small grey label, on a frame. */
+function IdentityRow({
+  value,
+  name,
+  h,
+  frame,
+}: {
+  value: string;
+  name: string;
+  h: number;
+  frame: React.ReactNode;
+}) {
   return (
     <div
       style={{
@@ -55,14 +72,14 @@ function IdentityRow({ value, name, h }: { value: string; name: string; h: numbe
         gap: 1,
       }}
     >
-      <OctagonFrame w={CONTENT_W} h={h} />
+      {frame}
       {value && (
         <span
           style={{
             position: "relative",
             fontWeight: 700,
             fontSize: 10.5,
-            maxWidth: CONTENT_W - 28,
+            maxWidth: CONTENT_W - 32,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -120,9 +137,10 @@ function DmFace({ card }: { card: CardData }) {
   const compact = toggles.showStats || toggles.showDefenses;
 
   // Sizes shrink slightly when the optional stat/defense strips are shown.
+  // The AC shield keeps its official 48:55 aspect ratio.
   const S = compact
-    ? { row: 26, sqH: 50, shW: 54, shH: 56, spW: 48, spH: 36, gap: 4 }
-    : { row: 34, sqH: 60, shW: 62, shH: 68, spW: 54, spH: 42, gap: 5 };
+    ? { row: 26, sqH: 48, shW: 54, shH: 62, gap: 4 }
+    : { row: 34, sqH: 62, shW: 62, shH: 71, gap: 5 };
 
   const classLine = [card.characterClass, card.subclass, card.level && `Lvl ${card.level}`]
     .filter(Boolean)
@@ -140,10 +158,31 @@ function DmFace({ card }: { card: CardData }) {
   return (
     <div className="card-face" style={{ display: "flex", flexDirection: "column", padding: 8 }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: S.gap }}>
-        <IdentityRow name="Name" value={card.characterName} h={S.row} />
-        <IdentityRow name="Player" value={card.playerName} h={S.row} />
-        <IdentityRow name="Race" value={card.race} h={S.row} />
-        <IdentityRow name="Class" value={classLine} h={S.row} />
+        {/* Identity rows — each on a different official frame to compare */}
+        <IdentityRow
+          name="Name"
+          value={card.characterName}
+          h={S.row}
+          frame={<CharBoxFrame w={CONTENT_W} h={S.row} />}
+        />
+        <IdentityRow
+          name="Player"
+          value={card.playerName}
+          h={S.row}
+          frame={<CharBoxFrame w={CONTENT_W} h={S.row} simple />}
+        />
+        <IdentityRow
+          name="Race"
+          value={card.race}
+          h={S.row}
+          frame={<InfoTemplateFrame w={CONTENT_W} h={S.row} />}
+        />
+        <IdentityRow
+          name="Class"
+          value={classLine}
+          h={S.row}
+          frame={<ScrollFrame w={CONTENT_W} h={S.row} />}
+        />
 
         {toggles.showStats && (
           <div style={{ display: "flex", gap: 3 }}>
@@ -176,11 +215,11 @@ function DmFace({ card }: { card: CardData }) {
           </div>
         )}
 
-        {/* Stat shapes — pushed to the bottom like the reference */}
+        {/* Stat shapes — pushed to the bottom */}
         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <StatShape
-              frame={<RoundedFrame w={68} h={S.sqH} />}
+              frame={<VitalBoxFrame w={68} h={S.sqH} />}
               value={card.maxHp}
               name="Max HP"
               w={68}
@@ -192,11 +231,11 @@ function DmFace({ card }: { card: CardData }) {
               name={"Armor\nClass"}
               w={S.shW}
               h={S.shH}
-              padBottom={10}
+              padBottom={12}
             />
             {toggles.showSpellSaveDC ? (
               <StatShape
-                frame={<RoundedFrame w={68} h={S.sqH} />}
+                frame={<VitalBoxFrame w={68} h={S.sqH} />}
                 value={card.spellSaveDC}
                 name="Spell Save"
                 w={68}
@@ -209,7 +248,7 @@ function DmFace({ card }: { card: CardData }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {toggles.showPassives ? (
               <StatShape
-                frame={<RoundedFrame w={68} h={S.sqH} />}
+                frame={<VitalBoxFrame w={68} h={S.sqH} />}
                 value={card.passivePerception}
                 name="Perception"
                 w={68}
@@ -219,15 +258,15 @@ function DmFace({ card }: { card: CardData }) {
               <div style={{ width: 68 }} />
             )}
             <StatShape
-              frame={<ScallopFrame w={S.spW} h={S.spH} />}
+              frame={<SpellHeadFrame w={68} h={S.sqH} />}
               value={card.speed}
               name="Speed"
-              w={S.spW}
-              h={S.spH}
+              w={68}
+              h={S.sqH}
             />
             {toggles.showPassives ? (
               <StatShape
-                frame={<RoundedFrame w={68} h={S.sqH} />}
+                frame={<VitalBoxFrame w={68} h={S.sqH} />}
                 value={card.passiveInsight}
                 name="Insight"
                 w={68}
@@ -297,7 +336,17 @@ function PlayerFace({ card }: { card: CardData }) {
       ) : (
         <>
           <PlayerFrame w={FACE_W - 2} h={FACE_H - 2} />
-          <span style={{ ...label(7, "#111"), position: "absolute", top: 9, left: 0, right: 0 }}>
+          <span
+            style={{
+              ...label(8, "#111"),
+              position: "absolute",
+              top: 16,
+              left: 0,
+              right: 0,
+              fontWeight: 700,
+              letterSpacing: "0.16em",
+            }}
+          >
             Character Appearance
           </span>
           <div
@@ -307,12 +356,43 @@ function PlayerFace({ card }: { card: CardData }) {
               alignItems: "center",
               justifyContent: "center",
               color: "#111",
+              paddingBottom: SCROLL_H - 14,
             }}
           >
-            {Logo ? <Logo size={130} /> : <ClassInitial characterClass={card.characterClass} />}
+            {Logo ? <Logo size={110} /> : <ClassInitial characterClass={card.characterClass} />}
           </div>
         </>
       )}
+
+      {/* Name scroll (dragon variant) along the bottom */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 8,
+          left: (FACE_W - 2 - SCROLL_W) / 2,
+          width: SCROLL_W,
+          height: SCROLL_H,
+        }}
+      >
+        <ScrollFrame w={SCROLL_W} h={SCROLL_H} dragon />
+        <span
+          style={{
+            position: "absolute",
+            left: "64%",
+            top: "62%",
+            transform: "translate(-50%, -50%)",
+            fontWeight: 800,
+            fontSize: 13,
+            whiteSpace: "nowrap",
+            maxWidth: "62%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            color: "#111",
+          }}
+        >
+          {card.characterName || "—"}
+        </span>
+      </div>
     </div>
   );
 }
