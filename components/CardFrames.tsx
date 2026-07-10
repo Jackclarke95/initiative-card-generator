@@ -342,16 +342,19 @@ export function SpellHead({
 // Single silhouette traced from the original asset's outermost contour
 // on its 48 × 55.08 canvas; the banded borders and studs the original
 // baked into nested contours now come from the IconFrame construction.
+// Scaled down 5.6% vertically about the viewBox centre so its rendered
+// height matches the Heart/Save frames, which fill less of their own
+// (shorter) viewBox.
 const SHIELD_SHAPE =
-  "M24,0L6.62,5.32C6.62,5.4,5.91,13.5,0.62,14.57L0,14.7V27.61C0.08,28,5.86,50.24,24,55C42.14,50.24,47.92,28,48,27.61V14.7L47.38,14.57C42.09,13.5,41.38,5.4,41.38,5.32Z";
+  "M24,1.54L6.62,6.56C6.62,6.64,5.91,14.29,0.62,15.3L0,15.42V27.61C0.08,27.97,5.86,48.97,24,53.46C42.14,48.97,47.92,27.97,48,27.61V15.42L47.38,15.3C42.09,14.29,41.38,6.64,41.38,6.56Z";
 
 // Centre-relative positions of the original asset's four studs: below
 // the peak, the two waist corners, and the bottom tip.
 const SHIELD_RIVETS = [
-  { x: 0, y: -24 },
-  { x: 20.5, y: -10.5 },
-  { x: 0, y: 24 },
-  { x: -20.5, y: -10.5 },
+  { x: 0, y: -22.66 },
+  { x: 20.5, y: -9.91 },
+  { x: 0, y: 22.66 },
+  { x: -20.5, y: -9.91 },
 ];
 
 /** Shield-shaped stat frame with value + label, e.g. "18" over "AC". */
@@ -403,18 +406,11 @@ export function Heart({
 // ── Save box — an open book ────────────────────────────────────────────
 // Two page spreads meeting at a spine dip top-centre and bottom-centre;
 // both page edges bow upward, the bottom edge parallel to the top.
-// Drawn on the same 57.6 × 55.08 canvas as the heart.
-
+// Drawn on the same 57.6 × 55.08 canvas as the heart, with matching top
+// and bottom extremes (2.4 / 52.5) and a shallower spine dip — taller
+// straight sides, gentler curve — than the original.
 const SAVE_SHAPE =
-  "M28.8,13.2C21.6,5.7,12.8,2.4,4,4.2L4,43.2C12.8,41.4,21.6,44.7,28.8,52.2C36,44.7,44.8,41.4,53.6,43.2L53.6,4.2C44.8,2.4,36,5.7,28.8,13.2Z";
-
-// Centre-relative rivet positions: the four outer page corners.
-const SAVE_RIVETS = [
-  { x: -21.7, y: -20.8 },
-  { x: 21.7, y: -20.8 },
-  { x: 21.7, y: 11.8 },
-  { x: -21.7, y: 11.8 },
-];
+  "M28.8,7.4C21.6,3.23,12.8,1.4,4,2.4L4,47.5C12.8,46.5,21.6,48.33,28.8,52.5C36,48.33,44.8,46.5,53.6,47.5L53.6,2.4C44.8,1.4,36,3.23,28.8,7.4Z";
 
 /** Save-DC stat frame with value + label, e.g. "14" over "Save". */
 export function SaveBox({
@@ -429,10 +425,8 @@ export function SaveBox({
       height={height}
       path={SAVE_SHAPE}
       viewBox="0 0 57.6 55.08"
-      rivets={SAVE_RIVETS}
       value={value}
       label={label}
-      bottomInset={height * 0.27}
     />
   );
 }

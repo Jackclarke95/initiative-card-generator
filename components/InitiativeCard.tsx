@@ -165,7 +165,7 @@ function DmFace({ card }: { card: CardData }) {
             {toggles.showSpellSaveDC ? (
               <SaveBox
                 value={card.spellSaveDC}
-                label="Save"
+                label="DC"
                 width={saveW}
                 height={S.shH}
               />

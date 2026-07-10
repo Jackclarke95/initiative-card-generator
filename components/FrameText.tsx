@@ -77,11 +77,12 @@ export function FrameText({
         {hasValue && (
           <span
             style={{
-              fontWeight: 800,
+              fontWeight: "bold",
               fontSize,
               lineHeight: 1,
               color: INK,
               whiteSpace: "nowrap",
+              marginTop: 10,
             }}
           >
             {value}
@@ -93,13 +94,14 @@ export function FrameText({
           style={{
             paddingBottom: bottomInset,
             fontSize: 6.5,
-            letterSpacing: "0.2em",
+            letterSpacing: "0.1em",
             textTransform: "uppercase",
             fontWeight: 600,
             color: LABEL_GREY,
             whiteSpace: "pre-line",
             textAlign: "center",
             lineHeight: 1.3,
+            marginBottom: 3,
           }}
         >
           {label}

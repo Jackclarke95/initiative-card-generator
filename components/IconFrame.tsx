@@ -11,7 +11,7 @@
 //
 //   <IconFrame w={62} h={60} path={SHAPE} viewBox="0 0 57.6 55.08"
 //               rivets={[{ x: 0, y: -14.5 }]} value={15} label="AC" />
-1
+
 import { useId } from "react";
 import { FrameText, INK } from "@/components/FrameText";
 
