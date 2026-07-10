@@ -8,7 +8,7 @@ import {
   VitalBox,
   SaveBox,
   VitalStackRow,
-  SpellHead,
+  Boot,
   Shield,
   Heart,
   NameScroll,
@@ -190,11 +190,11 @@ function DmFace({ card }: { card: CardData }) {
             ) : (
               <div style={{ width: 68 }} />
             )}
-            <SpellHead
+            <Boot
               value={card.speed}
               label="Speed"
-              width={68}
-              height={S.sqH}
+              width={81}
+              height={S.shH}
             />
             {toggles.showPassives ? (
               <VitalBox

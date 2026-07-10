@@ -431,6 +431,32 @@ export function SaveBox({
   );
 }
 
+// ── Boot (Speed) — side-profile boot, toe to the right ─────────────────
+// A fat, straight-sided cuff over the ankle and a flat sole, capped at
+// the front by a true semicircular toe (radius 16, twice its previous
+// height) reading as a plain capital D. Canvas widened to 64 × 48 to fit
+// the toe's larger reach.
+const BOOT_SHAPE = "M8,4L45.4,4L45.4,10A16,16 0 0,1 45.4,42L8,42Z";
+
+/** Boot-shaped stat frame with value + label, e.g. "30" over "Speed". */
+export function Boot({
+  width,
+  height,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <IconFrame
+      width={width}
+      height={height}
+      path={BOOT_SHAPE}
+      viewBox="0 0 64 48"
+      value={value}
+      label={label}
+    />
+  );
+}
+
 // ── vital-top/mid/bottom.svg (164.94 × 63.89/49.7/49.7) ───────────────
 // The stacked vitals column from the sheet: ornate caps top and bottom,
 // wavy junction edges between the pieces. Pre-scaled 0.5× so the tall
