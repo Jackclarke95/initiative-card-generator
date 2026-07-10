@@ -8,7 +8,7 @@ import {
   VitalBox,
   SaveBox,
   VitalStackRow,
-  Boot,
+  Chevron,
   Shield,
   Heart,
   NameScroll,
@@ -190,10 +190,10 @@ function DmFace({ card }: { card: CardData }) {
             ) : (
               <div style={{ width: 68 }} />
             )}
-            <Boot
+            <Chevron
               value={card.speed}
               label="Speed"
-              width={81}
+              width={63}
               height={S.shH}
             />
             {toggles.showPassives ? (

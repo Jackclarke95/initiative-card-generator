@@ -431,15 +431,16 @@ export function SaveBox({
   );
 }
 
-// ── Boot (Speed) — side-profile boot, toe to the right ─────────────────
-// A fat, straight-sided cuff over the ankle and a flat sole, capped at
-// the front by a true semicircular toe (radius 16, twice its previous
-// height) reading as a plain capital D. Canvas widened to 64 × 48 to fit
-// the toe's larger reach.
-const BOOT_SHAPE = "M8,4L45.4,4L45.4,10A16,16 0 0,1 45.4,42L8,42Z";
+// ── Chevron (Speed) — a box with a protruding tip and a matching notch ──
+// A single thick chevron ribbon: flat top and bottom, a triangular point
+// sticking out on the right, and a matching triangular notch cut into
+// the left — same (shallow) depth on both ends, filling almost the full
+// canvas so the points stay gentle and the flat middle stays roomy for
+// the value.
+const CHEVRON_SHAPE = "M2,2L41,2L48,24L41,46L2,46L9,24Z";
 
-/** Boot-shaped stat frame with value + label, e.g. "30" over "Speed". */
-export function Boot({
+/** Chevron stat frame with value + label, e.g. "30" over "Speed". */
+export function Chevron({
   width,
   height,
   value,
@@ -449,8 +450,8 @@ export function Boot({
     <IconFrame
       width={width}
       height={height}
-      path={BOOT_SHAPE}
-      viewBox="0 0 64 48"
+      path={CHEVRON_SHAPE}
+      viewBox="0 0 50 48"
       value={value}
       label={label}
     />
