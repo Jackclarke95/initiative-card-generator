@@ -36,7 +36,7 @@ const SCROLL_W = 200; // player face
 const SCROLL_H = scrollHeight(SCROLL_W);
 const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
 const DM_SCROLL_H = Math.round(
-  (SCROLL_NODRAGON_BOX.h / SCROLL_NODRAGON_BOX.w) * DM_SCROLL_W
+  (SCROLL_NODRAGON_BOX.h / SCROLL_NODRAGON_BOX.w) * DM_SCROLL_W,
 );
 
 const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
@@ -443,7 +443,7 @@ function PlayerFace({ card }: { card: CardData }) {
             }}
           >
             {Logo ? (
-              <Logo size={110} />
+              <Logo size={220} />
             ) : (
               <ClassInitial characterClass={card.characterClass} />
             )}
