@@ -598,6 +598,11 @@ export function ScrollFrame({
       <path d={SCROLL.rollWhite} fill="#fff" />
       <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
       <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />
+      <path d={SCROLL.rollGrey} fill="#bfc0c3" />
+      <path d={SCROLL.rollGrey} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.body} fill="#fff" />
+      <path d={SCROLL.body} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.bodyThin} {...line} strokeWidth={0.75} />
       {dragon &&
         SCROLL.dragon.slice(1).map((d, i) => <path key={i} d={d} fill={INK} />)}
       {dragon && <path d={SCROLL.dragonEye} fill="#fff" />}
