@@ -265,7 +265,7 @@ export function ProfBonus({
           <span
             style={{
               fontSize: 6.5,
-              letterSpacing: "0.2em",
+              letterSpacing: "0.1em",
               textTransform: "uppercase",
               fontWeight: 600,
               color: "#fff",
@@ -437,7 +437,7 @@ export function SaveBox({
 // the left — same (shallow) depth on both ends, filling almost the full
 // canvas so the points stay gentle and the flat middle stays roomy for
 // the value.
-const CHEVRON_SHAPE = "M2,2L41,2L48,24L41,46L2,46L9,24Z";
+const CHEVRON_SHAPE = "M2.2,2L45.1,2L52.8,24L45.1,46L2.2,46L9.9,24Z";
 
 /** Chevron stat frame with value + label, e.g. "30" over "Speed". */
 export function Chevron({
@@ -451,7 +451,7 @@ export function Chevron({
       width={width}
       height={height}
       path={CHEVRON_SHAPE}
-      viewBox="0 0 50 48"
+      viewBox="0 0 55 48"
       value={value}
       label={label}
     />
@@ -672,7 +672,7 @@ export function DragonScroll({
           <span
             style={{
               fontSize: 6.5,
-              letterSpacing: "0.2em",
+              letterSpacing: "0.1em",
               textTransform: "uppercase",
               fontWeight: 600,
               color: LABEL_GREY,

@@ -45,7 +45,7 @@ const DM_SCROLL_H = Math.round(
 const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
   position: "relative",
   fontSize: size,
-  letterSpacing: "0.2em",
+  letterSpacing: "0.1em",
   textTransform: "uppercase",
   color,
   fontWeight: 600,
@@ -66,8 +66,11 @@ function DmFace({ card }: { card: CardData }) {
   const S = compact
     ? { row: 26, sqH: 48, shW: 54, shH: 62, gap: 4 }
     : { row: 28, sqH: 52, shW: 52, shH: 60, gap: 4 };
+  // Heart/Shield/Book are drawn 20% larger than the base shield size.
+  const badgeW = Math.round(S.shW * 1.2);
+  const badgeH = Math.round(S.shH * 1.2);
   // The hearts (HP, Save) are drawn 1.2× wider than the shield.
-  const heartW = Math.round(S.shW * 1.2);
+  const heartW = Math.round(badgeW * 1.2);
   const saveW = heartW;
 
   const classLine = [
@@ -159,15 +162,20 @@ function DmFace({ card }: { card: CardData }) {
               value={card.maxHp}
               label={"HP"}
               width={heartW}
-              height={S.shH}
+              height={badgeH}
             />
-            <Shield value={card.ac} label={"AC"} width={S.shW} height={S.shH} />
+            <Shield
+              value={card.ac}
+              label={"AC"}
+              width={badgeW}
+              height={badgeH}
+            />
             {toggles.showSpellSaveDC ? (
               <SaveBox
                 value={card.spellSaveDC}
                 label="DC"
                 width={saveW}
-                height={S.shH}
+                height={badgeH}
               />
             ) : (
               <div style={{ width: saveW }} />
@@ -193,7 +201,7 @@ function DmFace({ card }: { card: CardData }) {
             <Chevron
               value={card.speed}
               label="Speed"
-              width={63}
+              width={69}
               height={S.shH}
             />
             {toggles.showPassives ? (
