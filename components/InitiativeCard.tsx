@@ -5,12 +5,13 @@ import { DamageTypeIcon } from "@/components/Icons";
 import { getClassLogo } from "@/components/ClassLogos";
 import {
   PlayerFrame,
-  VitalBox,
   SaveBox,
   VitalStackRow,
   Chevron,
   Shield,
   Heart,
+  Eye,
+  Orb,
   NameScroll,
   DragonScroll,
   SCROLL_DRAGON_BOX,
@@ -72,6 +73,10 @@ function DmFace({ card }: { card: CardData }) {
   // The hearts (HP, Save) are drawn 1.2× wider than the shield.
   const heartW = Math.round(badgeW * 1.2);
   const saveW = heartW;
+  // Eye/Orb (Perception/Insight) share the Chevron's height so the row
+  // reads as one size; each width follows its own shape's viewBox aspect.
+  const eyeW = Math.round(S.shH * 1.2162);
+  const orbW = Math.round(S.shH * 1.0);
 
   const classLine = [
     card.characterClass,
@@ -189,14 +194,14 @@ function DmFace({ card }: { card: CardData }) {
             }}
           >
             {toggles.showPassives ? (
-              <VitalBox
+              <Eye
                 value={card.passivePerception}
                 label="Perception"
-                width={68}
-                height={S.sqH}
+                width={eyeW}
+                height={S.shH}
               />
             ) : (
-              <div style={{ width: 68 }} />
+              <div style={{ width: eyeW }} />
             )}
             <Chevron
               value={card.speed}
@@ -205,14 +210,14 @@ function DmFace({ card }: { card: CardData }) {
               height={S.shH}
             />
             {toggles.showPassives ? (
-              <VitalBox
+              <Orb
                 value={card.passiveInsight}
                 label="Insight"
-                width={68}
-                height={S.sqH}
+                width={orbW}
+                height={S.shH}
               />
             ) : (
-              <div style={{ width: 68 }} />
+              <div style={{ width: orbW }} />
             )}
           </div>
         </div>

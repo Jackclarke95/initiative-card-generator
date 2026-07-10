@@ -458,6 +458,75 @@ export function Chevron({
   );
 }
 
+// ── Eye (Passive Perception) — companion piece to the Heart/Shield ────
+// A symmetric almond/vesica silhouette on the same 57.6 × 55.08 canvas as
+// the Heart and Save book, with matching corner points (2.4 / 55.2) so it
+// sits at the same scale in the row. Pointed canthi left and right, lids
+// curving away evenly top and bottom — taller than a flat almond (width
+// 52.8 : height 42.56, ≈1.24 aspect) so the label has vertical room.
+const EYE_SHAPE =
+  "M2.4,27.54C10.4,18.34,18.4,6.22,28.8,6.22C39.2,6.22,47.2,18.34,55.2,27.54C47.2,36.74,39.2,48.78,28.8,48.78C18.4,48.78,10.4,36.74,2.4,27.54Z";
+
+/** Eye-shaped stat frame with value + label, e.g. "15" over "Perception".
+ *  Cropped tight to the shape's own bounds (plus the usual 2.4-unit
+ *  margin) rather than the shared 57.6 × 55.08 canvas, so its container's
+ *  width/height ratio matches what's actually drawn — without this, the
+ *  taller-than-wide canvas leaves the shape letterboxed and undersized,
+ *  and the label overflows past its visibly-smaller edges. */
+export function Eye({
+  width,
+  height,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <IconFrame
+      width={width}
+      height={height}
+      path={EYE_SHAPE}
+      viewBox="0 3.82 57.6 47.36"
+      value={value}
+      label={label}
+      // The canthi taper the interior narrow near top and bottom — pull
+      // the label up off the point, into the wider zone nearer centre,
+      // and cap the value a bit smaller so it doesn't grow into the top
+      // taper once the label zone eats into its space.
+      bottomInset={Math.round(height * 0.3)}
+      maxValueSize={20}
+    />
+  );
+}
+
+// ── Orb (Passive Insight) — a scrying orb mounted on a stand ──────────
+// Just two pieces: a true circle (the orb — radius stays circular, never
+// stretched) sitting directly on a trapezium (the stand), meeting at the
+// circle's widest point (its equator) so the trapezium's top edge is the
+// full-diameter chord — the widest a plain circle+trapezium join can be —
+// then tapering straight down to a flat foot. Flat foot (not a point)
+// leaves room for a longer label than a sharp tip would.
+const ORB_SHAPE = "M3.8,27A25,25,0,1,1,53.8,27L42.8,52L14.8,52Z";
+
+/** Orb-on-a-stand stat frame with value + label, e.g. "13" over "Insight".
+ *  Cropped tight to the shape's own bounds (see the Eye's note above) so
+ *  its narrow container isn't letterboxed against the shared canvas. */
+export function Orb({
+  width,
+  height,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <IconFrame
+      width={width}
+      height={height}
+      path={ORB_SHAPE}
+      viewBox="1.4 -0.4 54.8 54.8"
+      value={value}
+      label={label}
+    />
+  );
+}
+
 // ── vital-top/mid/bottom.svg (164.94 × 63.89/49.7/49.7) ───────────────
 // The stacked vitals column from the sheet: ornate caps top and bottom,
 // wavy junction edges between the pieces. Pre-scaled 0.5× so the tall
