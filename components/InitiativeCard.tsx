@@ -5,12 +5,11 @@ import { DamageTypeIcon } from "@/components/Icons";
 import { getClassLogo } from "@/components/ClassLogos";
 import {
   PlayerFrame,
-  CharBoxFrame,
   VitalBoxFrame,
+  VitalStackFrame,
   SpellHeadFrame,
   ShieldFrame,
   ScrollFrame,
-  InfoTemplateFrame,
   SCROLL_DRAGON_BOX,
 } from "@/components/CardFrames";
 import {
@@ -31,7 +30,9 @@ const CONTENT_W = FACE_W - 2 - 16;
 
 // Name scroll on the player face keeps the artwork's natural aspect.
 const SCROLL_W = 200;
-const SCROLL_H = Math.round((SCROLL_DRAGON_BOX.h / SCROLL_DRAGON_BOX.w) * SCROLL_W);
+const SCROLL_H = Math.round(
+  (SCROLL_DRAGON_BOX.h / SCROLL_DRAGON_BOX.w) * SCROLL_W,
+);
 
 const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
   position: "relative",
@@ -124,7 +125,14 @@ function StatShape({
       }}
     >
       {frame}
-      <span style={{ position: "relative", fontWeight: 800, fontSize: 15, lineHeight: 1 }}>
+      <span
+        style={{
+          position: "relative",
+          fontWeight: 800,
+          fontSize: 15,
+          lineHeight: 1,
+        }}
+      >
         {value}
       </span>
       <span style={label(6.5, "#111")}>{name}</span>
@@ -142,7 +150,11 @@ function DmFace({ card }: { card: CardData }) {
     ? { row: 26, sqH: 48, shW: 54, shH: 62, gap: 4 }
     : { row: 34, sqH: 62, shW: 62, shH: 71, gap: 5 };
 
-  const classLine = [card.characterClass, card.subclass, card.level && `Lvl ${card.level}`]
+  const classLine = [
+    card.characterClass,
+    card.subclass,
+    card.level && `Lvl ${card.level}`,
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -156,35 +168,27 @@ function DmFace({ card }: { card: CardData }) {
   ];
 
   return (
-    <div className="card-face" style={{ display: "flex", flexDirection: "column", padding: 8 }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: S.gap }}>
-        {/* Identity rows — each on a different official frame to compare */}
+    <div
+      className="card-face"
+      style={{ display: "flex", flexDirection: "column", padding: 8 }}
+    >
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: S.gap,
+        }}
+      >
+        {/* Identity rows — scroll for the name, then the vital stack */}
         <IdentityRow
           name="Name"
           value={card.characterName}
           h={S.row}
-          frame={<CharBoxFrame w={CONTENT_W} h={S.row} />}
-        />
-        <IdentityRow
-          name="Player"
-          value={card.playerName}
-          h={S.row}
-          frame={<CharBoxFrame w={CONTENT_W} h={S.row} simple />}
-        />
-        <IdentityRow
-          name="Race"
-          value={card.race}
-          h={S.row}
-          frame={<InfoTemplateFrame w={CONTENT_W} h={S.row} />}
-        />
-        <IdentityRow
-          name="Class"
-          value={classLine}
-          h={S.row}
           frame={<ScrollFrame w={CONTENT_W} h={S.row} />}
         />
 
-        {toggles.showStats && (
+        {/* {toggles.showStats && (
           <div style={{ display: "flex", gap: 3 }}>
             {stats.map(({ name, score }) => (
               <div
@@ -213,11 +217,24 @@ function DmFace({ card }: { card: CardData }) {
             <DefenseStrip name="Resist" types={card.resistances} />
             <DefenseStrip name="Immune" types={card.immunities} />
           </div>
-        )}
+        )} */}
 
         {/* Stat shapes — pushed to the bottom */}
-        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{
+            marginTop: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <StatShape
               frame={<VitalBoxFrame w={68} h={S.sqH} />}
               value={card.maxHp}
@@ -245,7 +262,13 @@ function DmFace({ card }: { card: CardData }) {
               <div style={{ width: 68 }} />
             )}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             {toggles.showPassives ? (
               <StatShape
                 frame={<VitalBoxFrame w={68} h={S.sqH} />}
@@ -277,6 +300,25 @@ function DmFace({ card }: { card: CardData }) {
             )}
           </div>
         </div>
+
+        <IdentityRow
+          name="Race"
+          value={card.race}
+          h={S.row}
+          frame={<VitalStackFrame w={CONTENT_W} h={S.row} part="top" />}
+        />
+        <IdentityRow
+          name="Class"
+          value={classLine}
+          h={S.row}
+          frame={<VitalStackFrame w={CONTENT_W} h={S.row} part="mid" />}
+        />
+        <IdentityRow
+          name="Player"
+          value={card.playerName}
+          h={S.row}
+          frame={<VitalStackFrame w={CONTENT_W} h={S.row} part="bottom" />}
+        />
       </div>
     </div>
   );
@@ -359,7 +401,11 @@ function PlayerFace({ card }: { card: CardData }) {
               paddingBottom: SCROLL_H - 14,
             }}
           >
-            {Logo ? <Logo size={110} /> : <ClassInitial characterClass={card.characterClass} />}
+            {Logo ? (
+              <Logo size={110} />
+            ) : (
+              <ClassInitial characterClass={card.characterClass} />
+            )}
           </div>
         </>
       )}
@@ -374,7 +420,7 @@ function PlayerFace({ card }: { card: CardData }) {
           height: SCROLL_H,
         }}
       >
-        <ScrollFrame w={SCROLL_W} h={SCROLL_H} dragon />
+        <ScrollFrame w={SCROLL_W} h={SCROLL_H} />
         <span
           style={{
             position: "absolute",
@@ -412,7 +458,9 @@ function ClassInitial({ characterClass }: { characterClass: string }) {
         justifyContent: "center",
       }}
     >
-      <span style={{ fontSize: "3.4rem", fontWeight: 900, lineHeight: 1 }}>{initial}</span>
+      <span style={{ fontSize: "3.4rem", fontWeight: 900, lineHeight: 1 }}>
+        {initial}
+      </span>
     </div>
   );
 }
@@ -428,7 +476,11 @@ export default function InitiativeCard({ card }: InitiativeCardProps) {
   return (
     <div
       id="print-area"
-      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+      }}
     >
       <PlayerFace card={card} />
       <div className="card-gutter" style={gutterStyle} />

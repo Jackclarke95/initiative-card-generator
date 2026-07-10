@@ -126,6 +126,42 @@ export function ShieldFrame({ w, h }: FrameProps) {
   );
 }
 
+// ── vital-top/mid/bottom.svg (164.94 × 63.89/49.7/49.7) ───────────────
+// The stacked vitals column from the sheet: ornate caps top and bottom,
+// wavy junction edges between the pieces. Pre-scaled 0.5× so the tall
+// originals 9-slice into 34px rows without the zones inverting.
+
+const VITAL_STACK = {
+  top: {
+    d: "M162.13,62.89a4.42,4.42,0,0,0-3.13-1.7.9.9,0,0,0-1.6,0,12.6,12.6,0,0,0-4.58,1.67H12.12a12.54,12.54,0,0,0-4.58-1.67.9.9,0,0,0-1.6,0,4.44,4.44,0,0,0-3.13,1.7H1v-9A99.44,99.44,0,0,0,2.47,38.18V8.23C4.31,5.26,7.74,1,12.28,1H152.66c4.53,0,8,4.27,9.81,7.23v30a99.44,99.44,0,0,0,1.47,15.72v9ZM1,10.93c.11-.23.44-.93,1-1.86V38.18A91.61,91.61,0,0,1,1,50.6ZM5.41,1H8.25C4.75,2.76,2.27,6.46,1,8.73V4.78C2,4.4,5,3.14,5.41,1M159.54,1c.41,2.14,3.36,3.4,4.4,3.78v4c-1.27-2.27-3.75-6-7.25-7.73ZM163,9.07c.53.93.86,1.63,1,1.86V50.6a91.61,91.61,0,0,1-1-12.42Zm1.62-5.13c-1.14-.35-4.1-1.66-4.1-3.44V0H4.45V.5c0,1.77-3,3.09-4.1,3.44L0,4.05V63.89H3.38l.14-.26A3.35,3.35,0,0,1,6,62.19a.93.93,0,0,0,.73.38.92.92,0,0,0,.71-.36,11.84,11.84,0,0,1,4.3,1.62l.11.06H153.09l.12-.06a11.74,11.74,0,0,1,4.29-1.62.92.92,0,0,0,.71.36.93.93,0,0,0,.73-.38,3.35,3.35,0,0,1,2.48,1.44l.14.26h3.38V4.05Z",
+    h: 63.89,
+  },
+  mid: {
+    d: "M163.94,36.41A91.74,91.74,0,0,1,163,24v1.74a91.74,91.74,0,0,1,1-12.43Zm0,12.29h-1.81A4.46,4.46,0,0,0,159,47a.91.91,0,0,0-1.6,0,12.58,12.58,0,0,0-4.58,1.68H12.12A12.58,12.58,0,0,0,7.54,47a.91.91,0,0,0-1.6,0A4.48,4.48,0,0,0,2.81,48.7H1v-9A99.45,99.45,0,0,0,2.47,24v1.74A99.23,99.23,0,0,0,1,10V1H2.81A4.48,4.48,0,0,0,5.94,2.71a.9.9,0,0,0,1.6,0A12.4,12.4,0,0,0,12.12,1h140.7a12.4,12.4,0,0,0,4.58,1.68.9.9,0,0,0,1.6,0A4.46,4.46,0,0,0,162.13,1h1.81v9a99.23,99.23,0,0,0-1.47,15.72V24a99.45,99.45,0,0,0,1.47,15.73ZM1,13.29A91.74,91.74,0,0,1,2,25.72V24A91.74,91.74,0,0,1,1,36.41ZM161.57,0l-.15.26a3.31,3.31,0,0,1-2.48,1.45.89.89,0,0,0-1.44,0A11.7,11.7,0,0,1,153.21.07L153.09,0H11.85l-.12.07A11.7,11.7,0,0,1,7.44,1.68.89.89,0,0,0,6,1.71,3.35,3.35,0,0,1,3.52.27L3.38,0H0V49.7H3.38l.14-.26A3.31,3.31,0,0,1,6,48a.92.92,0,0,0,.73.37A.91.91,0,0,0,7.44,48a11.7,11.7,0,0,1,4.29,1.61l.12.07H153.09l.12-.07A11.7,11.7,0,0,1,157.5,48a.91.91,0,0,0,.71.35.92.92,0,0,0,.73-.37,3.31,3.31,0,0,1,2.48,1.44l.14.26h3.38V0Z",
+    h: 49.7,
+  },
+  bottom: {
+    d: "M2.81,1A4.48,4.48,0,0,0,5.94,2.71a.9.9,0,0,0,1.6,0A12.4,12.4,0,0,0,12.12,1h140.7a12.46,12.46,0,0,0,4.58,1.68.9.9,0,0,0,1.6,0A4.46,4.46,0,0,0,162.13,1h1.81v9a99.23,99.23,0,0,0-1.47,15.72V41.47c-1.84,3-5.27,7.23-9.81,7.23H12.28c-4.53,0-8-4.26-9.81-7.23V25.72A99.23,99.23,0,0,0,1,10V1ZM163.94,38.77c-.11.23-.43.93-1,1.86V25.72a91.74,91.74,0,0,1,1-12.43Zm-4.41,9.93h-2.84c3.5-1.76,6-5.46,7.25-7.73v4c-1,.38-4,1.64-4.41,3.78M5.4,48.7C5,46.56,2,45.3,1,44.92V41c1.27,2.27,3.75,6,7.25,7.73ZM2,40.63c-.53-.93-.86-1.63-1-1.86V13.29A91.74,91.74,0,0,1,2,25.72ZM.35,45.76c1.14.35,4.1,1.66,4.1,3.44v.5h156v-.5c0-1.77,3-3.09,4.1-3.44l.35-.11V0h-3.37l-.15.26a3.31,3.31,0,0,1-2.48,1.45.89.89,0,0,0-1.44,0A11.7,11.7,0,0,1,153.21.07L153.09,0H11.85l-.11.07a11.8,11.8,0,0,1-4.3,1.61A.89.89,0,0,0,6,1.71,3.31,3.31,0,0,1,3.52.26L3.38,0H0V45.65Z",
+    h: 49.7,
+  },
+};
+
+export function VitalStackFrame({
+  w,
+  h,
+  part,
+}: FrameProps & { part: "top" | "mid" | "bottom" }) {
+  const piece = VITAL_STACK[part];
+  return (
+    <Svg w={w} h={h}>
+      <path
+        d={stretchPath(piece.d, { origW: 164.94, origH: piece.h, w, h, scale: 0.5 })}
+        fill={INK}
+      />
+    </Svg>
+  );
+}
+
 // ── CharScroll.svg — scroll banner, with/without the dragon ───────────
 // Grey background polygons and the "Dungeons & Dragons" lettering are
 // excluded. Art box: x 21..254 of the original; dragon extends to y 0.
@@ -149,12 +185,11 @@ const SCROLL = {
   dragonEye: "M91.16,20.82a7.63,7.63,0,0,1,4.29,4.66c-2.85-.08-3.69-2.28-4.29-4.66",
 };
 
-/** Scroll aspect helpers: source boxes within the original artwork. */
+/** Scroll aspect helper: source box within the original artwork. */
 export const SCROLL_DRAGON_BOX = { x: 21, y: 0, w: 233, h: 99 };
-export const SCROLL_PLAIN_BOX = { x: 21, y: 36, w: 233, h: 51 };
 
-export function ScrollFrame({ w, h, dragon }: FrameProps & { dragon?: boolean }) {
-  const box = dragon ? SCROLL_DRAGON_BOX : SCROLL_PLAIN_BOX;
+export function ScrollFrame({ w, h }: FrameProps) {
+  const box = SCROLL_DRAGON_BOX;
   const line = { stroke: INK, vectorEffect: "non-scaling-stroke" as const };
   return (
     <svg
@@ -165,23 +200,22 @@ export function ScrollFrame({ w, h, dragon }: FrameProps & { dragon?: boolean })
       fill="none"
       style={{ position: "absolute", inset: 0 }}
     >
-      {dragon && <path d={SCROLL.dragon[0]} fill={INK} />}
-      <path d={SCROLL.rollWhite} fill="#fff" />
-      <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
-      <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />
-      <path d={SCROLL.rollGrey} fill="#bfc0c3" />
-      <path d={SCROLL.rollGrey} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.dragon[0]} fill={INK} />
+      {/* Depth order: body at the back, grey backing sheet over it, white
+          flap in front — keeps the flap's top edge complete with the grey
+          wedge peeking out exactly like it does along the bottom. */}
       <path d={SCROLL.body} fill="#fff" />
       <path d={SCROLL.body} {...line} strokeWidth={1.38} />
       <path d={SCROLL.bodyThin} {...line} strokeWidth={0.75} />
-      {dragon && (
-        <>
-          {SCROLL.dragon.slice(1).map((d, i) => (
-            <path key={i} d={d} fill={INK} />
-          ))}
-          <path d={SCROLL.dragonEye} fill="#fff" />
-        </>
-      )}
+      <path d={SCROLL.rollGrey} fill="#bfc0c3" />
+      <path d={SCROLL.rollGrey} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.rollWhite} fill="#fff" />
+      <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
+      <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />
+      {SCROLL.dragon.slice(1).map((d, i) => (
+        <path key={i} d={d} fill={INK} />
+      ))}
+      <path d={SCROLL.dragonEye} fill="#fff" />
     </svg>
   );
 }
