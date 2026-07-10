@@ -39,7 +39,10 @@ const BORDER_5E =
 export function PlayerFrame({ w, h }: FrameProps) {
   return (
     <Svg w={w} h={h}>
-      <path d={stretchPath(BORDER_5E, { origW: 185, origH: 199.07, w, h })} fill={INK} />
+      <path
+        d={stretchPath(BORDER_5E, { origW: 185, origH: 199.07, w, h })}
+        fill={INK}
+      />
     </Svg>
   );
 }
@@ -52,7 +55,10 @@ const VITAL_BOX =
 export function VitalBoxFrame({ w, h }: FrameProps) {
   return (
     <Svg w={w} h={h}>
-      <path d={stretchPath(VITAL_BOX, { origW: 52.24, origH: 49.28, w, h })} fill={INK} />
+      <path
+        d={stretchPath(VITAL_BOX, { origW: 52.24, origH: 49.28, w, h })}
+        fill={INK}
+      />
     </Svg>
   );
 }
@@ -63,15 +69,21 @@ const CHARBOX = {
   rect: "M2.72,9.44 H316.61 V70.08 H2.72 Z",
   swash:
     "M24.62,70.08a103.81,103.81,0,0,1,17.21-1.92H277.51a103.81,103.81,0,0,1,17.21,1.92m0-60.64a104.88,104.88,0,0,1-17.21,1.92H41.83A104.88,104.88,0,0,1,24.62,9.44",
-  bracketL: "M.63,3.13V76.39a11.66,11.66,0,0,1,2.09-3.57V6.69A11.5,11.5,0,0,1,.63,3.13Z",
+  bracketL:
+    "M.63,3.13V76.39a11.66,11.66,0,0,1,2.09-3.57V6.69A11.5,11.5,0,0,1,.63,3.13Z",
   flourishL:
     "M2.72,62.19s1.07,10.33,8.4,10.33h22s7.17-2.44,20.5-2.44M2.72,17.32S3.79,7,11.12,7h22s7.17,2.45,20.5,2.45",
-  bracketR: "M318.72,3.13V76.39a11.78,11.78,0,0,0-2.1-3.57V6.69A11.61,11.61,0,0,0,318.72,3.13Z",
+  bracketR:
+    "M318.72,3.13V76.39a11.78,11.78,0,0,0-2.1-3.57V6.69A11.61,11.61,0,0,0,318.72,3.13Z",
   flourishR:
     "M316.62,62.19s-1.07,10.33-8.4,10.33h-22s-7.17-2.44-20.5-2.44m50.9-52.76S315.55,7,308.22,7h-22s-7.17,2.45-20.5,2.45",
 };
 
-export function CharBoxFrame({ w, h, simple }: FrameProps & { simple?: boolean }) {
+export function CharBoxFrame({
+  w,
+  h,
+  simple,
+}: FrameProps & { simple?: boolean }) {
   const o = { origW: 319.34, origH: 79.51, w, h, scale: 0.45 };
   return (
     <Svg w={w} h={h}>
@@ -79,10 +91,26 @@ export function CharBoxFrame({ w, h, simple }: FrameProps & { simple?: boolean }
       <path d={stretchPath(CHARBOX.swash, o)} stroke={INK} strokeWidth={0.7} />
       {!simple && (
         <>
-          <path d={stretchPath(CHARBOX.bracketL, o)} stroke={INK} strokeWidth={1.1} />
-          <path d={stretchPath(CHARBOX.flourishL, o)} stroke={INK} strokeWidth={1.1} />
-          <path d={stretchPath(CHARBOX.bracketR, o)} stroke={INK} strokeWidth={1.1} />
-          <path d={stretchPath(CHARBOX.flourishR, o)} stroke={INK} strokeWidth={1.1} />
+          <path
+            d={stretchPath(CHARBOX.bracketL, o)}
+            stroke={INK}
+            strokeWidth={1.1}
+          />
+          <path
+            d={stretchPath(CHARBOX.flourishL, o)}
+            stroke={INK}
+            strokeWidth={1.1}
+          />
+          <path
+            d={stretchPath(CHARBOX.bracketR, o)}
+            stroke={INK}
+            strokeWidth={1.1}
+          />
+          <path
+            d={stretchPath(CHARBOX.flourishR, o)}
+            stroke={INK}
+            strokeWidth={1.1}
+          />
         </>
       )}
     </Svg>
@@ -104,9 +132,21 @@ export function SpellHeadFrame({ w, h }: FrameProps) {
   const o = { origW: 75.59, origH: 33.92, w, h };
   return (
     <Svg w={w} h={h}>
-      <path d={stretchPath(SPELLHEAD.outline, o)} stroke={INK} strokeWidth={1.3} />
-      <path d={stretchPath(SPELLHEAD.thinL, o)} stroke={INK} strokeWidth={0.6} />
-      <path d={stretchPath(SPELLHEAD.thinR, o)} stroke={INK} strokeWidth={0.6} />
+      <path
+        d={stretchPath(SPELLHEAD.outline, o)}
+        stroke={INK}
+        strokeWidth={1.3}
+      />
+      <path
+        d={stretchPath(SPELLHEAD.thinL, o)}
+        stroke={INK}
+        strokeWidth={0.6}
+      />
+      <path
+        d={stretchPath(SPELLHEAD.thinR, o)}
+        stroke={INK}
+        strokeWidth={0.6}
+      />
       <path d={stretchPath(SPELLHEAD.dotL, o)} fill={INK} />
       <path d={stretchPath(SPELLHEAD.dotR, o)} fill={INK} />
     </Svg>
@@ -120,7 +160,12 @@ const AC_PATH =
 
 export function ShieldFrame({ w, h }: FrameProps) {
   return (
-    <svg width={w} height={h} viewBox="0 0 48 55.08" style={{ position: "absolute", inset: 0 }}>
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 48 55.08"
+      style={{ position: "absolute", inset: 0 }}
+    >
       <path d={AC_PATH} fill={INK} />
     </svg>
   );
@@ -155,7 +200,13 @@ export function VitalStackFrame({
   return (
     <Svg w={w} h={h}>
       <path
-        d={stretchPath(piece.d, { origW: 164.94, origH: piece.h, w, h, scale: 0.5 })}
+        d={stretchPath(piece.d, {
+          origW: 164.94,
+          origH: piece.h,
+          w,
+          h,
+          scale: 0.5,
+        })}
         fill={INK}
       />
     </Svg>
@@ -182,7 +233,8 @@ const SCROLL = {
     "M32.52,32.42a12.49,12.49,0,0,1,2.78-1.55l1.59,1.41-.82.25s-1.53,5-.91,7.07l1,2.9s-3.26-.65-3.76-1.9c0,0-1-5.63.12-8.18",
     "M30.68,34.54s.21,6.42.87,7l2.42,1L34,44.75s-4.32-1.37-4.68-3S28.72,36,28.72,36a4,4,0,0,1,2-1.44",
   ],
-  dragonEye: "M91.16,20.82a7.63,7.63,0,0,1,4.29,4.66c-2.85-.08-3.69-2.28-4.29-4.66",
+  dragonEye:
+    "M91.16,20.82a7.63,7.63,0,0,1,4.29,4.66c-2.85-.08-3.69-2.28-4.29-4.66",
 };
 
 /** Scroll aspect helper: source box within the original artwork. */
@@ -232,7 +284,14 @@ export function InfoTemplateFrame({ w, h }: FrameProps) {
       width={330}
       height={52}
       unoptimized
-      style={{ position: "absolute", top, left: 0, width: w, height: ih, objectFit: "fill" }}
+      style={{
+        position: "absolute",
+        top,
+        left: 0,
+        width: w,
+        height: ih,
+        objectFit: "fill",
+      }}
     />
   );
   return (

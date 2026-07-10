@@ -28,11 +28,13 @@ const FACE_W = 240;
 const FACE_H = 336;
 const CONTENT_W = FACE_W - 2 - 16;
 
-// Name scroll on the player face keeps the artwork's natural aspect.
-const SCROLL_W = 200;
-const SCROLL_H = Math.round(
-  (SCROLL_DRAGON_BOX.h / SCROLL_DRAGON_BOX.w) * SCROLL_W,
-);
+// The dragon scroll always keeps the artwork's natural aspect ratio.
+const scrollHeight = (w: number) =>
+  Math.round((SCROLL_DRAGON_BOX.h / SCROLL_DRAGON_BOX.w) * w);
+const SCROLL_W = 200; // player face
+const SCROLL_H = scrollHeight(SCROLL_W);
+const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
+const DM_SCROLL_H = scrollHeight(DM_SCROLL_W);
 
 const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
   position: "relative",
@@ -94,6 +96,55 @@ function IdentityRow({
   );
 }
 
+/** The Name banner: dragon scroll at its natural aspect ratio, with the
+ *  value and label positioned over the scroll body (right of the dragon). */
+function NameScrollRow({
+  value,
+  w,
+  h,
+}: {
+  value: string;
+  w: number;
+  h: number;
+}) {
+  return (
+    <div
+      style={{ position: "relative", width: w, height: h, alignSelf: "center" }}
+    >
+      <ScrollFrame w={w} h={h} />
+      <div
+        style={{
+          position: "absolute",
+          left: "64%",
+          top: "57%",
+          transform: "translate(-50%, -50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 1,
+          maxWidth: "62%",
+        }}
+      >
+        {value && (
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 10.5,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "100%",
+            }}
+          >
+            {value}
+          </span>
+        )}
+        <span style={label(6.5)}>Name</span>
+      </div>
+    </div>
+  );
+}
+
 /** A stat shape (frame prop) with a bold value and black caps label. */
 function StatShape({
   frame,
@@ -145,10 +196,11 @@ function DmFace({ card }: { card: CardData }) {
   const compact = toggles.showStats || toggles.showDefenses;
 
   // Sizes shrink slightly when the optional stat/defense strips are shown.
-  // The AC shield keeps its official 48:55 aspect ratio.
+  // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
+  // for the full-aspect Name scroll above.
   const S = compact
     ? { row: 26, sqH: 48, shW: 54, shH: 62, gap: 4 }
-    : { row: 34, sqH: 62, shW: 62, shH: 71, gap: 5 };
+    : { row: 28, sqH: 52, shW: 52, shH: 60, gap: 4 };
 
   const classLine = [
     card.characterClass,
@@ -181,14 +233,13 @@ function DmFace({ card }: { card: CardData }) {
         }}
       >
         {/* Identity rows — scroll for the name, then the vital stack */}
-        <IdentityRow
-          name="Name"
+        <NameScrollRow
           value={card.characterName}
-          h={S.row}
-          frame={<ScrollFrame w={CONTENT_W} h={S.row} />}
+          w={DM_SCROLL_W}
+          h={DM_SCROLL_H}
         />
 
-        {/* {toggles.showStats && (
+        {toggles.showStats && (
           <div style={{ display: "flex", gap: 3 }}>
             {stats.map(({ name, score }) => (
               <div
@@ -217,7 +268,7 @@ function DmFace({ card }: { card: CardData }) {
             <DefenseStrip name="Resist" types={card.resistances} />
             <DefenseStrip name="Immune" types={card.immunities} />
           </div>
-        )} */}
+        )}
 
         {/* Stat shapes — pushed to the bottom */}
         <div
@@ -378,19 +429,6 @@ function PlayerFace({ card }: { card: CardData }) {
       ) : (
         <>
           <PlayerFrame w={FACE_W - 2} h={FACE_H - 2} />
-          <span
-            style={{
-              ...label(8, "#111"),
-              position: "absolute",
-              top: 16,
-              left: 0,
-              right: 0,
-              fontWeight: 700,
-              letterSpacing: "0.16em",
-            }}
-          >
-            Character Appearance
-          </span>
           <div
             style={{
               flex: 1,
