@@ -5,11 +5,12 @@ import { DamageTypeIcon } from "@/components/Icons";
 import { getClassLogo } from "@/components/ClassLogos";
 import {
   PlayerFrame,
-  VitalBoxFrame,
-  VitalStackFrame,
-  SpellHeadFrame,
-  ShieldFrame,
-  ScrollFrame,
+  VitalBox,
+  VitalStackRow,
+  SpellHead,
+  Shield,
+  NameScroll,
+  DragonScroll,
   SCROLL_DRAGON_BOX,
   SCROLL_NODRAGON_BOX,
 } from "@/components/CardFrames";
@@ -53,147 +54,6 @@ const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
 
 // ── DM-facing side ────────────────────────────────────────────────────
 
-/** Full-width row: value centred over a small grey label, on a frame. */
-function IdentityRow({
-  value,
-  name,
-  h,
-  frame,
-}: {
-  value: string;
-  name: string;
-  h: number;
-  frame: React.ReactNode;
-}) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: CONTENT_W,
-        height: h,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 1,
-      }}
-    >
-      {frame}
-      {value && (
-        <span
-          style={{
-            position: "relative",
-            fontWeight: 700,
-            fontSize: 10.5,
-            maxWidth: CONTENT_W - 32,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {value}
-        </span>
-      )}
-      <span style={label(6.5)}>{name}</span>
-    </div>
-  );
-}
-
-/** The Name banner: dragon scroll at its natural aspect ratio, with the
- *  value and label positioned over the scroll body (right of the dragon). */
-function NameScrollRow({
-  value,
-  w,
-  h,
-}: {
-  value: string;
-  w: number;
-  h: number;
-}) {
-  return (
-    <div
-      style={{ position: "relative", width: w, height: h, alignSelf: "center" }}
-    >
-      <ScrollFrame w={w} h={h} dragon={false} />
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 1,
-          maxWidth: "62%",
-        }}
-      >
-        {value && (
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: 10.5,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: "100%",
-            }}
-          >
-            {value}
-          </span>
-        )}
-        <span style={label(6.5)}>Name</span>
-      </div>
-    </div>
-  );
-}
-
-/** A stat shape (frame prop) with a bold value and black caps label. */
-function StatShape({
-  frame,
-  value,
-  name,
-  w,
-  h,
-  padBottom = 0,
-}: {
-  frame: React.ReactNode;
-  value: React.ReactNode;
-  name: string;
-  w: number;
-  h: number;
-  padBottom?: number;
-}) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: w,
-        height: h,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 1,
-        paddingBottom: padBottom,
-      }}
-    >
-      {frame}
-      <span
-        style={{
-          position: "relative",
-          fontWeight: 800,
-          fontSize: 15,
-          lineHeight: 1,
-        }}
-      >
-        {value}
-      </span>
-      <span style={label(6.5, "#111")}>{name}</span>
-    </div>
-  );
-}
-
 function DmFace({ card }: { card: CardData }) {
   const { abilityScores, toggles } = card;
   const compact = toggles.showStats || toggles.showDefenses;
@@ -236,8 +96,9 @@ function DmFace({ card }: { card: CardData }) {
         }}
       >
         {/* Identity rows — scroll for the name, then the vital stack */}
-        <NameScrollRow
+        <NameScroll
           value={card.characterName}
+          label="Name"
           w={DM_SCROLL_W}
           h={DM_SCROLL_H}
         />
@@ -289,26 +150,17 @@ function DmFace({ card }: { card: CardData }) {
               alignItems: "center",
             }}
           >
-            <StatShape
-              frame={<VitalBoxFrame w={68} h={S.sqH} />}
-              value={card.maxHp}
-              name="Max HP"
-              w={68}
-              h={S.sqH}
-            />
-            <StatShape
-              frame={<ShieldFrame w={S.shW} h={S.shH} />}
+            <VitalBox value={card.maxHp} label="Max HP" w={68} h={S.sqH} />
+            <Shield
               value={card.ac}
-              name={"Armor\nClass"}
+              label={"Armor\nClass"}
               w={S.shW}
               h={S.shH}
-              padBottom={12}
             />
             {toggles.showSpellSaveDC ? (
-              <StatShape
-                frame={<VitalBoxFrame w={68} h={S.sqH} />}
+              <VitalBox
                 value={card.spellSaveDC}
-                name="Spell Save"
+                label="Spell Save"
                 w={68}
                 h={S.sqH}
               />
@@ -324,28 +176,20 @@ function DmFace({ card }: { card: CardData }) {
             }}
           >
             {toggles.showPassives ? (
-              <StatShape
-                frame={<VitalBoxFrame w={68} h={S.sqH} />}
+              <VitalBox
                 value={card.passivePerception}
-                name="Perception"
+                label="Perception"
                 w={68}
                 h={S.sqH}
               />
             ) : (
               <div style={{ width: 68 }} />
             )}
-            <StatShape
-              frame={<SpellHeadFrame w={68} h={S.sqH} />}
-              value={card.speed}
-              name="Speed"
-              w={68}
-              h={S.sqH}
-            />
+            <SpellHead value={card.speed} label="Speed" w={68} h={S.sqH} />
             {toggles.showPassives ? (
-              <StatShape
-                frame={<VitalBoxFrame w={68} h={S.sqH} />}
+              <VitalBox
                 value={card.passiveInsight}
-                name="Insight"
+                label="Insight"
                 w={68}
                 h={S.sqH}
               />
@@ -355,23 +199,26 @@ function DmFace({ card }: { card: CardData }) {
           </div>
         </div>
 
-        <IdentityRow
-          name="Race"
+        <VitalStackRow
+          part="top"
           value={card.race}
+          label="Race"
+          w={CONTENT_W}
           h={S.row}
-          frame={<VitalStackFrame w={CONTENT_W} h={S.row} part="top" />}
         />
-        <IdentityRow
-          name="Class"
+        <VitalStackRow
+          part="mid"
           value={classLine}
+          label="Class"
+          w={CONTENT_W}
           h={S.row}
-          frame={<VitalStackFrame w={CONTENT_W} h={S.row} part="mid" />}
         />
-        <IdentityRow
-          name="Player"
+        <VitalStackRow
+          part="bottom"
           value={card.playerName}
+          label="Player"
+          w={CONTENT_W}
           h={S.row}
-          frame={<VitalStackFrame w={CONTENT_W} h={S.row} part="bottom" />}
         />
       </div>
     </div>
@@ -461,24 +308,11 @@ function PlayerFace({ card }: { card: CardData }) {
           height: SCROLL_H,
         }}
       >
-        <ScrollFrame w={SCROLL_W} h={SCROLL_H} />
-        <span
-          style={{
-            position: "absolute",
-            left: "64%",
-            top: "62%",
-            transform: "translate(-50%, -50%)",
-            fontWeight: 800,
-            fontSize: 13,
-            whiteSpace: "nowrap",
-            maxWidth: "62%",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            color: "#111",
-          }}
-        >
-          {card.characterName || "—"}
-        </span>
+        <DragonScroll
+          w={SCROLL_W}
+          h={SCROLL_H}
+          value={card.characterName || "—"}
+        />
       </div>
     </div>
   );

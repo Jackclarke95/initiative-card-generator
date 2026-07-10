@@ -16,6 +16,7 @@ interface FrameProps {
 }
 
 const INK = "#111";
+const LABEL_GREY = "#6b6b6b";
 
 function Svg({ w, h, children }: FrameProps & { children: React.ReactNode }) {
   return (
@@ -28,6 +29,115 @@ function Svg({ w, h, children }: FrameProps & { children: React.ReactNode }) {
     >
       {children}
     </svg>
+  );
+}
+
+// ── Frame + text composition ───────────────────────────────────────────
+// Every stat-carrying frame below is paired with a companion component
+// that overlays a value and a label on top of it: the label sits at the
+// bottom, inside the frame, in medium grey; the value fills whatever
+// space is left above it.
+
+interface FrameTextProps {
+  w: number;
+  h: number;
+  value?: React.ReactNode;
+  label?: string;
+  /** Gap between the label's baseline and the frame's bottom edge — bump
+   *  this up for frames that taper or curve near the bottom (e.g. the shield). */
+  bottomInset?: number;
+  /** Horizontal margin reserved on each side when sizing the value text. */
+  sidePadding?: number;
+  /** Largest the value text is allowed to grow. */
+  maxValueSize?: number;
+}
+
+/** Picks a value font size that fills the available box without overflowing. */
+function fitValueFontSize(
+  value: React.ReactNode,
+  maxW: number,
+  maxH: number,
+  cap: number,
+) {
+  const text = typeof value === "string" || typeof value === "number" ? String(value) : "";
+  if (!text) return cap;
+  const widthFit = (maxW * 1.5) / text.length;
+  return Math.max(8, Math.min(cap, maxH, widthFit));
+}
+
+function FrameText({
+  w,
+  h,
+  value,
+  label,
+  bottomInset = 3,
+  sidePadding = 6,
+  maxValueSize = 24,
+}: FrameTextProps) {
+  const labelLines = label ? label.split("\n").length : 0;
+  const labelLineH = 6.5 * 1.3;
+  const labelZoneH = label ? labelLineH * labelLines + bottomInset : 0;
+  const valueAreaH = Math.max(0, h - labelZoneH) * 0.92;
+  const hasValue = value !== undefined && value !== null && value !== "";
+  const fontSize = fitValueFontSize(
+    value,
+    Math.max(0, w - sidePadding * 2),
+    valueAreaH,
+    maxValueSize,
+  );
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        {hasValue && (
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize,
+              lineHeight: 1,
+              color: INK,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {value}
+          </span>
+        )}
+      </div>
+      {label && (
+        <span
+          style={{
+            paddingBottom: bottomInset,
+            fontSize: 6.5,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            color: LABEL_GREY,
+            whiteSpace: "pre-line",
+            textAlign: "center",
+            lineHeight: 1.3,
+          }}
+        >
+          {label}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -63,6 +173,22 @@ export function VitalBoxFrame({ w, h }: FrameProps) {
   );
 }
 
+/** VitalBoxFrame with a value that fills the box and a label pinned to the
+ *  bottom edge inside it — e.g. "10" over "Max HP". */
+export function VitalBox({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <VitalBoxFrame w={w} h={h} />
+      <FrameText w={w} h={h} value={value} label={label} maxValueSize={26} />
+    </div>
+  );
+}
+
 // ── CharBox.svg (319.34 × 79.51) — bracketed name box ─────────────────
 
 const CHARBOX = {
@@ -87,33 +213,143 @@ export function CharBoxFrame({
   const o = { origW: 319.34, origH: 79.51, w, h, scale: 0.45 };
   return (
     <Svg w={w} h={h}>
-      <path d={stretchPath(CHARBOX.rect, o)} stroke={INK} strokeWidth={1.1} />
-      <path d={stretchPath(CHARBOX.swash, o)} stroke={INK} strokeWidth={0.7} />
+      {/* White background fill matches the source SVG (cls-1 rect) */}
+      <path d={stretchPath(CHARBOX.rect, o)} fill="#fff" stroke={INK} strokeWidth={1.25} />
+      <path d={stretchPath(CHARBOX.swash, o)} stroke={INK} strokeWidth={0.75} />
       {!simple && (
         <>
-          <path
-            d={stretchPath(CHARBOX.bracketL, o)}
-            stroke={INK}
-            strokeWidth={1.1}
-          />
-          <path
-            d={stretchPath(CHARBOX.flourishL, o)}
-            stroke={INK}
-            strokeWidth={1.1}
-          />
-          <path
-            d={stretchPath(CHARBOX.bracketR, o)}
-            stroke={INK}
-            strokeWidth={1.1}
-          />
-          <path
-            d={stretchPath(CHARBOX.flourishR, o)}
-            stroke={INK}
-            strokeWidth={1.1}
-          />
+          {/* Brackets: white fill first (background), then stroke outline */}
+          <path d={stretchPath(CHARBOX.bracketL, o)} fill="#fff" stroke={INK} strokeWidth={1.25} />
+          <path d={stretchPath(CHARBOX.flourishL, o)} stroke={INK} strokeWidth={1.25} />
+          <path d={stretchPath(CHARBOX.bracketR, o)} fill="#fff" stroke={INK} strokeWidth={1.25} />
+          <path d={stretchPath(CHARBOX.flourishR, o)} stroke={INK} strokeWidth={1.25} />
         </>
       )}
     </Svg>
+  );
+}
+
+/** CharBoxFrame with a value + label overlay — a horizontal text label box.
+ *  Use `simple` to omit the bracket-and-flourish end decorations. */
+export function CharBox({
+  w,
+  h,
+  value,
+  label,
+  simple,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  simple?: boolean;
+}) {
+  // The bracket flourishes extend ~54/319 of width in from each edge.
+  const sidePad = simple ? 8 : Math.round((54 / 319.34) * w);
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <CharBoxFrame w={w} h={h} simple={simple} />
+      <FrameText
+        w={w}
+        h={h}
+        value={value}
+        label={label}
+        bottomInset={4}
+        sidePadding={sidePad}
+        maxValueSize={16}
+      />
+    </div>
+  );
+}
+
+// ── proficency-bonus.svg (113.65 × 34.58) — filled circle + banner ────
+// Dark-filled shape: circle on the left holds the bonus value; rectangular
+// banner extends right. Text must be white to read against the dark fill.
+
+const PROF_BONUS_PATH =
+  "M19,5.55a11.92,11.92,0,0,0,3.6,2.18,11.69,11.69,0,0,0,4.5.73,14,14,0,0,1,0,17.66,11.89,11.89,0,0,0-4.5.73A12.13,12.13,0,0,0,19,29a26.35,26.35,0,0,1-7.81,1.43,14.05,14.05,0,0,1,0-26.34A26.68,26.68,0,0,1,19,5.55m15.54.89h67.6c2.4.9,8.7,3.57,10.17,7.39v6.94c-1.47,3.83-7.77,6.5-10.17,7.39H34.5a20.39,20.39,0,0,0-5.13-1.78,16,16,0,0,0,0-18.16A20,20,0,0,0,34.5,6.44M28,6.43h4.73a17.26,17.26,0,0,1-3.81,1.1c-.29-.38-.6-.74-.92-1.1m80.48,0a15.08,15.08,0,0,0,3.84,4.3v1.49c-1.81-2.7-5.55-4.67-8.14-5.79Zm3.84,17.42a15.22,15.22,0,0,0-3.84,4.3h-4.3c2.59-1.11,6.33-3.09,8.14-5.78ZM28,28.15c.32-.35.63-.72.92-1.1a17.82,17.82,0,0,1,3.81,1.1ZM15.42,0a.39.39,0,0,0-.21.49s.14.31.34.7a16,16,0,0,0-6.4,1.57,26.69,26.69,0,0,1,7.58.5h.12q.22.3.48.6c-12.74-3-16,3.45-16,3.45a11.34,11.34,0,0,1,3.8-2.53c.42-.12.84-.21,1.26-.3a16.05,16.05,0,0,0,0,25.56c-.42-.08-.84-.18-1.26-.29a11.23,11.23,0,0,1-3.8-2.54s3.31,6.43,16,3.45l-.48.61h-.12a27,27,0,0,1-7.58.49,16,16,0,0,0,6.4,1.57c-.2.4-.32.66-.34.71a.38.38,0,1,0,.7.28s3-5.72,6.93-6.8a15.14,15.14,0,0,1,3.57-.68,14,14,0,0,1-7.8,4.28,4.35,4.35,0,0,0-1.31,2.19,16,16,0,0,0,6.3-1.81l2.15-1.38c.26-.2.52-.41.77-.63h82.69l.19-.33c.58-1,2.39-3.62,3.85-4.31l.4-.18V9.89l-.4-.19C111.79,9,110,6.36,109.4,5.4l-.19-.34H26.52c-.25-.22-.51-.43-.77-.63L23.6,3.06a16,16,0,0,0-6.3-1.82,4.27,4.27,0,0,0,1.31,2.19,14.1,14.1,0,0,1,7.8,4.28A14.65,14.65,0,0,1,22.84,7C18.92,6,15.91.25,15.91.23a.37.37,0,0,0-.49-.2";
+
+export function ProfBonusFrame({ w, h }: FrameProps) {
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 113.65 34.58"
+      style={{ position: "absolute", inset: 0 }}
+    >
+      <path d={PROF_BONUS_PATH} fill={INK} />
+    </svg>
+  );
+}
+
+/** ProfBonusFrame with the bonus value in the left circle and a label in the
+ *  right banner. Both are white — the frame fill is dark. */
+export function ProfBonus({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  // Circle occupies the left ~30% of the artwork; banner takes the rest.
+  const circleW = Math.round((34.5 / 113.65) * w);
+  const bannerW = w - circleW;
+  const valueFontSize = Math.min(Math.round(h * 0.5), 18);
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <ProfBonusFrame w={w} h={h} />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: circleW,
+          height: h,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {value !== undefined && value !== null && value !== "" && (
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize: valueFontSize,
+              lineHeight: 1,
+              color: "#fff",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {value}
+          </span>
+        )}
+      </div>
+      {label && (
+        <div
+          style={{
+            position: "absolute",
+            left: circleW,
+            top: 0,
+            width: bannerW,
+            height: h,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 6.5,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+              color: "#fff",
+              whiteSpace: "nowrap",
+              textAlign: "center",
+            }}
+          >
+            {label}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -153,6 +389,21 @@ export function SpellHeadFrame({ w, h }: FrameProps) {
   );
 }
 
+/** SpellHeadFrame with value + label. */
+export function SpellHead({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <SpellHeadFrame w={w} h={h} />
+      <FrameText w={w} h={h} value={value} label={label} maxValueSize={22} />
+    </div>
+  );
+}
+
 // ── AC.svg (48 × 55.08) — the official shield, scales as one piece ────
 
 const AC_PATH =
@@ -168,6 +419,29 @@ export function ShieldFrame({ w, h }: FrameProps) {
     >
       <path d={AC_PATH} fill={INK} />
     </svg>
+  );
+}
+
+/** ShieldFrame with value + label; the label sits above the shield's
+ *  pointed tip rather than flush against it. */
+export function Shield({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <ShieldFrame w={w} h={h} />
+      <FrameText
+        w={w}
+        h={h}
+        value={value}
+        label={label}
+        bottomInset={h * 0.16}
+        maxValueSize={24}
+      />
+    </div>
   );
 }
 
@@ -210,6 +484,35 @@ export function VitalStackFrame({
         fill={INK}
       />
     </Svg>
+  );
+}
+
+/** A full-width VitalStackFrame row with a value + label, e.g. a
+ *  character's race or player name over the "Race"/"Player" caption. */
+export function VitalStackRow({
+  w,
+  h,
+  part,
+  value,
+  label,
+}: FrameProps & {
+  part: "top" | "mid" | "bottom";
+  value?: React.ReactNode;
+  label?: string;
+}) {
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <VitalStackFrame w={w} h={h} part={part} />
+      <FrameText
+        w={w}
+        h={h}
+        value={value}
+        label={label}
+        bottomInset={2}
+        sidePadding={24}
+        maxValueSize={14}
+      />
+    </div>
   );
 }
 
@@ -277,6 +580,101 @@ export function ScrollFrame({
         ))}
       {dragon && <path d={SCROLL.dragonEye} fill="#fff" />}
     </svg>
+  );
+}
+
+/** The dragon-less scroll (DM side) with a value + label centered on the
+ *  scroll body, e.g. a character's name over "Name". */
+export function NameScroll({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  const contentW = w * 0.62;
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <ScrollFrame w={w} h={h} dragon={false} />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ position: "relative", width: contentW, height: h }}>
+          <FrameText
+            w={contentW}
+            h={h}
+            value={value}
+            label={label}
+            bottomInset={4}
+            maxValueSize={14}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The dragon scroll (player side) with a value offset to the right of the
+ *  dragon's head, since the dragon occupies the left of the banner. */
+export function DragonScroll({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <ScrollFrame w={w} h={h} />
+      <div
+        style={{
+          position: "absolute",
+          left: "64%",
+          top: "62%",
+          transform: "translate(-50%, -50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 1,
+          maxWidth: "62%",
+        }}
+      >
+        {value !== undefined && value !== null && value !== "" && (
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize: 13,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "100%",
+              color: INK,
+            }}
+          >
+            {value}
+          </span>
+        )}
+        {label && (
+          <span
+            style={{
+              fontSize: 6.5,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+              color: LABEL_GREY,
+              whiteSpace: "pre-line",
+              textAlign: "center",
+              lineHeight: 1.3,
+            }}
+          >
+            {label}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
