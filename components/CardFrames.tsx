@@ -59,7 +59,8 @@ function fitValueFontSize(
   maxH: number,
   cap: number,
 ) {
-  const text = typeof value === "string" || typeof value === "number" ? String(value) : "";
+  const text =
+    typeof value === "string" || typeof value === "number" ? String(value) : "";
   if (!text) return cap;
   const widthFit = (maxW * 1.5) / text.length;
   return Math.max(8, Math.min(cap, maxH, widthFit));
@@ -214,15 +215,38 @@ export function CharBoxFrame({
   return (
     <Svg w={w} h={h}>
       {/* White background fill matches the source SVG (cls-1 rect) */}
-      <path d={stretchPath(CHARBOX.rect, o)} fill="#fff" stroke={INK} strokeWidth={1.25} />
+      <path
+        d={stretchPath(CHARBOX.rect, o)}
+        fill="#fff"
+        stroke={INK}
+        strokeWidth={1.25}
+      />
       <path d={stretchPath(CHARBOX.swash, o)} stroke={INK} strokeWidth={0.75} />
       {!simple && (
         <>
           {/* Brackets: white fill first (background), then stroke outline */}
-          <path d={stretchPath(CHARBOX.bracketL, o)} fill="#fff" stroke={INK} strokeWidth={1.25} />
-          <path d={stretchPath(CHARBOX.flourishL, o)} stroke={INK} strokeWidth={1.25} />
-          <path d={stretchPath(CHARBOX.bracketR, o)} fill="#fff" stroke={INK} strokeWidth={1.25} />
-          <path d={stretchPath(CHARBOX.flourishR, o)} stroke={INK} strokeWidth={1.25} />
+          <path
+            d={stretchPath(CHARBOX.bracketL, o)}
+            fill="#fff"
+            stroke={INK}
+            strokeWidth={1.25}
+          />
+          <path
+            d={stretchPath(CHARBOX.flourishL, o)}
+            stroke={INK}
+            strokeWidth={1.25}
+          />
+          <path
+            d={stretchPath(CHARBOX.bracketR, o)}
+            fill="#fff"
+            stroke={INK}
+            strokeWidth={1.25}
+          />
+          <path
+            d={stretchPath(CHARBOX.flourishR, o)}
+            stroke={INK}
+            strokeWidth={1.25}
+          />
         </>
       )}
     </Svg>
@@ -575,9 +599,7 @@ export function ScrollFrame({
       <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
       <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />
       {dragon &&
-        SCROLL.dragon.slice(1).map((d, i) => (
-          <path key={i} d={d} fill={INK} />
-        ))}
+        SCROLL.dragon.slice(1).map((d, i) => <path key={i} d={d} fill={INK} />)}
       {dragon && <path d={SCROLL.dragonEye} fill="#fff" />}
     </svg>
   );

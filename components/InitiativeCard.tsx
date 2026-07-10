@@ -151,12 +151,7 @@ function DmFace({ card }: { card: CardData }) {
             }}
           >
             <VitalBox value={card.maxHp} label="Max HP" w={68} h={S.sqH} />
-            <Shield
-              value={card.ac}
-              label={"Armor\nClass"}
-              w={S.shW}
-              h={S.shH}
-            />
+            <Shield value={card.ac} label={"AC"} w={S.shW} h={S.shH} />
             {toggles.showSpellSaveDC ? (
               <VitalBox
                 value={card.spellSaveDC}
