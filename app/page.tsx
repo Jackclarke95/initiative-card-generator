@@ -13,7 +13,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--background)" }}>
+    <div
+      className="flex h-screen overflow-hidden"
+      style={{ background: "var(--background)" }}
+    >
       {/* Sidebar */}
       <aside
         className="no-print flex flex-col w-72 shrink-0 border-r overflow-hidden"
@@ -24,7 +27,10 @@ export default function Home() {
           style={{ borderColor: "var(--border)" }}
         >
           <div>
-            <h1 className="text-sm font-bold tracking-wide" style={{ color: "var(--accent)" }}>
+            <h1
+              className="text-sm font-bold tracking-wide"
+              style={{ color: "var(--accent)" }}
+            >
               Initiative Cards
             </h1>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -47,11 +53,14 @@ export default function Home() {
       {/* Preview */}
       <main className="no-print flex-1 overflow-auto flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-4">
-          <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>
+          <p
+            className="text-xs uppercase tracking-widest mb-2"
+            style={{ color: "var(--text-muted)" }}
+          >
             Live Preview
           </p>
           {/* Scale the card up so it's comfortable to review on screen */}
-          <div style={{ transform: "scale(1.5)", transformOrigin: "top center" }}>
+          <div style={{ transform: "scale(1.5)" }}>
             <InitiativeCard card={card} />
           </div>
         </div>
