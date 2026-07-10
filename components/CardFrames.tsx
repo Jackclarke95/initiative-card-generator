@@ -468,6 +468,18 @@ export function Chevron({
 const STAR_SHAPE =
   "M28.4,3.6L41.4,2.4L46.86,14.26L54.4,24.92L46.86,35.58L41.4,47.43L28.4,46.24L15.4,47.43L9.94,35.58L2.4,24.92L9.94,14.26L15.4,2.4Z";
 
+// Centre-relative positions of the six outer points, pulled in from the
+// tip (radius 26) to radius 22.66 — the same 3.34-unit inset the Shield
+// uses to land its studs on the inner border ring rather than the edge.
+const STAR_RIVETS = [
+  { x: 11, y: -19 },
+  { x: 22, y: 0 },
+  { x: 11, y: 19 },
+  { x: -11, y: 19 },
+  { x: -22, y: 0 },
+  { x: -11, y: -19 },
+];
+
 /** Compass-star stat frame with value + label, e.g. "15" over "Perception".
  *  Cropped tight to the shape's own bounds (plus the usual 2.4-unit
  *  margin) rather than the shared canvas, so the container's aspect
@@ -484,6 +496,7 @@ export function Star({
       height={height}
       path={STAR_SHAPE}
       viewBox="0 0 56.8 49.83"
+      rivets={STAR_RIVETS}
       value={value}
       label={label}
     />
@@ -498,6 +511,16 @@ export function Star({
 // then tapering straight down to a flat foot. Flat foot (not a point)
 // leaves room for a longer label than a sharp tip would.
 const ORB_SHAPE = "M3.8,27A25,25,0,1,1,53.8,27L42.8,52L14.8,52Z";
+
+// Centre-relative positions of the stand's four corners (the two points
+// where it meets the orb, and the two feet), each pulled in 3.34 units
+// toward the centre — the same inset the Shield/Star use for their studs.
+const ORB_RIVETS = [
+  { x: -21.5, y: 0 },
+  { x: 21.5, y: 0 },
+  { x: 12, y: 21.7 },
+  { x: -12, y: 21.7 },
+];
 
 /** Orb-on-a-stand stat frame with value + label, e.g. "13" over "Insight".
  *  Cropped tight to the shape's own bounds (see the Eye's note above) so
@@ -514,6 +537,7 @@ export function Orb({
       height={height}
       path={ORB_SHAPE}
       viewBox="1.4 -0.4 54.8 54.8"
+      rivets={ORB_RIVETS}
       value={value}
       label={label}
     />

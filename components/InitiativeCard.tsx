@@ -224,7 +224,7 @@ function DmFace({ card }: { card: CardData }) {
               {toggles.showPassives && (
                 <Star
                   value={card.passivePerception}
-                  label="Perception"
+                  label="P. P."
                   width={starW}
                   height={iconH}
                 />
@@ -242,7 +242,7 @@ function DmFace({ card }: { card: CardData }) {
                   value={card.passiveInsight}
                   label="Insight"
                   width={orbW}
-                  height={iconH * 1.}
+                  height={iconH * 1}
                 />
               )}
             </Slot>
