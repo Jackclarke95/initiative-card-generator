@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
+/* ── App UI variables ───────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #1a1a2e;
+  --surface: #16213e;
+  --surface-raised: #0f3460;
+  --accent: #e94560;
+  --text-primary: #eaeaea;
+  --text-muted: #8892b0;
+  --border: #2d3561;
+
+  /* Card-specific */
+  --card-width: 2.5in;
+  --card-height: 3.5in;
+  --card-bg: #ffffff;
+  --card-ink: #111111;
+  --card-accent: #1a1a2e;
+  --card-border: #cccccc;
+  --card-header-bg: #1a1a2e;
+  --card-header-text: #ffffff;
+  --card-section-bg: #f5f5f5;
+  --card-initiative-bg: #1a1a2e;
+  --card-initiative-text: #fff;
+
+  --font-card: system-ui, sans-serif;
+  --font-ui: var(--font-geist-sans, system-ui, sans-serif);
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+/* ── Card shell ─────────────────────────────────────────────────────── */
+.card-face {
+  width: var(--card-width);
+  height: var(--card-height);
+  background: var(--card-bg);
+  color: var(--card-ink);
+  font-family: var(--font-card);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.card-player-face {
+  transform: rotate(180deg);
+}
+
+.card-gutter {
+  width: var(--card-width);
+  flex-shrink: 0;
+}
+
+/* ── Print stylesheet ───────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: var(--card-width) calc(var(--card-height) * 2 + var(--gutter-height, 1cm));
+    margin: 0;
+  }
+
+  /* Hide everything except the printable card */
+  body > * {
+    display: none !important;
+  }
+
+  #print-area {
+    display: flex !important;
+    flex-direction: column;
+    width: var(--card-width);
+    margin: 0;
+    padding: 0;
+    page-break-inside: avoid;
+  }
+
+  .card-face {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }
