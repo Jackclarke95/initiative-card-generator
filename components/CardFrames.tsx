@@ -469,6 +469,48 @@ export function Shield({
   );
 }
 
+const HEART_PATH =
+  "M24.85,50.52A1.1,1.1,0,0,0,24,50.1a1.08,1.08,0,0,0-.84.42C9.86,45.8,4.65,29.32,4,27.14V18.91a1.13,1.13,0,0,0,.71-1.06.76.76,0,0,0,0-.16c3.69-2.43,5.07-7,5.54-9.19L23.14,4.56A1.11,1.11,0,0,0,24,5a1.08,1.08,0,0,0,.86-.44L37.77,8.5c.47,2.19,1.85,6.76,5.54,9.19,0,0,0,.1,0,.16A1.14,1.14,0,0,0,44,18.91v8.23c-.63,2.18-5.85,18.66-19.14,23.38M38.51,8.1l0-.24L25.09,3.77a1.09,1.09,0,0,0-2.18,0L9.54,7.86l0,.24c-.39,2-1.65,6.51-5.21,8.87a1.1,1.1,0,0,0-.68-.26A1.13,1.13,0,0,0,2.5,17.85a1.15,1.15,0,0,0,.71,1.06V27.2l0,.11c.57,2,5.87,19.09,19.67,24A1.13,1.13,0,0,0,24,52.38a1.11,1.11,0,0,0,1.1-1.11c5.65-2,10.52-6.17,14.48-12.47a47.44,47.44,0,0,0,5.19-11.48l0-8.41a1.14,1.14,0,0,0,.71-1.06,1.12,1.12,0,0,0-1.11-1.14,1.1,1.1,0,0,0-.68.26c-3.55-2.36-4.82-6.92-5.2-8.87m8,19.41C46.13,29,40.41,49,24,53.52,7.59,49,1.87,29,1.47,27.51V16.35c5.06-1.48,6.27-8,6.51-9.88l16-4.9,16,4.9c.24,1.91,1.45,8.4,6.52,9.88ZM47.41,15c-5.28-1.07-6-9.11-6-9.19l0-.51L24,0,6.62,5.32l0,.51c0,.08-.71,8.12-6,9.19L0,15.14V27.61l0,.18C.08,28,5.86,50.24,23.82,55l.18,0,.18,0c18-4.79,23.74-27,23.8-27.24l0-12.65Z";
+
+// ── Second heart instance — same HEART.svg artwork, independent component
+// so it can be used (and later tweaked) apart from the HEART above.
+
+export function HeartFrame({ w, h }: FrameProps) {
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 48 55.08"
+      style={{ position: "absolute", inset: 0 }}
+    >
+      <path d={HEART_PATH} fill={INK} />
+    </svg>
+  );
+}
+
+/** HeartFrame with value + label; the label sits above the heart's
+ *  pointed tip rather than flush against it. */
+export function Heart({
+  w,
+  h,
+  value,
+  label,
+}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  return (
+    <div style={{ position: "relative", width: w, height: h }}>
+      <HeartFrame w={w} h={h} />
+      <FrameText
+        w={w}
+        h={h}
+        value={value}
+        label={label}
+        bottomInset={h * 0.16}
+        maxValueSize={24}
+      />
+    </div>
+  );
+}
+
 // ── vital-top/mid/bottom.svg (164.94 × 63.89/49.7/49.7) ───────────────
 // The stacked vitals column from the sheet: ornate caps top and bottom,
 // wavy junction edges between the pieces. Pre-scaled 0.5× so the tall
@@ -590,11 +632,6 @@ export function ScrollFrame({
       {/* Depth order: body at the back, grey backing sheet over it, white
           flap in front — keeps the flap's top edge complete with the grey
           wedge peeking out exactly like it does along the bottom. */}
-      <path d={SCROLL.body} fill="#fff" />
-      <path d={SCROLL.body} {...line} strokeWidth={1.38} />
-      <path d={SCROLL.bodyThin} {...line} strokeWidth={0.75} />
-      <path d={SCROLL.rollGrey} fill="#bfc0c3" />
-      <path d={SCROLL.rollGrey} {...line} strokeWidth={1.38} />
       <path d={SCROLL.rollWhite} fill="#fff" />
       <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
       <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />

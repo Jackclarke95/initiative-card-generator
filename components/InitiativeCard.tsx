@@ -9,6 +9,7 @@ import {
   VitalStackRow,
   SpellHead,
   Shield,
+  Heart,
   NameScroll,
   DragonScroll,
   SCROLL_DRAGON_BOX,
@@ -150,7 +151,7 @@ function DmFace({ card }: { card: CardData }) {
               alignItems: "center",
             }}
           >
-            <VitalBox value={card.maxHp} label="Max HP" w={68} h={S.sqH} />
+            <Heart value={card.maxHp} label={"Max\nHP"} w={S.shW} h={S.shH} />
             <Shield value={card.ac} label={"AC"} w={S.shW} h={S.shH} />
             {toggles.showSpellSaveDC ? (
               <VitalBox
