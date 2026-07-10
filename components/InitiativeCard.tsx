@@ -11,6 +11,7 @@ import {
   ShieldFrame,
   ScrollFrame,
   SCROLL_DRAGON_BOX,
+  SCROLL_NODRAGON_BOX,
 } from "@/components/CardFrames";
 import {
   type CardData,
@@ -34,7 +35,9 @@ const scrollHeight = (w: number) =>
 const SCROLL_W = 200; // player face
 const SCROLL_H = scrollHeight(SCROLL_W);
 const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
-const DM_SCROLL_H = scrollHeight(DM_SCROLL_W);
+const DM_SCROLL_H = Math.round(
+  (SCROLL_NODRAGON_BOX.h / SCROLL_NODRAGON_BOX.w) * DM_SCROLL_W
+);
 
 const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
   position: "relative",
@@ -111,12 +114,12 @@ function NameScrollRow({
     <div
       style={{ position: "relative", width: w, height: h, alignSelf: "center" }}
     >
-      <ScrollFrame w={w} h={h} />
+      <ScrollFrame w={w} h={h} dragon={false} />
       <div
         style={{
           position: "absolute",
-          left: "64%",
-          top: "57%",
+          left: "50%",
+          top: "50%",
           transform: "translate(-50%, -50%)",
           display: "flex",
           flexDirection: "column",

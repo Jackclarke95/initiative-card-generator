@@ -239,9 +239,16 @@ const SCROLL = {
 
 /** Scroll aspect helper: source box within the original artwork. */
 export const SCROLL_DRAGON_BOX = { x: 21, y: 0, w: 233, h: 99 };
+/** Tight crop around scroll body + flap only — no dragon head space above.
+ *  y=30 captures the wavy top bezier of the body, which dips to ~y=34. */
+export const SCROLL_NODRAGON_BOX = { x: 21, y: 30, w: 233, h: 55 };
 
-export function ScrollFrame({ w, h }: FrameProps) {
-  const box = SCROLL_DRAGON_BOX;
+export function ScrollFrame({
+  w,
+  h,
+  dragon = true,
+}: FrameProps & { dragon?: boolean }) {
+  const box = dragon ? SCROLL_DRAGON_BOX : SCROLL_NODRAGON_BOX;
   const line = { stroke: INK, vectorEffect: "non-scaling-stroke" as const };
   return (
     <svg
@@ -252,7 +259,7 @@ export function ScrollFrame({ w, h }: FrameProps) {
       fill="none"
       style={{ position: "absolute", inset: 0 }}
     >
-      <path d={SCROLL.dragon[0]} fill={INK} />
+      {dragon && <path d={SCROLL.dragon[0]} fill={INK} />}
       {/* Depth order: body at the back, grey backing sheet over it, white
           flap in front — keeps the flap's top edge complete with the grey
           wedge peeking out exactly like it does along the bottom. */}
@@ -264,10 +271,11 @@ export function ScrollFrame({ w, h }: FrameProps) {
       <path d={SCROLL.rollWhite} fill="#fff" />
       <path d={SCROLL.rollWhite} {...line} strokeWidth={1.38} />
       <path d={SCROLL.rollThin} {...line} strokeWidth={0.75} />
-      {SCROLL.dragon.slice(1).map((d, i) => (
-        <path key={i} d={d} fill={INK} />
-      ))}
-      <path d={SCROLL.dragonEye} fill="#fff" />
+      {dragon &&
+        SCROLL.dragon.slice(1).map((d, i) => (
+          <path key={i} d={d} fill={INK} />
+        ))}
+      {dragon && <path d={SCROLL.dragonEye} fill="#fff" />}
     </svg>
   );
 }
