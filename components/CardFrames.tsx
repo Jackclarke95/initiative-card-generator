@@ -10,7 +10,7 @@
 import Image from "next/image";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY } from "@/components/FrameText";
-import { RivetedFrame } from "@/components/RivetedFrame";
+import { IconFrame } from "@/components/IconFrame";
 
 interface FrameProps {
   width: number;
@@ -338,10 +338,10 @@ export function SpellHead({
   );
 }
 
-// ── Shield (AC) — RivetedFrame rebuild of the official AC.svg ─────────
+// ── Shield (AC) — IconFrame rebuild of the official AC.svg ─────────
 // Single silhouette traced from the original asset's outermost contour
 // on its 48 × 55.08 canvas; the banded borders and studs the original
-// baked into nested contours now come from the RivetedFrame construction.
+// baked into nested contours now come from the IconFrame construction.
 const SHIELD_SHAPE =
   "M24,0L6.62,5.32C6.62,5.4,5.91,13.5,0.62,14.57L0,14.7V27.61C0.08,28,5.86,50.24,24,55C42.14,50.24,47.92,28,48,27.61V14.7L47.38,14.57C42.09,13.5,41.38,5.4,41.38,5.32Z";
 
@@ -362,7 +362,7 @@ export function Shield({
   label,
 }: FrameProps & { value?: React.ReactNode; label?: string }) {
   return (
-    <RivetedFrame
+    <IconFrame
       width={width}
       height={height}
       path={SHIELD_SHAPE}
@@ -375,7 +375,7 @@ export function Shield({
 }
 
 // ── Heart (Max HP) — companion piece to the AC shield ─────────────────
-// A RivetedFrame (see RivetedFrame.tsx): silhouette drawn 1.2× wider
+// A IconFrame (see IconFrame.tsx): silhouette drawn 1.2× wider
 // than the AC shield's 48-unit canvas (x-coords scaled about the
 // centreline), on a 57.6 × 55.08 viewBox.
 const HEART_SHAPE =
@@ -389,7 +389,7 @@ export function Heart({
   label,
 }: FrameProps & { value?: React.ReactNode; label?: string }) {
   return (
-    <RivetedFrame
+    <IconFrame
       width={width}
       height={height}
       path={HEART_SHAPE}
@@ -400,12 +400,21 @@ export function Heart({
   );
 }
 
-// ── Save box — starts as a duplicate of the heart above ───────────────
-// Independent copy used by the Spell Save slot so it can be reworked
-// into its own design without affecting the heart.
+// ── Save box — an open book ────────────────────────────────────────────
+// Two page spreads meeting at a spine dip top-centre and bottom-centre;
+// both page edges bow upward, the bottom edge parallel to the top.
+// Drawn on the same 57.6 × 55.08 canvas as the heart.
 
 const SAVE_SHAPE =
-  "M28.8,8.1C25.92,4.6,21.48,2.4,16.92,2.4C8.76,2.4,2.4,9,2.4,17.4C2.4,27.7,11.28,36.1,24.84,48.8L28.8,52.5L32.76,48.8C46.32,36.1,55.2,27.7,55.2,17.4C55.2,9,48.84,2.4,40.68,2.4C36.12,2.4,31.68,4.6,28.8,8.1Z";
+  "M28.8,13.2C21.6,5.7,12.8,2.4,4,4.2L4,43.2C12.8,41.4,21.6,44.7,28.8,52.2C36,44.7,44.8,41.4,53.6,43.2L53.6,4.2C44.8,2.4,36,5.7,28.8,13.2Z";
+
+// Centre-relative rivet positions: the four outer page corners.
+const SAVE_RIVETS = [
+  { x: -21.7, y: -20.8 },
+  { x: 21.7, y: -20.8 },
+  { x: 21.7, y: 11.8 },
+  { x: -21.7, y: 11.8 },
+];
 
 /** Save-DC stat frame with value + label, e.g. "14" over "Save". */
 export function SaveBox({
@@ -415,13 +424,15 @@ export function SaveBox({
   label,
 }: FrameProps & { value?: React.ReactNode; label?: string }) {
   return (
-    <RivetedFrame
+    <IconFrame
       width={width}
       height={height}
       path={SAVE_SHAPE}
       viewBox="0 0 57.6 55.08"
+      rivets={SAVE_RIVETS}
       value={value}
       label={label}
+      bottomInset={height * 0.27}
     />
   );
 }

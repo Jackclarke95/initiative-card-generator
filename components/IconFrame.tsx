@@ -1,4 +1,4 @@
-// Riveted frame — a complete stat display built from a single shape.
+// Icon frame — a complete stat display built from a single shape.
 // Generic construction matching the AC shield's anatomy, from any closed
 // path: the silhouette is filled white, then — clipped to its interior
 // so nothing leaks outside — a fat black stroke is laid down and a
@@ -9,13 +9,13 @@
 // given relative to the centre of the frame (+x right, +y down). The
 // value and label render over the frame:
 //
-//   <RivetedFrame w={62} h={60} path={SHAPE} viewBox="0 0 57.6 55.08"
-//                 rivets={[{ x: 0, y: -14.5 }]} value={15} label="AC" />
-
+//   <IconFrame w={62} h={60} path={SHAPE} viewBox="0 0 57.6 55.08"
+//               rivets={[{ x: 0, y: -14.5 }]} value={15} label="AC" />
+1
 import { useId } from "react";
 import { FrameText, INK } from "@/components/FrameText";
 
-interface RivetedFrameProps {
+interface IconFrameProps {
   width: number;
   height: number;
   /** The frame's silhouette as an SVG path (a single closed subpath). */
@@ -40,7 +40,7 @@ interface RivetedFrameProps {
   maxValueSize?: number;
 }
 
-export function RivetedFrame({
+export function IconFrame({
   width,
   height,
   path,
@@ -54,7 +54,7 @@ export function RivetedFrame({
   label,
   bottomInset,
   maxValueSize = 24,
-}: RivetedFrameProps) {
+}: IconFrameProps) {
   const clipId = useId();
   const [minX, minY, vbW, vbH] = viewBox.split(/[\s,]+/).map(Number);
   const centreX = minX + vbW / 2;
