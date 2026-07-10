@@ -48,7 +48,7 @@ export function RivetedFrame({
   outerW = 1.5,
   bandW = 7,
   gapW = 5.5,
-  rivetR = 1.3,
+  rivetR = 1.1,
   rivets = [],
   value,
   label,
