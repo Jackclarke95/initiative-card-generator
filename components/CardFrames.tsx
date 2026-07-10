@@ -338,26 +338,23 @@ export function SpellHead({
   );
 }
 
-// ── AC.svg (48 × 55.08) — the official shield, scales as one piece ────
+// ── Shield (AC) — RivetedFrame rebuild of the official AC.svg ─────────
+// Single silhouette traced from the original asset's outermost contour
+// on its 48 × 55.08 canvas; the banded borders and studs the original
+// baked into nested contours now come from the RivetedFrame construction.
+const SHIELD_SHAPE =
+  "M24,0L6.62,5.32C6.62,5.4,5.91,13.5,0.62,14.57L0,14.7V27.61C0.08,28,5.86,50.24,24,55C42.14,50.24,47.92,28,48,27.61V14.7L47.38,14.57C42.09,13.5,41.38,5.4,41.38,5.32Z";
 
-const AC_PATH =
-  "M24.85,50.52A1.1,1.1,0,0,0,24,50.1a1.08,1.08,0,0,0-.84.42C9.86,45.8,4.65,29.32,4,27.14V18.91a1.13,1.13,0,0,0,.71-1.06.76.76,0,0,0,0-.16c3.69-2.43,5.07-7,5.54-9.19L23.14,4.56A1.11,1.11,0,0,0,24,5a1.08,1.08,0,0,0,.86-.44L37.77,8.5c.47,2.19,1.85,6.76,5.54,9.19,0,0,0,.1,0,.16A1.14,1.14,0,0,0,44,18.91v8.23c-.63,2.18-5.85,18.66-19.14,23.38M38.51,8.1l0-.24L25.09,3.77a1.09,1.09,0,0,0-2.18,0L9.54,7.86l0,.24c-.39,2-1.65,6.51-5.21,8.87a1.1,1.1,0,0,0-.68-.26A1.13,1.13,0,0,0,2.5,17.85a1.15,1.15,0,0,0,.71,1.06V27.2l0,.11c.57,2,5.87,19.09,19.67,24A1.13,1.13,0,0,0,24,52.38a1.11,1.11,0,0,0,1.1-1.11c5.65-2,10.52-6.17,14.48-12.47a47.44,47.44,0,0,0,5.19-11.48l0-8.41a1.14,1.14,0,0,0,.71-1.06,1.12,1.12,0,0,0-1.11-1.14,1.1,1.1,0,0,0-.68.26c-3.55-2.36-4.82-6.92-5.2-8.87m8,19.41C46.13,29,40.41,49,24,53.52,7.59,49,1.87,29,1.47,27.51V16.35c5.06-1.48,6.27-8,6.51-9.88l16-4.9,16,4.9c.24,1.91,1.45,8.4,6.52,9.88ZM47.41,15c-5.28-1.07-6-9.11-6-9.19l0-.51L24,0,6.62,5.32l0,.51c0,.08-.71,8.12-6,9.19L0,15.14V27.61l0,.18C.08,28,5.86,50.24,23.82,55l.18,0,.18,0c18-4.79,23.74-27,23.8-27.24l0-12.65Z";
+// Centre-relative positions of the original asset's four studs: below
+// the peak, the two waist corners, and the bottom tip.
+const SHIELD_RIVETS = [
+  { x: 0, y: -24 },
+  { x: 20.5, y: -10.5 },
+  { x: 0, y: 24 },
+  { x: -20.5, y: -10.5 },
+];
 
-export function ShieldFrame({ width, height }: FrameProps) {
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 48 55.08"
-      style={{ position: "absolute", inset: 0 }}
-    >
-      <path d={AC_PATH} fill={INK} />
-    </svg>
-  );
-}
-
-/** ShieldFrame with value + label; the label sits above the shield's
- *  pointed tip rather than flush against it. */
+/** Shield-shaped stat frame with value + label, e.g. "18" over "AC". */
 export function Shield({
   width,
   height,
@@ -365,17 +362,15 @@ export function Shield({
   label,
 }: FrameProps & { value?: React.ReactNode; label?: string }) {
   return (
-    <div style={{ position: "relative", width: width, height: height }}>
-      <ShieldFrame width={width} height={height} />
-      <FrameText
-        width={width}
-        height={height}
-        value={value}
-        label={label}
-        bottomInset={height * 0.16}
-        maxValueSize={24}
-      />
-    </div>
+    <RivetedFrame
+      width={width}
+      height={height}
+      path={SHIELD_SHAPE}
+      viewBox="-1 -1 50 57.08"
+      rivets={SHIELD_RIVETS}
+      value={value}
+      label={label}
+    />
   );
 }
 
@@ -385,12 +380,6 @@ export function Shield({
 // centreline), on a 57.6 × 55.08 viewBox.
 const HEART_SHAPE =
   "M28.8,8.1C25.92,4.6,21.48,2.4,16.92,2.4C8.76,2.4,2.4,9,2.4,17.4C2.4,27.7,11.28,36.1,24.84,48.8L28.8,52.5L32.76,48.8C46.32,36.1,55.2,27.7,55.2,17.4C55.2,9,48.84,2.4,40.68,2.4C36.12,2.4,31.68,4.6,28.8,8.1Z";
-
-// Centre-relative rivet positions: cleft and tip of the heart.
-const HEART_RIVETS = [
-  { x: 0, y: -14.5 },
-  { x: 0, y: 20.7 },
-];
 
 /** Heart-shaped stat frame with value + label, e.g. "52" over "HP". */
 export function Heart({
@@ -405,7 +394,6 @@ export function Heart({
       height={height}
       path={HEART_SHAPE}
       viewBox="0 0 57.6 55.08"
-      rivets={HEART_RIVETS}
       value={value}
       label={label}
     />
@@ -418,12 +406,6 @@ export function Heart({
 
 const SAVE_SHAPE =
   "M28.8,8.1C25.92,4.6,21.48,2.4,16.92,2.4C8.76,2.4,2.4,9,2.4,17.4C2.4,27.7,11.28,36.1,24.84,48.8L28.8,52.5L32.76,48.8C46.32,36.1,55.2,27.7,55.2,17.4C55.2,9,48.84,2.4,40.68,2.4C36.12,2.4,31.68,4.6,28.8,8.1Z";
-
-// Centre-relative rivet positions: cleft and tip of the heart.
-const SAVE_RIVETS = [
-  { x: 0, y: -14.5 },
-  { x: 0, y: 20.7 },
-];
 
 /** Save-DC stat frame with value + label, e.g. "14" over "Save". */
 export function SaveBox({
@@ -438,7 +420,6 @@ export function SaveBox({
       height={height}
       path={SAVE_SHAPE}
       viewBox="0 0 57.6 55.08"
-      rivets={SAVE_RIVETS}
       value={value}
       label={label}
     />
