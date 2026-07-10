@@ -1,8 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { ShieldIcon, HalfShieldIcon, DamageTypeIcon } from "@/components/Icons";
+import { DamageTypeIcon } from "@/components/Icons";
 import { getClassLogo } from "@/components/ClassLogos";
+import {
+  OctagonFrame,
+  RoundedFrame,
+  ShieldFrame,
+  ScallopFrame,
+  PlayerFrame,
+} from "@/components/CardFrames";
 import {
   type CardData,
   type DamageType,
@@ -14,272 +21,251 @@ interface InitiativeCardProps {
   card: CardData;
 }
 
-// ── Small helpers ─────────────────────────────────────────────────────
+// Card face: 2.5in × 3.5in = 240 × 336 px. Minus 1px borders and 8px padding.
+const FACE_W = 240;
+const FACE_H = 336;
+const CONTENT_W = FACE_W - 2 - 16;
 
-function InitBox({ value, small }: { value: number; small?: boolean }) {
-  return (
-    <div
-      style={{
-        background: "var(--card-initiative-bg)",
-        color: "var(--card-initiative-text)",
-        border: "1px solid var(--card-header-text)",
-        padding: small ? "2px 6px" : "4px 10px",
-        fontWeight: 900,
-        fontSize: small ? "0.85rem" : "1.4rem",
-        lineHeight: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 1,
-        minWidth: small ? 32 : 44,
-      }}
-    >
-      <span style={{ fontSize: small ? "0.45rem" : "0.5rem", letterSpacing: 1, opacity: 0.85 }}>
-        INIT
-      </span>
-      <span>{value >= 0 ? `+${value}` : value}</span>
-    </div>
-  );
-}
+const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
+  position: "relative",
+  fontSize: size,
+  letterSpacing: "0.2em",
+  textTransform: "uppercase",
+  color,
+  fontWeight: 600,
+  whiteSpace: "pre-line",
+  textAlign: "center",
+  lineHeight: 1.3,
+});
 
-/**
- * A stat box with angular L-bracket decorations in each corner —
- * the signature look of the reference aesthetic.
- */
-function BracketBox({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  const corner = (pos: React.CSSProperties): React.CSSProperties => ({
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderColor: "var(--card-ink)",
-    borderStyle: "solid",
-    borderWidth: 0,
-    ...pos,
-  });
+// ── DM-facing side ────────────────────────────────────────────────────
 
+/** Full-width chamfered row: value centred, small grey label beneath. */
+function IdentityRow({ value, name, h }: { value: string; name: string; h: number }) {
   return (
     <div
       style={{
         position: "relative",
-        border: "1px solid var(--card-border)",
+        width: CONTENT_W,
+        height: h,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "3px 2px",
-        minWidth: 0,
-        ...style,
+        gap: 1,
       }}
     >
-      <span style={corner({ top: 1, left: 1, borderTopWidth: 1.5, borderLeftWidth: 1.5 })} />
-      <span style={corner({ top: 1, right: 1, borderTopWidth: 1.5, borderRightWidth: 1.5 })} />
-      <span style={corner({ bottom: 1, left: 1, borderBottomWidth: 1.5, borderLeftWidth: 1.5 })} />
-      <span style={corner({ bottom: 1, right: 1, borderBottomWidth: 1.5, borderRightWidth: 1.5 })} />
-      {children}
-    </div>
-  );
-}
-
-/** Big value with a small ALL-CAPS label underneath. */
-function StatValue({
-  value,
-  label,
-  big,
-}: {
-  value: React.ReactNode;
-  label: string;
-  big?: boolean;
-}) {
-  return (
-    <>
-      <span
-        style={{
-          fontWeight: 800,
-          fontSize: big ? "0.85rem" : "0.62rem",
-          lineHeight: 1.15,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          maxWidth: "100%",
-        }}
-      >
-        {value}
-      </span>
-      <span
-        style={{
-          fontSize: "0.36rem",
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          opacity: 0.55,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {label}
-      </span>
-    </>
-  );
-}
-
-// ── DM-facing side ────────────────────────────────────────────────────
-
-function DmFace({ card }: { card: CardData }) {
-  const { abilityScores, toggles } = card;
-  const stats = [
-    { label: "STR", score: abilityScores.str },
-    { label: "DEX", score: abilityScores.dex },
-    { label: "CON", score: abilityScores.con },
-    { label: "INT", score: abilityScores.int },
-    { label: "WIS", score: abilityScores.wis },
-    { label: "CHA", score: abilityScores.cha },
-  ];
-
-  const classLine = [card.characterClass, card.subclass, card.level && `Lvl ${card.level}`]
-    .filter(Boolean)
-    .join(" · ");
-
-  return (
-    <div className="card-face" style={{ display: "flex", flexDirection: "column" }}>
-      {/* Header — dark navy bar with name + initiative */}
-      <div
-        style={{
-          background: "var(--card-header-bg)",
-          color: "var(--card-header-text)",
-          padding: "5px 8px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        <div
+      <OctagonFrame w={CONTENT_W} h={h} />
+      {value && (
+        <span
           style={{
-            fontWeight: 900,
-            fontSize: "0.8rem",
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
+            position: "relative",
+            fontWeight: 700,
+            fontSize: 10.5,
+            maxWidth: CONTENT_W - 28,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
         >
-          {card.characterName || "—"}
-        </div>
-        <InitBox value={card.initiative} />
-      </div>
+          {value}
+        </span>
+      )}
+      <span style={label(6.5)}>{name}</span>
+    </div>
+  );
+}
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3, padding: 5 }}>
-        {/* Full-width identity rows */}
-        <BracketBox>
-          <StatValue value={card.playerName || "—"} label="Player" />
-        </BracketBox>
-        <BracketBox>
-          <StatValue value={card.race || "—"} label="Race" />
-        </BracketBox>
-        <BracketBox>
-          <StatValue value={classLine || "—"} label="Class" />
-        </BracketBox>
+/** A stat shape (frame prop) with a bold value and black caps label. */
+function StatShape({
+  frame,
+  value,
+  name,
+  w,
+  h,
+  padBottom = 0,
+}: {
+  frame: React.ReactNode;
+  value: React.ReactNode;
+  name: string;
+  w: number;
+  h: number;
+  padBottom?: number;
+}) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: w,
+        height: h,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 1,
+        paddingBottom: padBottom,
+      }}
+    >
+      {frame}
+      <span style={{ position: "relative", fontWeight: 800, fontSize: 15, lineHeight: 1 }}>
+        {value}
+      </span>
+      <span style={label(6.5, "#111")}>{name}</span>
+    </div>
+  );
+}
 
-        {/* HP / AC / Spell save */}
-        <div style={{ display: "flex", gap: 3 }}>
-          <BracketBox style={{ flex: 1 }}>
-            <StatValue big value={card.maxHp} label="Max HP" />
-          </BracketBox>
-          <BracketBox style={{ flex: 1 }}>
-            <StatValue big value={card.ac} label="AC" />
-          </BracketBox>
-          {toggles.showSpellSaveDC && (
-            <BracketBox style={{ flex: 1 }}>
-              <StatValue big value={card.spellSaveDC} label="Spell Save" />
-            </BracketBox>
-          )}
-        </div>
+function DmFace({ card }: { card: CardData }) {
+  const { abilityScores, toggles } = card;
+  const compact = toggles.showStats || toggles.showDefenses;
 
-        {/* Perception / Speed / Insight */}
-        <div style={{ display: "flex", gap: 3 }}>
-          {toggles.showPassives && (
-            <BracketBox style={{ flex: 1.2 }}>
-              <StatValue big value={card.passivePerception} label="Perception" />
-            </BracketBox>
-          )}
-          <BracketBox style={{ flex: 1 }}>
-            <StatValue big value={`${card.speed}`} label="Speed" />
-          </BracketBox>
-          {toggles.showPassives && (
-            <BracketBox style={{ flex: 1.2 }}>
-              <StatValue big value={card.passiveInsight} label="Insight" />
-            </BracketBox>
-          )}
-        </div>
+  // Sizes shrink slightly when the optional stat/defense strips are shown.
+  const S = compact
+    ? { row: 26, sqH: 50, shW: 54, shH: 56, spW: 48, spH: 36, gap: 4 }
+    : { row: 34, sqH: 60, shW: 62, shH: 68, spW: 54, spH: 42, gap: 5 };
 
-        {/* Ability modifiers */}
+  const classLine = [card.characterClass, card.subclass, card.level && `Lvl ${card.level}`]
+    .filter(Boolean)
+    .join(" · ");
+
+  const stats = [
+    { name: "STR", score: abilityScores.str },
+    { name: "DEX", score: abilityScores.dex },
+    { name: "CON", score: abilityScores.con },
+    { name: "INT", score: abilityScores.int },
+    { name: "WIS", score: abilityScores.wis },
+    { name: "CHA", score: abilityScores.cha },
+  ];
+
+  return (
+    <div className="card-face" style={{ display: "flex", flexDirection: "column", padding: 8 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: S.gap }}>
+        <IdentityRow name="Name" value={card.characterName} h={S.row} />
+        <IdentityRow name="Player" value={card.playerName} h={S.row} />
+        <IdentityRow name="Race" value={card.race} h={S.row} />
+        <IdentityRow name="Class" value={classLine} h={S.row} />
+
         {toggles.showStats && (
           <div style={{ display: "flex", gap: 3 }}>
-            {stats.map(({ label, score }) => (
-              <BracketBox key={label} style={{ flex: 1, padding: "2px 0" }}>
-                <StatValue value={formatModifier(abilityModifier(score))} label={label} />
-              </BracketBox>
+            {stats.map(({ name, score }) => (
+              <div
+                key={name}
+                style={{
+                  flex: 1,
+                  border: "1px solid #111",
+                  borderRadius: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "2px 0",
+                }}
+              >
+                <span style={{ fontWeight: 800, fontSize: 9 }}>
+                  {formatModifier(abilityModifier(score))}
+                </span>
+                <span style={label(5.5)}>{name}</span>
+              </div>
             ))}
           </div>
         )}
 
-        {/* Defenses */}
         {toggles.showDefenses && (
-          <div style={{ flex: 1, display: "flex", gap: 3 }}>
-            <DefenseZone
-              icon={<HalfShieldIcon size={8} color="var(--card-accent)" />}
-              label="Resist"
-              types={card.resistances}
-            />
-            <DefenseZone
-              icon={<ShieldIcon size={8} color="var(--card-accent)" />}
-              label="Immune"
-              types={card.immunities}
-            />
+          <div style={{ display: "flex", gap: 4 }}>
+            <DefenseStrip name="Resist" types={card.resistances} />
+            <DefenseStrip name="Immune" types={card.immunities} />
           </div>
         )}
+
+        {/* Stat shapes — pushed to the bottom like the reference */}
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <StatShape
+              frame={<RoundedFrame w={68} h={S.sqH} />}
+              value={card.maxHp}
+              name="Max HP"
+              w={68}
+              h={S.sqH}
+            />
+            <StatShape
+              frame={<ShieldFrame w={S.shW} h={S.shH} />}
+              value={card.ac}
+              name={"Armor\nClass"}
+              w={S.shW}
+              h={S.shH}
+              padBottom={10}
+            />
+            {toggles.showSpellSaveDC ? (
+              <StatShape
+                frame={<RoundedFrame w={68} h={S.sqH} />}
+                value={card.spellSaveDC}
+                name="Spell Save"
+                w={68}
+                h={S.sqH}
+              />
+            ) : (
+              <div style={{ width: 68 }} />
+            )}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {toggles.showPassives ? (
+              <StatShape
+                frame={<RoundedFrame w={68} h={S.sqH} />}
+                value={card.passivePerception}
+                name="Perception"
+                w={68}
+                h={S.sqH}
+              />
+            ) : (
+              <div style={{ width: 68 }} />
+            )}
+            <StatShape
+              frame={<ScallopFrame w={S.spW} h={S.spH} />}
+              value={card.speed}
+              name="Speed"
+              w={S.spW}
+              h={S.spH}
+            />
+            {toggles.showPassives ? (
+              <StatShape
+                frame={<RoundedFrame w={68} h={S.sqH} />}
+                value={card.passiveInsight}
+                name="Insight"
+                w={68}
+                h={S.sqH}
+              />
+            ) : (
+              <div style={{ width: 68 }} />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function DefenseZone({
-  icon,
-  label,
-  types,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  types: DamageType[];
-}) {
+function DefenseStrip({ name, types }: { name: string; types: DamageType[] }) {
   return (
-    <BracketBox style={{ flex: 1, justifyContent: "flex-start", padding: "3px 6px", alignItems: "flex-start" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-        {icon}
-        <span
-          style={{
-            fontSize: "0.36rem",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            opacity: 0.55,
-          }}
-        >
-          {label}
-        </span>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 2, marginTop: 2 }}>
+    <div
+      style={{
+        flex: 1,
+        border: "1px solid #111",
+        borderRadius: 6,
+        display: "flex",
+        alignItems: "center",
+        gap: 3,
+        padding: "2px 6px",
+        minHeight: 18,
+      }}
+    >
+      <span style={label(5.5)}>{name}</span>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
         {types.length === 0 ? (
-          <span style={{ fontSize: "0.4rem", opacity: 0.35 }}>—</span>
+          <span style={{ fontSize: 7, opacity: 0.35 }}>—</span>
         ) : (
-          types.map((t) => <DamageTypeIcon key={t} type={t} size={10} />)
+          types.map((t) => <DamageTypeIcon key={t} type={t} size={9} />)
         )}
       </div>
-    </BracketBox>
+    </div>
   );
 }
 
@@ -292,85 +278,41 @@ function PlayerFace({ card }: { card: CardData }) {
   return (
     <div
       className="card-face card-player-face"
-      style={{ display: "flex", flexDirection: "column", alignItems: "stretch" }}
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
     >
-      {/* Header bar — class name + initiative top-right */}
-      <div
-        style={{
-          background: "var(--card-header-bg)",
-          color: "var(--card-header-text)",
-          padding: "5px 8px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.48rem",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            opacity: 0.75,
-          }}
-        >
-          {card.characterClass}
-        </span>
-        <InitBox value={card.initiative} small />
-      </div>
-
-      {/* Portrait or class logo */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-          overflow: "hidden",
-        }}
-      >
-        {hasPortrait ? (
-          <Image
-            src={card.portraitUrl}
-            alt={card.characterName}
-            width={180}
-            height={220}
-            style={{ objectFit: "cover", width: "100%", height: "100%" }}
-            unoptimized
-          />
-        ) : (
-          <>
-            <div style={{ color: "var(--card-accent)" }}>
-              {Logo ? <Logo size={80} /> : <ClassInitial characterClass={card.characterClass} />}
-            </div>
-            <span
-              style={{
-                fontSize: "0.36rem",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                opacity: 0.45,
-              }}
-            >
-              Character Appearance
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Footer — character name */}
-      <div
-        style={{
-          background: "var(--card-header-bg)",
-          color: "var(--card-header-text)",
-          padding: "6px 8px",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontWeight: 900, fontSize: "0.85rem", letterSpacing: "0.05em" }}>
-          {card.characterName || "—"}
-        </div>
-      </div>
+      {hasPortrait ? (
+        <Image
+          src={card.portraitUrl}
+          alt={card.characterName}
+          width={FACE_W}
+          height={FACE_H}
+          style={{ objectFit: "cover", width: "100%", height: "100%" }}
+          unoptimized
+        />
+      ) : (
+        <>
+          <PlayerFrame w={FACE_W - 2} h={FACE_H - 2} />
+          <span style={{ ...label(7, "#111"), position: "absolute", top: 9, left: 0, right: 0 }}>
+            Character Appearance
+          </span>
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#111",
+            }}
+          >
+            {Logo ? <Logo size={130} /> : <ClassInitial characterClass={card.characterClass} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -381,15 +323,16 @@ function ClassInitial({ characterClass }: { characterClass: string }) {
   return (
     <div
       style={{
-        width: 80,
-        height: 80,
-        border: "3px solid var(--card-accent)",
+        width: 110,
+        height: 110,
+        border: "3px solid #111",
+        borderRadius: "50%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <span style={{ fontSize: "2.5rem", fontWeight: 900, lineHeight: 1 }}>{initial}</span>
+      <span style={{ fontSize: "3.4rem", fontWeight: 900, lineHeight: 1 }}>{initial}</span>
     </div>
   );
 }

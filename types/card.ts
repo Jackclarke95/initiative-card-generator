@@ -108,10 +108,10 @@ export const DEFAULT_CARD: CardData = {
   preset: "tactician",
   toggles: {
     showPassives: true,
-    showStats: true,
-    showDefenses: true,
+    showStats: false,
+    showDefenses: false,
     showSpellSaveDC: true,
-    showPortrait: true,
-    showClassLogo: false,
+    showPortrait: false,
+    showClassLogo: true,
   },
 };
