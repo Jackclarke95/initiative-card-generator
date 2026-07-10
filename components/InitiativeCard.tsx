@@ -6,6 +6,7 @@ import { getClassLogo } from "@/components/ClassLogos";
 import {
   PlayerFrame,
   VitalBox,
+  SaveBox,
   VitalStackRow,
   SpellHead,
   Shield,
@@ -65,6 +66,9 @@ function DmFace({ card }: { card: CardData }) {
   const S = compact
     ? { row: 26, sqH: 48, shW: 54, shH: 62, gap: 4 }
     : { row: 28, sqH: 52, shW: 52, shH: 60, gap: 4 };
+  // The hearts (HP, Save) are drawn 1.2× wider than the shield.
+  const heartW = Math.round(S.shW * 1.2);
+  const saveW = heartW;
 
   const classLine = [
     card.characterClass,
@@ -100,8 +104,8 @@ function DmFace({ card }: { card: CardData }) {
         <NameScroll
           value={card.characterName}
           label="Name"
-          w={DM_SCROLL_W}
-          h={DM_SCROLL_H}
+          width={DM_SCROLL_W}
+          height={DM_SCROLL_H}
         />
 
         {toggles.showStats && (
@@ -151,17 +155,22 @@ function DmFace({ card }: { card: CardData }) {
               alignItems: "center",
             }}
           >
-            <Heart value={card.maxHp} label={"Max\nHP"} w={S.shW} h={S.shH} />
-            <Shield value={card.ac} label={"AC"} w={S.shW} h={S.shH} />
+            <Heart
+              value={card.maxHp}
+              label={"HP"}
+              width={heartW}
+              height={S.shH}
+            />
+            <Shield value={card.ac} label={"AC"} width={S.shW} height={S.shH} />
             {toggles.showSpellSaveDC ? (
-              <VitalBox
+              <SaveBox
                 value={card.spellSaveDC}
-                label="Spell Save"
-                w={68}
-                h={S.sqH}
+                label="Save"
+                width={saveW}
+                height={S.shH}
               />
             ) : (
-              <div style={{ width: 68 }} />
+              <div style={{ width: saveW }} />
             )}
           </div>
           <div
@@ -175,19 +184,24 @@ function DmFace({ card }: { card: CardData }) {
               <VitalBox
                 value={card.passivePerception}
                 label="Perception"
-                w={68}
-                h={S.sqH}
+                width={68}
+                height={S.sqH}
               />
             ) : (
               <div style={{ width: 68 }} />
             )}
-            <SpellHead value={card.speed} label="Speed" w={68} h={S.sqH} />
+            <SpellHead
+              value={card.speed}
+              label="Speed"
+              width={68}
+              height={S.sqH}
+            />
             {toggles.showPassives ? (
               <VitalBox
                 value={card.passiveInsight}
                 label="Insight"
-                w={68}
-                h={S.sqH}
+                width={68}
+                height={S.sqH}
               />
             ) : (
               <div style={{ width: 68 }} />
@@ -199,22 +213,22 @@ function DmFace({ card }: { card: CardData }) {
           part="top"
           value={card.race}
           label="Race"
-          w={CONTENT_W}
-          h={S.row}
+          width={CONTENT_W}
+          height={S.row}
         />
         <VitalStackRow
           part="mid"
           value={classLine}
           label="Class"
-          w={CONTENT_W}
-          h={S.row}
+          width={CONTENT_W}
+          height={S.row}
         />
         <VitalStackRow
           part="bottom"
           value={card.playerName}
           label="Player"
-          w={CONTENT_W}
-          h={S.row}
+          width={CONTENT_W}
+          height={S.row}
         />
       </div>
     </div>
@@ -274,7 +288,7 @@ function PlayerFace({ card }: { card: CardData }) {
         />
       ) : (
         <>
-          <PlayerFrame w={FACE_W - 2} h={FACE_H - 2} />
+          <PlayerFrame width={FACE_W - 2} height={FACE_H - 2} />
           <div
             style={{
               flex: 1,
@@ -305,8 +319,8 @@ function PlayerFace({ card }: { card: CardData }) {
         }}
       >
         <DragonScroll
-          w={SCROLL_W}
-          h={SCROLL_H}
+          width={SCROLL_W}
+          height={SCROLL_H}
           value={card.characterName || "—"}
         />
       </div>
