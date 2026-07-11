@@ -212,7 +212,7 @@ function PlayerFace({ card }: { card: CardData }) {
             alignItems: "center",
             justifyContent: "center",
             color: "#111",
-            paddingBottom: SCROLL_H - 14,
+            paddingTop: SCROLL_H - 14,
           }}
         >
           {Logo && <Logo size={220} />}
@@ -221,7 +221,7 @@ function PlayerFace({ card }: { card: CardData }) {
       <div
         style={{
           position: "absolute",
-          bottom: 8,
+          top: 0,
           left: (FACE_W - 2 - SCROLL_W) / 2,
           width: SCROLL_W,
           height: SCROLL_H,

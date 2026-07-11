@@ -71,12 +71,29 @@ body {
     margin: 0;
   }
 
-  /* Hide everything except the printable card */
-  body > * {
-    display: none !important;
+  /* Hide everything except the printable card. This uses visibility
+     rather than display: #print-area sits inside <main>, and a
+     display:none ancestor can't be un-hidden by a display:flex
+     descendant — visibility:visible on the descendant can. */
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  /* The live-preview zoom is for on-screen viewing only. */
+  .preview-scale {
+    transform: none !important;
   }
 
   #print-area {
+    visibility: visible;
+    position: fixed;
+    top: 0;
+    left: 0;
     display: flex !important;
     flex-direction: column;
     width: var(--card-width);

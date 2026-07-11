@@ -51,16 +51,16 @@ export default function Home() {
       </aside>
 
       {/* Preview */}
-      <main className="no-print flex-1 overflow-auto flex items-center justify-center p-8">
+      <main className="flex-1 overflow-auto flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-4">
           <p
-            className="text-xs uppercase tracking-widest mb-2"
+            className="no-print text-xs uppercase tracking-widest mb-2"
             style={{ color: "var(--text-muted)" }}
           >
             Live Preview
           </p>
           {/* Scale the card up so it's comfortable to review on screen */}
-          <div style={{ transform: "scale(1.5)" }}>
+          <div className="preview-scale" style={{ transform: "scale(1.5)" }}>
             <InitiativeCard card={card} />
           </div>
         </div>
