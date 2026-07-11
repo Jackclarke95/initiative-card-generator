@@ -1,28 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { DamageTypeIcon } from "@/components/Icons";
 import { getClassLogo } from "@/components/ClassLogos";
 import {
   PlayerFrame,
   SaveBox,
-  VitalStackRow,
   Chevron,
   Shield,
   Heart,
   Star,
   Orb,
   NameScroll,
-  DragonScroll,
   SCROLL_DRAGON_BOX,
   SCROLL_NODRAGON_BOX,
+  VitalBox,
+  StatBox,
 } from "@/components/CardFrames";
-import {
-  type CardData,
-  type DamageType,
-  abilityModifier,
-  formatModifier,
-} from "@/types/card";
+import { type CardData } from "@/types/card";
 
 interface InitiativeCardProps {
   card: CardData;
@@ -42,18 +36,6 @@ const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
 const DM_SCROLL_H = Math.round(
   (SCROLL_NODRAGON_BOX.h / SCROLL_NODRAGON_BOX.w) * DM_SCROLL_W,
 );
-
-const label = (size: number, color = "#a3a3a3"): React.CSSProperties => ({
-  position: "relative",
-  fontSize: size,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color,
-  fontWeight: 600,
-  whiteSpace: "pre-line",
-  textAlign: "center",
-  lineHeight: 1.3,
-});
 
 /** Fixed-width centering slot: lets two badges with different natural
  *  widths (e.g. Heart vs. Star) share one alignment axis between rows,
@@ -76,15 +58,11 @@ function Slot({
 // ── DM-facing side ────────────────────────────────────────────────────
 
 function DmFace({ card }: { card: CardData }) {
-  const { abilityScores, toggles } = card;
-  const compact = toggles.showStats || toggles.showDefenses;
+  const { toggles } = card;
 
-  // Sizes shrink slightly when the optional stat/defense strips are shown.
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
-  const S = compact
-    ? { row: 26, shW: 54, shH: 62, gap: 4 }
-    : { row: 28, shW: 52, shH: 60, gap: 4 };
+  const S = { shW: 52, shH: 60, gap: 4 };
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
   const iconH = S.shH;
@@ -103,22 +81,7 @@ function DmFace({ card }: { card: CardData }) {
   // for both sides also keeps AC/Speed centered exactly between them.
   const slotW = Math.max(heartW, starW, saveW, orbW);
 
-  const classLine = [
-    card.characterClass,
-    card.subclass,
-    card.level && `Lvl ${card.level}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  const stats = [
-    { name: "STR", score: abilityScores.str },
-    { name: "DEX", score: abilityScores.dex },
-    { name: "CON", score: abilityScores.con },
-    { name: "INT", score: abilityScores.int },
-    { name: "WIS", score: abilityScores.wis },
-    { name: "CHA", score: abilityScores.cha },
-  ];
+  const statGap = 4;
 
   return (
     <div
@@ -136,41 +99,24 @@ function DmFace({ card }: { card: CardData }) {
         {/* Identity rows — scroll for the name, then the vital stack */}
         <NameScroll
           value={card.characterName}
-          label="Name"
           width={DM_SCROLL_W}
           height={DM_SCROLL_H}
         />
 
-        {toggles.showStats && (
-          <div style={{ display: "flex", gap: 3 }}>
-            {stats.map(({ name, score }) => (
-              <div
-                key={name}
-                style={{
-                  flex: 1,
-                  border: "1px solid #111",
-                  borderRadius: 6,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  padding: "2px 0",
-                }}
-              >
-                <span style={{ fontWeight: 800, fontSize: 9 }}>
-                  {formatModifier(abilityModifier(score))}
-                </span>
-                <span style={label(5.5)}>{name}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {toggles.showDefenses && (
-          <div style={{ display: "flex", gap: 4 }}>
-            <DefenseStrip name="Resist" types={card.resistances} />
-            <DefenseStrip name="Immune" types={card.immunities} />
-          </div>
-        )}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: statGap,
+          }}
+        >
+          <StatBox label={"STR"} value={"+5"} proficiency={true} />
+          <StatBox label={"DEX"} value={"+2"} proficiency={false} />
+          <StatBox label={"CON"} value={"+3"} proficiency={true} />
+          <StatBox label={"INT"} value={"-1"} proficiency={false} />
+          <StatBox label={"WIS"} value={"+0"} proficiency={false} />
+          <StatBox label={"CHA"} value={"+2"} proficiency={false} />
+        </div>
 
         {/* Stat shapes — pushed to the bottom */}
         <div
@@ -248,54 +194,6 @@ function DmFace({ card }: { card: CardData }) {
             </Slot>
           </div>
         </div>
-
-        <VitalStackRow
-          part="top"
-          value={card.race}
-          label="Race"
-          width={CONTENT_W}
-          height={S.row}
-        />
-        <VitalStackRow
-          part="mid"
-          value={classLine}
-          label="Class"
-          width={CONTENT_W}
-          height={S.row}
-        />
-        <VitalStackRow
-          part="bottom"
-          value={card.playerName}
-          label="Player"
-          width={CONTENT_W}
-          height={S.row}
-        />
-      </div>
-    </div>
-  );
-}
-
-function DefenseStrip({ name, types }: { name: string; types: DamageType[] }) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        border: "1px solid #111",
-        borderRadius: 6,
-        display: "flex",
-        alignItems: "center",
-        gap: 3,
-        padding: "2px 6px",
-        minHeight: 18,
-      }}
-    >
-      <span style={label(5.5)}>{name}</span>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-        {types.length === 0 ? (
-          <span style={{ fontSize: 7, opacity: 0.35 }}>—</span>
-        ) : (
-          types.map((t) => <DamageTypeIcon key={t} type={t} size={9} />)
-        )}
       </div>
     </div>
   );
@@ -347,8 +245,6 @@ function PlayerFace({ card }: { card: CardData }) {
           </div>
         </>
       )}
-
-      {/* Name scroll (dragon variant) along the bottom */}
       <div
         style={{
           position: "absolute",
@@ -358,7 +254,8 @@ function PlayerFace({ card }: { card: CardData }) {
           height: SCROLL_H,
         }}
       >
-        <DragonScroll
+        <NameScroll
+          dragon
           width={SCROLL_W}
           height={SCROLL_H}
           value={card.characterName || "—"}

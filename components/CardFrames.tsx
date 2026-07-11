@@ -8,6 +8,7 @@
 // personal print tool, not for public distribution.
 
 import Image from "next/image";
+import { JSX, useId } from "react";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
@@ -73,13 +74,27 @@ export function VitalBoxFrame({ width, height }: FrameProps) {
 }
 
 /** VitalBoxFrame with a value that fills the box and a label pinned to the
- *  bottom edge inside it — e.g. "10" over "Max HP". */
+ *  top or bottom edge inside it — e.g. "10" over "Max HP". `proficiency` adds a
+ *  small dot near the bottom edge: omitted entirely when the prop is
+ *  absent, a hollow ring when false, a filled dot inside the ring when true. */
 export function VitalBox({
   width,
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  labelPosition = "bottom",
+  valuePosition = "default",
+  proficiency,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  labelPosition?: "top" | "bottom";
+  valuePosition?: "default" | "middle";
+  proficiency?: boolean;
+}) {
+  const dotR = height * 0.075;
+  const dotCx = width / 2;
+  const dotCy = height * 0.87;
   return (
     <div style={{ position: "relative", width, height }}>
       <VitalBoxFrame width={width} height={height} />
@@ -88,11 +103,52 @@ export function VitalBox({
         height={height}
         value={value}
         label={label}
+        labelPosition={labelPosition}
+        valuePosition={valuePosition}
         maxValueSize={26}
       />
+      {proficiency !== undefined && (
+        <svg
+          width={width}
+          height={height}
+          style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+        >
+          <circle
+            cx={dotCx}
+            cy={dotCy}
+            r={dotR}
+            fill="none"
+            stroke={INK}
+            strokeWidth={1}
+          />
+          {proficiency && (
+            <circle cx={dotCx} cy={dotCy} r={dotR * 0.5} fill={INK} />
+          )}
+        </svg>
+      )}
     </div>
   );
 }
+
+export const StatBox = ({
+  label,
+  value,
+  proficiency,
+}: {
+  label: string;
+  value?: React.ReactNode;
+  proficiency?: boolean;
+}) => (
+  <VitalBox
+    label={label}
+    value={value}
+    width={30}
+    height={40}
+    proficiency={proficiency}
+    labelPosition="top"
+    valuePosition="middle"
+  />
+); // alias for InitiativeCard.tsx usage
 
 // ── CharBox.svg (319.34 × 79.51) — bracketed name box ─────────────────
 
@@ -337,7 +393,6 @@ export function SpellHead({
     </div>
   );
 }
-
 // ── Shield (AC) — IconFrame rebuild of the official AC.svg ─────────
 // Single silhouette traced from the original asset's outermost contour
 // on its 48 × 55.08 canvas; the banded borders and studs the original
@@ -459,14 +514,14 @@ export function Chevron({
 }
 
 // ── Star (Passive Perception) — a six-pointed compass rose ────────────
-// Six shallow points (outer radius 26, inner radius 21.32 — an 0.82
-// ratio, close to a circle), every tip and notch opening past 100° so
-// nothing reads as a thin spike. Oriented so it stands on two of its
-// points — like feet — with a shallow concave notch between them
-// (mirrored at the top too, a consequence of the 6-fold symmetry),
-// rather than balancing on a single point.
+// Six points (outer radius 26, inner radius 18.5 — a 0.71 ratio) with
+// every notch opening at ~146°, comfortably past the 100° floor where a
+// point starts reading as a thin spike. Oriented so it stands on two of
+// its points — like feet — with a concave notch between them (mirrored
+// at the top too, a consequence of the 6-fold symmetry), rather than
+// balancing on a single point.
 const STAR_SHAPE =
-  "M28.4,3.6L41.4,2.4L46.86,14.26L54.4,24.92L46.86,35.58L41.4,47.43L28.4,46.24L15.4,47.43L9.94,35.58L2.4,24.92L9.94,14.26L15.4,2.4Z";
+  "M28.4,6.42L41.4,2.4L44.42,15.67L54.4,24.92L44.42,34.17L41.4,47.43L28.4,43.42L15.4,47.43L12.38,34.17L2.4,24.92L12.38,15.67L15.4,2.4Z";
 
 // Centre-relative positions of the six outer points, pulled in from the
 // tip (radius 26) to radius 22.66 — the same 3.34-unit inset the Shield
@@ -512,16 +567,6 @@ export function Star({
 // leaves room for a longer label than a sharp tip would.
 const ORB_SHAPE = "M3.8,27A25,25,0,1,1,53.8,27L42.8,52L14.8,52Z";
 
-// Centre-relative positions of the stand's four corners (the two points
-// where it meets the orb, and the two feet), each pulled in 3.34 units
-// toward the centre — the same inset the Shield/Star use for their studs.
-const ORB_RIVETS = [
-  { x: -21.5, y: 0 },
-  { x: 21.5, y: 0 },
-  { x: 12, y: 21.7 },
-  { x: -12, y: 21.7 },
-];
-
 /** Orb-on-a-stand stat frame with value + label, e.g. "13" over "Insight".
  *  Cropped tight to the shape's own bounds (see the Eye's note above) so
  *  its narrow container isn't letterboxed against the shared canvas. */
@@ -537,81 +582,9 @@ export function Orb({
       height={height}
       path={ORB_SHAPE}
       viewBox="1.4 -0.4 54.8 54.8"
-      rivets={ORB_RIVETS}
       value={value}
       label={label}
     />
-  );
-}
-
-// ── vital-top/mid/bottom.svg (164.94 × 63.89/49.7/49.7) ───────────────
-// The stacked vitals column from the sheet: ornate caps top and bottom,
-// wavy junction edges between the pieces. Pre-scaled 0.5× so the tall
-// originals 9-slice into 34px rows without the zones inverting.
-
-const VITAL_STACK = {
-  top: {
-    d: "M162.13,62.89a4.42,4.42,0,0,0-3.13-1.7.9.9,0,0,0-1.6,0,12.6,12.6,0,0,0-4.58,1.67H12.12a12.54,12.54,0,0,0-4.58-1.67.9.9,0,0,0-1.6,0,4.44,4.44,0,0,0-3.13,1.7H1v-9A99.44,99.44,0,0,0,2.47,38.18V8.23C4.31,5.26,7.74,1,12.28,1H152.66c4.53,0,8,4.27,9.81,7.23v30a99.44,99.44,0,0,0,1.47,15.72v9ZM1,10.93c.11-.23.44-.93,1-1.86V38.18A91.61,91.61,0,0,1,1,50.6ZM5.41,1H8.25C4.75,2.76,2.27,6.46,1,8.73V4.78C2,4.4,5,3.14,5.41,1M159.54,1c.41,2.14,3.36,3.4,4.4,3.78v4c-1.27-2.27-3.75-6-7.25-7.73ZM163,9.07c.53.93.86,1.63,1,1.86V50.6a91.61,91.61,0,0,1-1-12.42Zm1.62-5.13c-1.14-.35-4.1-1.66-4.1-3.44V0H4.45V.5c0,1.77-3,3.09-4.1,3.44L0,4.05V63.89H3.38l.14-.26A3.35,3.35,0,0,1,6,62.19a.93.93,0,0,0,.73.38.92.92,0,0,0,.71-.36,11.84,11.84,0,0,1,4.3,1.62l.11.06H153.09l.12-.06a11.74,11.74,0,0,1,4.29-1.62.92.92,0,0,0,.71.36.93.93,0,0,0,.73-.38,3.35,3.35,0,0,1,2.48,1.44l.14.26h3.38V4.05Z",
-    h: 63.89,
-  },
-  mid: {
-    d: "M163.94,36.41A91.74,91.74,0,0,1,163,24v1.74a91.74,91.74,0,0,1,1-12.43Zm0,12.29h-1.81A4.46,4.46,0,0,0,159,47a.91.91,0,0,0-1.6,0,12.58,12.58,0,0,0-4.58,1.68H12.12A12.58,12.58,0,0,0,7.54,47a.91.91,0,0,0-1.6,0A4.48,4.48,0,0,0,2.81,48.7H1v-9A99.45,99.45,0,0,0,2.47,24v1.74A99.23,99.23,0,0,0,1,10V1H2.81A4.48,4.48,0,0,0,5.94,2.71a.9.9,0,0,0,1.6,0A12.4,12.4,0,0,0,12.12,1h140.7a12.4,12.4,0,0,0,4.58,1.68.9.9,0,0,0,1.6,0A4.46,4.46,0,0,0,162.13,1h1.81v9a99.23,99.23,0,0,0-1.47,15.72V24a99.45,99.45,0,0,0,1.47,15.73ZM1,13.29A91.74,91.74,0,0,1,2,25.72V24A91.74,91.74,0,0,1,1,36.41ZM161.57,0l-.15.26a3.31,3.31,0,0,1-2.48,1.45.89.89,0,0,0-1.44,0A11.7,11.7,0,0,1,153.21.07L153.09,0H11.85l-.12.07A11.7,11.7,0,0,1,7.44,1.68.89.89,0,0,0,6,1.71,3.35,3.35,0,0,1,3.52.27L3.38,0H0V49.7H3.38l.14-.26A3.31,3.31,0,0,1,6,48a.92.92,0,0,0,.73.37A.91.91,0,0,0,7.44,48a11.7,11.7,0,0,1,4.29,1.61l.12.07H153.09l.12-.07A11.7,11.7,0,0,1,157.5,48a.91.91,0,0,0,.71.35.92.92,0,0,0,.73-.37,3.31,3.31,0,0,1,2.48,1.44l.14.26h3.38V0Z",
-    h: 49.7,
-  },
-  bottom: {
-    d: "M2.81,1A4.48,4.48,0,0,0,5.94,2.71a.9.9,0,0,0,1.6,0A12.4,12.4,0,0,0,12.12,1h140.7a12.46,12.46,0,0,0,4.58,1.68.9.9,0,0,0,1.6,0A4.46,4.46,0,0,0,162.13,1h1.81v9a99.23,99.23,0,0,0-1.47,15.72V41.47c-1.84,3-5.27,7.23-9.81,7.23H12.28c-4.53,0-8-4.26-9.81-7.23V25.72A99.23,99.23,0,0,0,1,10V1ZM163.94,38.77c-.11.23-.43.93-1,1.86V25.72a91.74,91.74,0,0,1,1-12.43Zm-4.41,9.93h-2.84c3.5-1.76,6-5.46,7.25-7.73v4c-1,.38-4,1.64-4.41,3.78M5.4,48.7C5,46.56,2,45.3,1,44.92V41c1.27,2.27,3.75,6,7.25,7.73ZM2,40.63c-.53-.93-.86-1.63-1-1.86V13.29A91.74,91.74,0,0,1,2,25.72ZM.35,45.76c1.14.35,4.1,1.66,4.1,3.44v.5h156v-.5c0-1.77,3-3.09,4.1-3.44l.35-.11V0h-3.37l-.15.26a3.31,3.31,0,0,1-2.48,1.45.89.89,0,0,0-1.44,0A11.7,11.7,0,0,1,153.21.07L153.09,0H11.85l-.11.07a11.8,11.8,0,0,1-4.3,1.61A.89.89,0,0,0,6,1.71,3.31,3.31,0,0,1,3.52.26L3.38,0H0V45.65Z",
-    h: 49.7,
-  },
-};
-
-export function VitalStackFrame({
-  width,
-  height,
-  part,
-}: FrameProps & { part: "top" | "mid" | "bottom" }) {
-  const piece = VITAL_STACK[part];
-  return (
-    <Svg width={width} height={height}>
-      <path
-        d={stretchPath(piece.d, {
-          origW: 164.94,
-          origH: piece.h,
-          width,
-          height,
-          scale: 0.5,
-        })}
-        fill={INK}
-      />
-    </Svg>
-  );
-}
-
-/** A full-width VitalStackFrame row with a value + label, e.g. a
- *  character's race or player name over the "Race"/"Player" caption. */
-export function VitalStackRow({
-  width,
-  height,
-  part,
-  value,
-  label,
-}: FrameProps & {
-  part: "top" | "mid" | "bottom";
-  value?: React.ReactNode;
-  label?: string;
-}) {
-  return (
-    <div style={{ position: "relative", width: width, height: height }}>
-      <VitalStackFrame width={width} height={height} part={part} />
-      <FrameText
-        width={width}
-        height={height}
-        value={value}
-        label={label}
-        bottomInset={2}
-        sidePadding={24}
-        maxValueSize={14}
-      />
-    </div>
   );
 }
 
@@ -626,6 +599,16 @@ const SCROLL = {
   body: "M252.17,75c-61.75,11.25-157.29-11.25-219,0V37.51c61.75-11.25,157.29,11.25,219,0Z",
   bodyThin:
     "M252.17,40.43s-19.87,8-114-.29c-66.51-5.89-99.72-.73-104.85.17M253.05,71.39s-20.5,8.66-114.67.33c-66.51-5.89-99.72-.73-104.85.17",
+  // Midline between the two bodyThin pinstripes, running left-to-right (the
+  // pinstripes themselves run right-to-left, which would read backwards) —
+  // used as the path the name text follows, so it rides the scroll's own wave.
+  nameCurve:
+    "M33.32,55.81C38.45,54.91,71.66,49.75,138.17,55.64C232.30,63.93,252.17,55.93,252.17,55.93",
+  // The same curve, re-subdivided to start just clear of the dragon's head
+  // (solid ink up to local x~106). It still runs across the breath/smoke
+  // wisp (SCROLL.dragon[1], x~192-246) further along — the text's white
+  // halo (see NameScroll) keeps it legible there instead of trimming the
+  // curve down to a sliver between the two and cramping the font size.
   dragon: [
     "M78.5,5a22.83,22.83,0,0,0,.22,6.34,50.35,50.35,0,0,0-4.29-2.77,10,10,0,0,1-3.16-3.65c-.48-.85-.76-1.48-.76-1.48a6.6,6.6,0,0,0-1.1,7.27,14.23,14.23,0,0,0-7.88.19c9.18,6,4.3,6.5-1,9s-5.68,5.63-5.68,5.63c6.33-2.08,8.85.58,8.85.58-3.41,3.26-.37,8.35-.37,8.35,3.31,6.34,11.51,9,18.85,10.15a70.1,70.1,0,0,0,13.7.67l-16.72,5.2-15,3.79S49.23,52.65,43.75,40s4.09-22.57,3.13-23.22-2.07.76-2.19.91c4.16-11.91,16.69-11.78,17.19-13s-2.47-1.35-2.47-1.35C72.08-.84,78.5,5,78.5,5",
     "M247.47,80c-.64-3.47-3.09-9.12-7.83-12.11-3.92-2.46-7.34-1.92-7.35-3.15,0-1.55,4.36-1.07,4.36-1.07-4.74-2.71-11.53.61-12.5-.94-.57-.94,3.16-2.24,3.16-2.24-5.77-.21-12.59,2.76-15.32,5.46,6.89-2.31,16.59-1,21,2.83a20.56,20.56,0,0,0-6-2.19c-7.82-1.57-16.52.76-21.76,2.94a51.1,51.1,0,0,0-10.43,5c-3.9,2.27-11.11,4.38-16,2.31h0s7.65,12.75,17.06,8.32c.69-.39,1.35-.78,2-1.17a64.25,64.25,0,0,0,10.31-7.43,52.33,52.33,0,0,1,14-6.88,10.44,10.44,0,0,1,4.42-.33c3.72.51,7,2.89,8,5.74,2.87-.5,10.14,1.9,12.88,4.94",
@@ -640,7 +623,7 @@ const SCROLL = {
 };
 
 /** Scroll aspect helper: source box within the original artwork. */
-export const SCROLL_DRAGON_BOX = { x: 21, y: 0, w: 233, h: 99 };
+export const SCROLL_DRAGON_BOX = { x: 21, y: -15, w: 233, h: 99 };
 /** Tight crop around scroll body + flap only — no dragon head space above.
  *  y=30 captures the wavy top bezier of the body, which dips to ~y=34. */
 export const SCROLL_NODRAGON_BOX = { x: 21, y: 30, w: 233, h: 55 };
@@ -680,97 +663,108 @@ export function ScrollFrame({
   );
 }
 
-/** The dragon-less scroll (DM side) with a value + label centered on the
- *  scroll body, e.g. a character's name over "Name". */
+// Shared text styling for both scroll variants — same anchor, same
+// baseline, same fitting formula and size cap, same white halo. Only the
+// usable width feeds in differently, from each curve's own measured
+// length: nameCurveDragon's ~133-unit run (clear of the dragon's head, but
+// still crossing its smoke wisp) versus nameCurve's full ~219-unit run —
+// sizing both off one shared width would either shrink the DM side to
+// match the tighter player side, or overflow it.
+const NAME_CURVE_LENGTH = 219;
+const NAME_TEXT_MAX_SIZE = 16;
+
+/** The scroll banner (DM's plain ribbon, or the player's with the dragon
+ *  head at its left) with a value that rides the ribbon's own wave, e.g. a
+ *  character's name. With `dragon`, the text follows nameCurveDragon (the
+ *  same wave, re-subdivided to start just clear of the dragon's head)
+ *  instead of nameCurve — text styling and centering use the same rule on
+ *  both, just scaled to whichever curve is in play. The white halo behind
+ *  the glyphs (rather than trimming the curve tighter still) is what keeps
+ *  the player-side name legible where it crosses the dragon's smoke wisp. */
 export function NameScroll({
   width,
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
-  const contentW = width * 0.62;
-  return (
-    <div style={{ position: "relative", width: width, height: height }}>
-      <ScrollFrame width={width} height={height} dragon={false} />
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ position: "relative", width: contentW, height: height }}>
-          <FrameText
-            width={contentW}
-            height={height}
-            value={value}
-            label={label}
-            bottomInset={4}
-            maxValueSize={14}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+  dragon = false,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  dragon?: boolean;
+}) {
+  const box = dragon ? SCROLL_DRAGON_BOX : SCROLL_NODRAGON_BOX;
+  const curve = SCROLL.nameCurve;
+  const curveLength = NAME_CURVE_LENGTH;
+  const pathId = useId();
+  const text =
+    typeof value === "string" || typeof value === "number" ? String(value) : "";
+  const usableWidth = curveLength * 0.85;
+  const fontSize = text
+    ? Math.max(
+        8,
+        Math.min(NAME_TEXT_MAX_SIZE, (usableWidth * 1.5) / text.length),
+      )
+    : 0;
 
-/** The dragon scroll (player side) with a value offset to the right of the
- *  dragon's head, since the dragon occupies the left of the banner. */
-export function DragonScroll({
-  width,
-  height,
-  value,
-  label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
   return (
-    <div style={{ position: "relative", width: width, height: height }}>
-      <ScrollFrame width={width} height={height} />
-      <div
-        style={{
-          position: "absolute",
-          left: "64%",
-          top: "62%",
-          transform: "translate(-50%, -50%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 1,
-          maxWidth: "62%",
-        }}
-      >
-        {value !== undefined && value !== null && value !== "" && (
-          <span
-            style={{
-              fontWeight: 800,
-              fontSize: 13,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: "100%",
-              color: INK,
-            }}
+    <div
+      style={{
+        position: "relative",
+        width: width,
+        height: height,
+      }}
+    >
+      <ScrollFrame width={width} height={height} dragon={dragon} />
+      {text && (
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+          style={{ position: "absolute", inset: 0 }}
+        >
+          <defs>
+            <path id={pathId} d={curve} />
+          </defs>
+          <text
+            fontWeight="bold"
+            fontSize={fontSize}
+            fill={INK}
+            stroke="#fff"
+            strokeWidth={fontSize * 0.12}
+            strokeLinejoin="round"
+            paintOrder="stroke"
+            dominantBaseline="central"
           >
-            {value}
-          </span>
-        )}
-        {label && (
+            <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
+              {text}
+            </textPath>
+          </text>
+        </svg>
+      )}
+      {label && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+          }}
+        >
           <span
             style={{
+              paddingBottom: 4,
               fontSize: 6.5,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
               fontWeight: 600,
               color: LABEL_GREY,
-              whiteSpace: "pre-line",
-              textAlign: "center",
-              lineHeight: 1.3,
             }}
           >
             {label}
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
