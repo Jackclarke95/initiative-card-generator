@@ -50,20 +50,22 @@ function toPolygon(points: Point[], offset: Point): string {
 // full card-sized panels (front-left and back-right) joined only by a
 // thin ridge at the top — the gutter fold — with no side or bottom
 // walls connecting them, since a folded card is two hinged panels,
-// not a solid block. The fold sits at the gutter's midline, so the
-// ridge depth is half the current gutter height. The front panel
-// shows the actual DM face (isometric is a parallel projection, so a
-// rectangle always maps to a parallelogram via a plain 2D affine
-// transform — no 3D/perspective math needed to place it).
+// not a solid block. The front panel shows the actual DM face
+// (isometric is a parallel projection, so a rectangle always maps to
+// a parallelogram via a plain 2D affine transform — no 3D/perspective
+// math needed to place it).
 export default function FoldedCardPreview({
   card,
   gutterHeightCm,
   maxGutterHeightCm,
 }: FoldedCardPreviewProps) {
+  // Physically the fold sits at the gutter's midline, leaving half its
+  // height as the visible ridge — but at this scale that read as too
+  // subtle, so this doubles it (the full gutter height) for legibility.
   const W = FACE_W * SCALE;
   const H = FACE_H * SCALE;
-  const D = Math.max(0, (gutterHeightCm * PX_PER_CM * SCALE) / 2);
-  const maxD = Math.max(0, (maxGutterHeightCm * PX_PER_CM * SCALE) / 2);
+  const D = Math.max(0, gutterHeightCm * PX_PER_CM * SCALE);
+  const maxD = Math.max(0, maxGutterHeightCm * PX_PER_CM * SCALE);
 
   const front = panelCorners(W, H, 0);
   const back = panelCorners(W, H, -D);
