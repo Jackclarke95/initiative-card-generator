@@ -1,38 +1,34 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { type CardData, DEFAULT_CARD } from "@/types/card";
 import CardEditor from "@/components/CardEditor";
 import CardList from "@/components/CardList";
-import PrintArea from "@/components/PrintArea";
+import ExportArea from "@/components/ExportArea";
 import InitiativeCard from "@/components/InitiativeCard";
-import { exportCard, exportAllCards, type ExportFormat } from "@/lib/exportCard";
+import {
+  exportCard,
+  exportAllCards,
+  exportAllCardsAsPdf,
+  type ExportFormat,
+} from "@/lib/exportCard";
+import { PAPER_LABELS, type Margins, type PaperPreset } from "@/lib/paperSizes";
 
-type PrintScope = "current" | "all";
-type Orientation = "portrait" | "landscape";
-type PaperPreset = "a4" | "a3" | "letter" | "legal";
+type ExportScope = "current" | "all";
+type ExportChoice = ExportFormat | "pdf";
+type MarginSide = keyof Margins;
 
-interface PrintSettings {
-  scope: PrintScope;
+interface PdfSettings {
   paper: PaperPreset;
-  orientation: Orientation;
-  marginCm: number;
-  gutterCm: number;
+  margins: Margins;
 }
 
-const PAPER_SIZES: Record<PaperPreset, { w: number; h: number }> = {
-  a4: { w: 21, h: 29.7 },
-  a3: { w: 29.7, h: 42 },
-  letter: { w: 21.59, h: 27.94 },
-  legal: { w: 21.59, h: 35.56 },
-};
-
-const PAPER_LABELS: Record<PaperPreset, string> = {
-  a4: "A4",
-  a3: "A3",
-  letter: "Letter",
-  legal: "Legal",
-};
+const MARGIN_SIDES: { side: MarginSide; label: string }[] = [
+  { side: "top", label: "Top" },
+  { side: "bottom", label: "Bottom" },
+  { side: "left", label: "Left" },
+  { side: "right", label: "Right" },
+];
 
 function newCard(): CardData {
   return { ...DEFAULT_CARD, id: crypto.randomUUID(), characterName: "" };
@@ -43,13 +39,15 @@ export default function Home() {
     { ...DEFAULT_CARD, id: crypto.randomUUID() },
   ]);
   const [activeId, setActiveId] = useState<string>(() => cards[0].id);
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
-  const [printSettings, setPrintSettings] = useState<PrintSettings>({
-    scope: "current",
+  const [gutterCm, setGutterCm] = useState(1);
+
+  const [exportScope, setExportScope] = useState<ExportScope>("current");
+  const [exportChoice, setExportChoice] = useState<ExportChoice>("png");
+  const [exporting, setExporting] = useState(false);
+
+  const [pdfSettings, setPdfSettings] = useState<PdfSettings>({
     paper: "a4",
-    orientation: "landscape",
-    marginCm: 1,
-    gutterCm: 1,
+    margins: { top: 1, bottom: 1, left: 1, right: 1 },
   });
 
   const activeCard = cards.find((c) => c.id === activeId) ?? cards[0];
@@ -91,53 +89,38 @@ export default function Home() {
     [activeId],
   );
 
-  function setPrint<K extends keyof PrintSettings>(key: K, value: PrintSettings[K]) {
-    setPrintSettings((prev) => ({ ...prev, [key]: value }));
+  function setMargin(side: MarginSide, value: number) {
+    setPdfSettings((prev) => ({ ...prev, margins: { ...prev.margins, [side]: value } }));
   }
 
-  // @page reads custom properties from the document root, not from
-  // #print-area, so the active print-page dimensions are pushed here.
-  useEffect(() => {
-    const root = document.documentElement;
-    if (printSettings.scope === "current") {
-      root.style.setProperty("--print-page-width", "var(--card-width)");
-      root.style.setProperty(
-        "--print-page-height",
-        `calc(var(--card-height) * 2 + ${printSettings.gutterCm}cm)`,
-      );
-      root.style.setProperty("--print-page-margin", "0");
-    } else {
-      const { w, h } = PAPER_SIZES[printSettings.paper];
-      const landscape = printSettings.orientation === "landscape";
-      const width = landscape ? Math.max(w, h) : Math.min(w, h);
-      const height = landscape ? Math.min(w, h) : Math.max(w, h);
-      root.style.setProperty("--print-page-width", `${width}cm`);
-      root.style.setProperty("--print-page-height", `${height}cm`);
-      root.style.setProperty("--print-page-margin", `${printSettings.marginCm}cm`);
-    }
-  }, [printSettings]);
+  // PDF always covers the whole deck, so picking it forces (and locks)
+  // the scope toggle to "All" — there's no such thing as a single-card
+  // PDF here.
+  function handleFormatChange(choice: ExportChoice) {
+    setExportChoice(choice);
+    if (choice === "pdf") setExportScope("all");
+  }
 
-  const handleExport = useCallback(
-    async (format: ExportFormat) => {
-      setExporting(format);
-      try {
-        if (printSettings.scope === "all") {
-          await exportAllCards(cards, format);
-        } else {
-          const node = document.querySelector<HTMLElement>(
-            `[data-card-id="${activeId}"]`,
-          );
-          if (node) await exportCard(node, format, activeCard.characterName);
-        }
-      } catch (err) {
-        console.error(`Failed to export ${format}`, err);
-        alert(`Failed to export ${format.toUpperCase()}. See console for details.`);
-      } finally {
-        setExporting(null);
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      if (exportChoice === "pdf") {
+        await exportAllCardsAsPdf(cards, pdfSettings.paper, pdfSettings.margins, gutterCm);
+      } else if (exportScope === "all") {
+        await exportAllCards(cards, exportChoice);
+      } else {
+        const node = document.querySelector<HTMLElement>(
+          `[data-card-id="${activeId}"]`,
+        );
+        if (node) await exportCard(node, exportChoice, activeCard.characterName);
       }
-    },
-    [cards, activeId, activeCard, printSettings.scope],
-  );
+    } catch (err) {
+      console.error(`Failed to export ${exportChoice}`, err);
+      alert(`Failed to export ${exportChoice.toUpperCase()}. See console for details.`);
+    } finally {
+      setExporting(false);
+    }
+  }, [cards, activeId, activeCard, exportScope, exportChoice, pdfSettings, gutterCm]);
 
   return (
     <div
@@ -146,130 +129,135 @@ export default function Home() {
     >
       {/* Sidebar */}
       <aside
-        className="no-print flex flex-col w-72 shrink-0 border-r overflow-hidden"
+        className="flex flex-col w-72 shrink-0 border-r overflow-hidden"
         style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
         <div
           className="px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--border)" }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1
-                className="text-sm font-bold tracking-wide"
-                style={{ color: "var(--accent)" }}
-              >
-                Initiative Cards
-              </h1>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                D&amp;D 5e DM Screen
-              </p>
-            </div>
+          <div className="mb-3">
+            <h1
+              className="text-sm font-bold tracking-wide"
+              style={{ color: "var(--accent)" }}
+            >
+              Initiative Cards
+            </h1>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              D&amp;D 5e DM Screen
+            </p>
+          </div>
+
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              Fold gutter: {gutterCm.toFixed(1)} cm
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={3}
+              step={0.1}
+              value={gutterCm}
+              onChange={(e) => setGutterCm(parseFloat(e.target.value))}
+              className="w-full accent-[var(--accent)]"
+            />
+          </label>
+
+          <div
+            className="mt-3 pt-3 border-t flex flex-col gap-2"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <span
+              className="text-[10px] font-bold uppercase tracking-widest"
+              style={{ color: "var(--accent)" }}
+            >
+              Export As
+            </span>
             <div className="flex items-center gap-1.5">
-              {(["svg", "png", "jpeg"] as const).map((format) => (
-                <button
-                  key={format}
-                  onClick={() => handleExport(format)}
-                  disabled={exporting !== null}
-                  className="px-2 py-1.5 rounded text-xs font-semibold uppercase transition-colors disabled:opacity-50"
-                  style={{
-                    background: "var(--surface-raised)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  {exporting === format ? "…" : format}
-                </button>
-              ))}
+              <select
+                value={exportChoice}
+                onChange={(e) => handleFormatChange(e.target.value as ExportChoice)}
+                className="bg-[var(--surface-raised)] border rounded px-1.5 py-1.5 text-xs uppercase"
+                style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+              >
+                <option value="svg">SVG</option>
+                <option value="png">PNG</option>
+                <option value="jpeg">JPEG</option>
+                <option value="pdf">PDF</option>
+              </select>
+              <div
+                className="flex rounded overflow-hidden border flex-1"
+                style={{ borderColor: "var(--border)" }}
+              >
+                {(["current", "all"] as const).map((scope) => {
+                  const disabled = scope === "current" && exportChoice === "pdf";
+                  return (
+                    <button
+                      key={scope}
+                      onClick={() => !disabled && setExportScope(scope)}
+                      disabled={disabled}
+                      className="flex-1 py-1.5 text-xs font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{
+                        background: exportScope === scope ? "var(--accent)" : "transparent",
+                        color: exportScope === scope ? "#fff" : "var(--text-muted)",
+                      }}
+                    >
+                      {scope === "current" ? "Current" : "All"}
+                    </button>
+                  );
+                })}
+              </div>
               <button
-                onClick={() => window.print()}
-                className="px-3 py-1.5 rounded text-xs font-semibold transition-colors"
+                onClick={handleExport}
+                disabled={exporting}
+                className="px-2.5 py-1.5 rounded text-xs font-semibold transition-colors disabled:opacity-50"
                 style={{ background: "var(--accent)", color: "#fff" }}
               >
-                Print
+                {exporting ? "…" : "Export"}
               </button>
             </div>
-          </div>
 
-          {/* Scope: governs both the Print button and the export buttons above */}
-          <div className="flex rounded overflow-hidden border" style={{ borderColor: "var(--border)" }}>
-            {(["current", "all"] as const).map((scope) => (
-              <button
-                key={scope}
-                onClick={() => setPrint("scope", scope)}
-                className="flex-1 py-1 text-xs font-semibold capitalize transition-colors"
-                style={{
-                  background: printSettings.scope === scope ? "var(--accent)" : "transparent",
-                  color: printSettings.scope === scope ? "#fff" : "var(--text-muted)",
-                }}
-              >
-                {scope === "current" ? "Current Card" : "All Cards"}
-              </button>
-            ))}
+            {exportChoice === "pdf" && (
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <label className="flex flex-col gap-0.5 col-span-2">
+                  <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                    Paper (portrait — card orientation auto-fits)
+                  </span>
+                  <select
+                    value={pdfSettings.paper}
+                    onChange={(e) =>
+                      setPdfSettings((prev) => ({ ...prev, paper: e.target.value as PaperPreset }))
+                    }
+                    className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
+                    style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                  >
+                    {(Object.keys(PAPER_LABELS) as PaperPreset[]).map((p) => (
+                      <option key={p} value={p}>
+                        {PAPER_LABELS[p]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {MARGIN_SIDES.map(({ side, label }) => (
+                  <label key={side} className="flex flex-col gap-0.5">
+                    <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                      {label} margin (cm)
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      value={pdfSettings.margins[side]}
+                      onChange={(e) => setMargin(side, parseFloat(e.target.value) || 0)}
+                      className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
+                      style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
-
-          {printSettings.scope === "all" && (
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <label className="flex flex-col gap-0.5">
-                <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                  Paper
-                </span>
-                <select
-                  value={printSettings.paper}
-                  onChange={(e) => setPrint("paper", e.target.value as PaperPreset)}
-                  className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                  style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
-                >
-                  {(Object.keys(PAPER_LABELS) as PaperPreset[]).map((p) => (
-                    <option key={p} value={p}>
-                      {PAPER_LABELS[p]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-0.5">
-                <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                  Orientation
-                </span>
-                <select
-                  value={printSettings.orientation}
-                  onChange={(e) => setPrint("orientation", e.target.value as Orientation)}
-                  className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                  style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
-                >
-                  <option value="portrait">Portrait</option>
-                  <option value="landscape">Landscape</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-0.5 col-span-2">
-                <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                  Margin: {printSettings.marginCm.toFixed(1)} cm
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={3}
-                  step={0.1}
-                  value={printSettings.marginCm}
-                  onChange={(e) => setPrint("marginCm", parseFloat(e.target.value))}
-                  className="w-full accent-[var(--accent)]"
-                />
-              </label>
-              <label className="flex flex-col gap-0.5 col-span-2">
-                <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                  Fold gutter: {printSettings.gutterCm.toFixed(1)} cm
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={3}
-                  step={0.1}
-                  value={printSettings.gutterCm}
-                  onChange={(e) => setPrint("gutterCm", parseFloat(e.target.value))}
-                  className="w-full accent-[var(--accent)]"
-                />
-              </label>
-            </div>
-          )}
         </div>
 
         <CardList
@@ -290,24 +278,19 @@ export default function Home() {
       <main className="flex-1 overflow-auto flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-4">
           <p
-            className="no-print text-xs uppercase tracking-widest mb-2"
+            className="text-xs uppercase tracking-widest mb-2"
             style={{ color: "var(--text-muted)" }}
           >
             Live Preview
           </p>
           {/* Scale the card up so it's comfortable to review on screen */}
-          <div className="preview-scale" style={{ transform: "scale(1.5)" }}>
-            <InitiativeCard card={activeCard} gutterHeightCm={printSettings.gutterCm} />
+          <div style={{ transform: "scale(1.5)" }}>
+            <InitiativeCard card={activeCard} gutterHeightCm={gutterCm} />
           </div>
         </div>
       </main>
 
-      <PrintArea
-        cards={cards}
-        activeId={activeId}
-        scope={printSettings.scope}
-        gutterHeightCm={printSettings.gutterCm}
-      />
+      <ExportArea cards={cards} gutterHeightCm={gutterCm} />
     </div>
   );
 }

@@ -21,7 +21,7 @@ export default function CardList({
 }: CardListProps) {
   return (
     <div
-      className="no-print px-4 py-3 border-b shrink-0"
+      className="px-4 py-3 border-b shrink-0"
       style={{ borderColor: "var(--border)" }}
     >
       <div className="flex items-center justify-between mb-2">
