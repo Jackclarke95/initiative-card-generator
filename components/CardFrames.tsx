@@ -137,7 +137,7 @@ export const StatBox = ({
 }: {
   label: string;
   value?: React.ReactNode;
-  proficiency?: boolean;
+  proficiency: boolean;
 }) => (
   <VitalBox
     label={label}
