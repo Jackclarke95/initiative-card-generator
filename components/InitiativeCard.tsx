@@ -34,6 +34,9 @@ const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
 const DM_SCROLL_H = Math.round(
   (SCROLL_NODRAGON_BOX.h / SCROLL_NODRAGON_BOX.w) * DM_SCROLL_W,
 );
+// Inset of the player-side border from the card edge — even on all sides.
+const PLAYER_BORDER_MARGIN_WIDTH = 4;
+const PLAYER_BORDER_MARGIN_HEIGHT = 6;
 
 /** Fixed-width centering slot: lets two badges with different natural
  *  widths (e.g. Heart vs. Star) share one alignment axis between rows,
@@ -204,7 +207,20 @@ function PlayerFace({ card }: { card: CardData }) {
       }}
     >
       <>
-        <PlayerFrame width={FACE_W - 2} height={FACE_H - 2} />
+        <div
+          style={{
+            position: "absolute",
+            top: PLAYER_BORDER_MARGIN_HEIGHT,
+            left: PLAYER_BORDER_MARGIN_WIDTH,
+            width: FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2,
+            height: FACE_H - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2,
+          }}
+        >
+          <PlayerFrame
+            width={FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2}
+            height={FACE_H - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2}
+          />
+        </div>
         <div
           style={{
             flex: 1,
