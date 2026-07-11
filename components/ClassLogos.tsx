@@ -241,5 +241,5 @@ export function getClassLogo(characterClass: string) {
   const key = Object.keys(CLASS_LOGO_MAP).find(
     (k) => k.toLowerCase() === characterClass.trim().toLowerCase(),
   );
-  return key ? CLASS_LOGO_MAP[key] : undefined;
+  return key ? CLASS_LOGO_MAP[key] : CLASS_LOGO_MAP[0];
 }

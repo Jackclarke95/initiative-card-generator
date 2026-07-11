@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { getClassLogo } from "@/components/ClassLogos";
+import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import {
   PlayerFrame,
   SaveBox,
@@ -13,7 +12,6 @@ import {
   NameScroll,
   SCROLL_DRAGON_BOX,
   SCROLL_NODRAGON_BOX,
-  VitalBox,
   StatBox,
 } from "@/components/CardFrames";
 import { type CardData } from "@/types/card";
@@ -55,11 +53,7 @@ function Slot({
   );
 }
 
-// ── DM-facing side ────────────────────────────────────────────────────
-
 function DmFace({ card }: { card: CardData }) {
-  const { toggles } = card;
-
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
   const S = { shW: 52, shH: 60, gap: 10 };
@@ -133,14 +127,12 @@ function DmFace({ card }: { card: CardData }) {
               height={iconH * 1.1}
             />
             <Slot width={slotW}>
-              {toggles.showSpellSaveDC && (
-                <SaveBox
-                  value={card.spellSaveDC}
-                  label="DC"
-                  width={saveW}
-                  height={iconH}
-                />
-              )}
+              <SaveBox
+                value={card.spellSaveDC}
+                label="DC"
+                width={saveW}
+                height={iconH}
+              />
             </Slot>
           </div>
           <div
@@ -151,14 +143,12 @@ function DmFace({ card }: { card: CardData }) {
             }}
           >
             <Slot width={slotW}>
-              {toggles.showPassives && (
-                <Star
-                  value={card.passivePerception}
-                  label="P. P."
-                  width={starW}
-                  height={iconH}
-                />
-              )}
+              <Star
+                value={card.passivePerception}
+                label="P. P."
+                width={starW}
+                height={iconH}
+              />
             </Slot>
             <Chevron
               value={card.speed}
@@ -167,14 +157,12 @@ function DmFace({ card }: { card: CardData }) {
               height={iconH * 0.9}
             />
             <Slot width={slotW}>
-              {toggles.showPassives && (
-                <Orb
-                  value={card.passiveInsight}
-                  label="Insight"
-                  width={orbW}
-                  height={iconH * 1}
-                />
-              )}
+              <Orb
+                value={card.passiveInsight}
+                label="Insight"
+                width={orbW}
+                height={iconH * 1}
+              />
             </Slot>
           </div>
         </div>
@@ -197,11 +185,11 @@ function DmFace({ card }: { card: CardData }) {
   );
 }
 
-// ── Player-facing side ────────────────────────────────────────────────
-
 function PlayerFace({ card }: { card: CardData }) {
-  const hasPortrait = card.toggles.showPortrait && card.portraitUrl;
-  const Logo = getClassLogo(card.characterClass);
+  const classKey = Object.keys(CLASS_LOGO_MAP).find(
+    (k) => k.toLowerCase() === card.characterClass.trim().toLowerCase(),
+  );
+  const Logo = classKey ? CLASS_LOGO_MAP[classKey] : undefined;
 
   return (
     <div
@@ -213,36 +201,21 @@ function PlayerFace({ card }: { card: CardData }) {
         alignItems: "center",
       }}
     >
-      {hasPortrait ? (
-        <Image
-          src={card.portraitUrl}
-          alt={card.characterName}
-          width={FACE_W}
-          height={FACE_H}
-          style={{ objectFit: "cover", width: "100%", height: "100%" }}
-          unoptimized
-        />
-      ) : (
-        <>
-          <PlayerFrame width={FACE_W - 2} height={FACE_H - 2} />
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#111",
-              paddingBottom: SCROLL_H - 14,
-            }}
-          >
-            {Logo ? (
-              <Logo size={220} />
-            ) : (
-              <ClassInitial characterClass={card.characterClass} />
-            )}
-          </div>
-        </>
-      )}
+      <>
+        <PlayerFrame width={FACE_W - 2} height={FACE_H - 2} />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#111",
+            paddingBottom: SCROLL_H - 14,
+          }}
+        >
+          {Logo && <Logo size={220} />}
+        </div>
+      </>
       <div
         style={{
           position: "absolute",
@@ -262,30 +235,6 @@ function PlayerFace({ card }: { card: CardData }) {
     </div>
   );
 }
-
-/** Fallback for class names we don't have a logo for. */
-function ClassInitial({ characterClass }: { characterClass: string }) {
-  const initial = (characterClass || "?")[0].toUpperCase();
-  return (
-    <div
-      style={{
-        width: 110,
-        height: 110,
-        border: "3px solid #111",
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <span style={{ fontSize: "3.4rem", fontWeight: 900, lineHeight: 1 }}>
-        {initial}
-      </span>
-    </div>
-  );
-}
-
-// ── Assembled card ────────────────────────────────────────────────────
 
 export default function InitiativeCard({ card }: InitiativeCardProps) {
   const gutterStyle = {

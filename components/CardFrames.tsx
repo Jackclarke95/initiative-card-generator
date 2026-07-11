@@ -8,7 +8,7 @@
 // personal print tool, not for public distribution.
 
 import Image from "next/image";
-import { JSX, useId } from "react";
+import { useId } from "react";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
@@ -45,7 +45,7 @@ export function PlayerFrame({ width, height }: FrameProps) {
   return (
     <Svg width={width} height={height}>
       <path
-        d={stretchPath(BORDER_5E, { origW: 185, origH: 199.07, width, height })}
+        d={stretchPath(BORDER_5E, { origW: 185, origH: 200, width, height })}
         fill={INK}
       />
     </Svg>
