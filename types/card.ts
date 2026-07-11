@@ -26,6 +26,8 @@ export const ABILITY_LABELS: Record<AbilityKey, string> = {
 export type AbilityStats = Record<AbilityKey, AbilityStat>;
 
 export interface CardData {
+  id: string;
+
   // Identity
   characterName: string;
   characterClass: string;
@@ -47,12 +49,12 @@ export interface CardData {
   portraitUrl: string;
 
   // Layout
-  gutterHeightCm: number;
   preset: LayoutPreset;
   toggles: CardToggles;
 }
 
 export const DEFAULT_CARD: CardData = {
+  id: "default",
   characterName: "Aelindra",
   characterClass: "Paladin",
   ac: 18,
@@ -70,7 +72,6 @@ export const DEFAULT_CARD: CardData = {
     cha: { modifier: "+2", proficiency: false },
   },
   portraitUrl: "",
-  gutterHeightCm: 1,
   preset: "tactician",
   toggles: {
     showPassives: true,

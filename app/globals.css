@@ -64,14 +64,28 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Print area ─────────────────────────────────────────────────────
+   #print-area always holds every card (see components/PrintArea.tsx)
+   so print/export can target any card's DOM node, but on screen it's
+   parked off-canvas rather than display:none — canvas-based export
+   (html-to-image) needs the nodes actually laid out to rasterize. */
+#print-area {
+  position: fixed;
+  top: 0;
+  left: -99999px;
+}
+
 /* ── Print stylesheet ───────────────────────────────────────────────── */
 @media print {
+  /* page.tsx sets these on :root based on the chosen print scope —
+     "current" mirrors today's exact-fit single card-unit page;
+     "all" uses the chosen paper size/orientation/margin. */
   @page {
-    size: var(--card-width) calc(var(--card-height) * 2 + var(--gutter-height, 1cm));
-    margin: 0;
+    size: var(--print-page-width) var(--print-page-height);
+    margin: var(--print-page-margin);
   }
 
-  /* Hide everything except the printable card. This uses visibility
+  /* Hide everything except the printable card(s). This uses visibility
      rather than display: #print-area sits inside <main>, and a
      display:none ancestor can't be un-hidden by a display:flex
      descendant — visibility:visible on the descendant can. */
@@ -94,11 +108,33 @@ body {
     position: fixed;
     top: 0;
     left: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  #print-area.mode-current {
     display: flex !important;
     flex-direction: column;
     width: var(--card-width);
-    margin: 0;
-    padding: 0;
+    page-break-inside: avoid;
+  }
+
+  /* No manual row/column math: once @page's size/margin are set,
+     the print engine already constrains this to the printable
+     region. Chromium's print pagination doesn't reliably fragment
+     flex/grid containers across pages (overflowing rows just get
+     packed onto the same page instead of breaking), so this relies
+     on plain block flow with inline-block items instead — the
+     classic, print-fragmentation-safe way to lay out a wrapping
+     grid of same-size boxes that overflows cleanly onto new pages. */
+  #print-area.mode-all {
+    display: block !important;
+  }
+
+  #print-area.mode-all > [data-card-id] {
+    display: inline-block;
+    vertical-align: top;
+    break-inside: avoid;
     page-break-inside: avoid;
   }
 

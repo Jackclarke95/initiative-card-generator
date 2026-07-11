@@ -173,20 +173,6 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           </div>
         ))}
       </div>
-
-      {/* Gutter */}
-      <SectionHeading>Print Settings</SectionHeading>
-      <Field label={`Screen gutter: ${card.gutterHeightCm.toFixed(1)} cm`}>
-        <input
-          type="range"
-          min={0}
-          max={3}
-          step={0.1}
-          value={card.gutterHeightCm}
-          onChange={(e) => set("gutterHeightCm", parseFloat(e.target.value))}
-          className="w-full accent-[var(--accent)]"
-        />
-      </Field>
     </div>
   );
 }

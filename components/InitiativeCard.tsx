@@ -18,6 +18,7 @@ import { ABILITY_KEYS, ABILITY_LABELS, type CardData } from "@/types/card";
 
 interface InitiativeCardProps {
   card: CardData;
+  gutterHeightCm: number;
 }
 
 // Card face: 2.5in × 3.5in = 240 × 336 px. Minus 1px borders and 8px padding.
@@ -254,15 +255,18 @@ function PlayerFace({ card }: { card: CardData }) {
   );
 }
 
-export default function InitiativeCard({ card }: InitiativeCardProps) {
+export default function InitiativeCard({
+  card,
+  gutterHeightCm,
+}: InitiativeCardProps) {
   const gutterStyle = {
-    height: `${card.gutterHeightCm}cm`,
-    "--gutter-height": `${card.gutterHeightCm}cm`,
+    height: `${gutterHeightCm}cm`,
+    "--gutter-height": `${gutterHeightCm}cm`,
   } as React.CSSProperties;
 
   return (
     <div
-      id="print-area"
+      className="card-unit"
       style={{
         display: "flex",
         flexDirection: "column",
