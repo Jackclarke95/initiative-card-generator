@@ -14,7 +14,7 @@ import {
   SCROLL_NODRAGON_BOX,
   StatBox,
 } from "@/components/CardFrames";
-import { type CardData } from "@/types/card";
+import { ABILITY_KEYS, ABILITY_LABELS, type CardData } from "@/types/card";
 
 interface InitiativeCardProps {
   card: CardData;
@@ -173,12 +173,14 @@ function DmFace({ card }: { card: CardData }) {
             gap: statGap,
           }}
         >
-          <StatBox label={"STR"} value={"+5"} proficiency={true} />
-          <StatBox label={"DEX"} value={"+2"} proficiency={false} />
-          <StatBox label={"CON"} value={"+3"} proficiency={true} />
-          <StatBox label={"INT"} value={"-1"} proficiency={false} />
-          <StatBox label={"WIS"} value={"+0"} proficiency={false} />
-          <StatBox label={"CHA"} value={"+2"} proficiency={false} />
+          {ABILITY_KEYS.map((key) => (
+            <StatBox
+              key={key}
+              label={ABILITY_LABELS[key]}
+              value={card.stats[key].modifier}
+              proficiency={card.stats[key].proficiency}
+            />
+          ))}
         </div>
       </div>
     </div>
