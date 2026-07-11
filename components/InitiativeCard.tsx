@@ -62,7 +62,7 @@ function DmFace({ card }: { card: CardData }) {
 
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
-  const S = { shW: 52, shH: 60, gap: 4 };
+  const S = { shW: 52, shH: 60, gap: 10 };
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
   const iconH = S.shH;
@@ -103,25 +103,9 @@ function DmFace({ card }: { card: CardData }) {
           height={DM_SCROLL_H}
         />
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: statGap,
-          }}
-        >
-          <StatBox label={"STR"} value={"+5"} proficiency={true} />
-          <StatBox label={"DEX"} value={"+2"} proficiency={false} />
-          <StatBox label={"CON"} value={"+3"} proficiency={true} />
-          <StatBox label={"INT"} value={"-1"} proficiency={false} />
-          <StatBox label={"WIS"} value={"+0"} proficiency={false} />
-          <StatBox label={"CHA"} value={"+2"} proficiency={false} />
-        </div>
-
         {/* Stat shapes — pushed to the bottom */}
         <div
           style={{
-            marginTop: "auto",
             display: "flex",
             flexDirection: "column",
             gap: 6,
@@ -193,6 +177,20 @@ function DmFace({ card }: { card: CardData }) {
               )}
             </Slot>
           </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: statGap,
+          }}
+        >
+          <StatBox label={"STR"} value={"+5"} proficiency={true} />
+          <StatBox label={"DEX"} value={"+2"} proficiency={false} />
+          <StatBox label={"CON"} value={"+3"} proficiency={true} />
+          <StatBox label={"INT"} value={"-1"} proficiency={false} />
+          <StatBox label={"WIS"} value={"+0"} proficiency={false} />
+          <StatBox label={"CHA"} value={"+2"} proficiency={false} />
         </div>
       </div>
     </div>
