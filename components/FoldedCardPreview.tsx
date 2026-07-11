@@ -1,8 +1,10 @@
 "use client";
 
-import { FACE_W, FACE_H } from "@/components/CardFaces";
+import { DmFace, FACE_W, FACE_H } from "@/components/CardFaces";
+import type { CardData } from "@/types/card";
 
 interface FoldedCardPreviewProps {
+  card: CardData;
   gutterHeightCm: number;
   /** The gutter slider's maximum — the SVG's own pixel footprint is
    *  sized off this (not the current value), so dragging the slider
@@ -44,13 +46,17 @@ function toPolygon(points: Point[], offset: Point): string {
   return points.map((p) => `${p.x + offset.x},${p.y + offset.y}`).join(" ");
 }
 
-// A blank isometric preview of the folded card as an open "book": two
+// An isometric preview of the folded card as an open "book": two
 // full card-sized panels (front-left and back-right) joined only by a
 // thin ridge at the top — the gutter fold — with no side or bottom
 // walls connecting them, since a folded card is two hinged panels,
 // not a solid block. The fold sits at the gutter's midline, so the
-// ridge depth is half the current gutter height.
+// ridge depth is half the current gutter height. The front panel
+// shows the actual DM face (isometric is a parallel projection, so a
+// rectangle always maps to a parallelogram via a plain 2D affine
+// transform — no 3D/perspective math needed to place it).
 export default function FoldedCardPreview({
+  card,
   gutterHeightCm,
   maxGutterHeightCm,
 }: FoldedCardPreviewProps) {
@@ -84,6 +90,16 @@ export default function FoldedCardPreview({
   const viewW = maxX - minX + pad * 2;
   const viewH = maxY - minY + pad * 2;
 
+  // Affine matrix mapping the DM face's own full-size DOM box
+  // (0,0)-(FACE_W,FACE_H) onto the front panel's isometric quad.
+  const p00 = { x: front.tl.x + offset.x, y: front.tl.y + offset.y }; // DOM top-left
+  const p10 = { x: front.tr.x + offset.x, y: front.tr.y + offset.y }; // DOM top-right
+  const p01 = { x: front.bl.x + offset.x, y: front.bl.y + offset.y }; // DOM bottom-left
+  const a = (p10.x - p00.x) / FACE_W;
+  const b = (p10.y - p00.y) / FACE_W;
+  const c = (p01.x - p00.x) / FACE_H;
+  const d = (p01.y - p00.y) / FACE_H;
+
   return (
     <svg width={viewW} height={viewH} viewBox={`0 0 ${viewW} ${viewH}`}>
       {/* Back panel — the other half of the fold, drawn first so the
@@ -103,13 +119,16 @@ export default function FoldedCardPreview({
           strokeWidth={0.5}
         />
       )}
-      {/* Front panel */}
-      <polygon
-        points={toPolygon([front.bl, front.br, front.tr, front.tl], offset)}
-        fill="var(--card-bg)"
-        stroke="var(--card-border)"
-        strokeWidth={0.5}
-      />
+      {/* Front panel — the real DM face, sheared onto the quad above */}
+      <foreignObject
+        x={0}
+        y={0}
+        width={FACE_W}
+        height={FACE_H}
+        transform={`matrix(${a} ${b} ${c} ${d} ${p00.x} ${p00.y})`}
+      >
+        <DmFace card={card} />
+      </foreignObject>
     </svg>
   );
 }

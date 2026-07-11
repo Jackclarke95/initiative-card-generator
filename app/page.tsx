@@ -166,7 +166,11 @@ export default function Home() {
             />
           </label>
           <div className="flex justify-center mt-2">
-            <FoldedCardPreview gutterHeightCm={gutterCm} maxGutterHeightCm={GUTTER_MAX_CM} />
+            <FoldedCardPreview
+              card={activeCard}
+              gutterHeightCm={gutterCm}
+              maxGutterHeightCm={GUTTER_MAX_CM}
+            />
           </div>
 
           <div
