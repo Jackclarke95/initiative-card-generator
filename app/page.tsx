@@ -5,7 +5,8 @@ import { type CardData, DEFAULT_CARD } from "@/types/card";
 import CardEditor from "@/components/CardEditor";
 import CardList from "@/components/CardList";
 import ExportArea from "@/components/ExportArea";
-import InitiativeCard from "@/components/InitiativeCard";
+import CardSpread from "@/components/CardSpread";
+import FoldedCardPreview from "@/components/FoldedCardPreview";
 import {
   exportCard,
   exportAllCards,
@@ -29,6 +30,8 @@ const MARGIN_SIDES: { side: MarginSide; label: string }[] = [
   { side: "left", label: "Left" },
   { side: "right", label: "Right" },
 ];
+
+const GUTTER_MAX_CM = 3;
 
 function newCard(): CardData {
   return { ...DEFAULT_CARD, id: crypto.randomUUID(), characterName: "" };
@@ -155,13 +158,16 @@ export default function Home() {
             <input
               type="range"
               min={0}
-              max={3}
+              max={GUTTER_MAX_CM}
               step={0.1}
               value={gutterCm}
               onChange={(e) => setGutterCm(parseFloat(e.target.value))}
               className="w-full accent-[var(--accent)]"
             />
           </label>
+          <div className="flex justify-center mt-2">
+            <FoldedCardPreview gutterHeightCm={gutterCm} maxGutterHeightCm={GUTTER_MAX_CM} />
+          </div>
 
           <div
             className="mt-3 pt-3 border-t flex flex-col gap-2"
@@ -283,9 +289,9 @@ export default function Home() {
           >
             Live Preview
           </p>
-          {/* Scale the card up so it's comfortable to review on screen */}
+          {/* Scale the spread up so it's comfortable to review on screen */}
           <div style={{ transform: "scale(1.5)" }}>
-            <InitiativeCard card={activeCard} gutterHeightCm={gutterCm} />
+            <CardSpread card={activeCard} />
           </div>
         </div>
       </main>
