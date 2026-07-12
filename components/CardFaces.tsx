@@ -2,7 +2,6 @@
 
 import { Fragment } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
-import { MONSTER_TYPE_LOGO_MAP } from "@/components/MonsterLogos";
 import { PALE_GREY } from "@/components/FrameText";
 import {
   PlayerFrame,
@@ -63,7 +62,6 @@ function Slot({
 }
 
 export function DmFace({ card }: { card: CardData }) {
-  const isMonster = card.cardType === "monster";
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
   const S = { shW: 52, shH: 60, gap: 10 };
@@ -118,7 +116,7 @@ export function DmFace({ card }: { card: CardData }) {
           <div
             style={{
               display: "flex",
-              justifyContent: isMonster ? "space-evenly" : "space-between",
+              justifyContent: "space-between",
               alignItems: "center",
             }}
           >
@@ -136,28 +134,26 @@ export function DmFace({ card }: { card: CardData }) {
               width={badgeW}
               height={iconH * 1.1}
             />
-            {!isMonster && (
-              <Slot width={slotW}>
-                <SaveBox
-                  value={card.spellSaveDC}
-                  label="DC"
-                  width={saveW}
-                  height={iconH}
-                />
-              </Slot>
-            )}
+            <Slot width={slotW}>
+              <SaveBox
+                value={card.spellSaveDC}
+                label="DC"
+                width={saveW}
+                height={iconH}
+              />
+            </Slot>
           </div>
           <div
             style={{
               display: "flex",
-              justifyContent: isMonster ? "space-evenly" : "space-between",
+              justifyContent: "space-between",
               alignItems: "center",
             }}
           >
             <Slot width={slotW}>
               <Star
                 value={card.passivePerception}
-                label="PP"
+                label="P. P."
                 width={starW}
                 height={iconH}
               />
@@ -168,38 +164,32 @@ export function DmFace({ card }: { card: CardData }) {
               width={chevronW}
               height={iconH * 0.9}
             />
-            {!isMonster && (
-              <Slot width={slotW}>
-                <Orb
-                  value={card.passiveInsight}
-                  label="Insight"
-                  width={orbW}
-                  height={iconH * 1}
-                />
-              </Slot>
-            )}
+            <Slot width={slotW}>
+              <Orb
+                value={card.passiveInsight}
+                label="Insight"
+                width={orbW}
+                height={iconH * 1}
+              />
+            </Slot>
           </div>
         </div>
-        {/* Monsters skip the ability-score row — the DM screen only
-            needs AC/HP/Speed/Perception plus resistances at a glance. */}
-        {!isMonster && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: statGap,
-            }}
-          >
-            {ABILITY_KEYS.map((key) => (
-              <StatBox
-                key={key}
-                label={ABILITY_LABELS[key]}
-                value={card.stats[key].modifier}
-                proficiency={card.stats[key].proficiency}
-              />
-            ))}
-          </div>
-        )}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: statGap,
+          }}
+        >
+          {ABILITY_KEYS.map((key) => (
+            <StatBox
+              key={key}
+              label={ABILITY_LABELS[key]}
+              value={card.stats[key].modifier}
+              proficiency={card.stats[key].proficiency}
+            />
+          ))}
+        </div>
 
         {/* Damage types — resistant/immune, dashed dividers between
             entries rather than an outer box. */}
@@ -243,12 +233,10 @@ interface PlayerFaceProps {
 }
 
 export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
-  const logoMap =
-    card.cardType === "monster" ? MONSTER_TYPE_LOGO_MAP : CLASS_LOGO_MAP;
-  const classKey = Object.keys(logoMap).find(
+  const classKey = Object.keys(CLASS_LOGO_MAP).find(
     (k) => k.toLowerCase() === card.characterClass.trim().toLowerCase(),
   );
-  const Logo = classKey ? logoMap[classKey] : undefined;
+  const Logo = classKey ? CLASS_LOGO_MAP[classKey] : undefined;
 
   return (
     <div
@@ -301,7 +289,7 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
           dragon
           width={SCROLL_W}
           height={SCROLL_H}
-          value={card.characterName}
+          value={card.characterName || "—"}
         />
       </div>
     </div>

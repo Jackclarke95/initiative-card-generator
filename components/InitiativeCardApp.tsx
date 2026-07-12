@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { type CardData, type CardType, DEFAULT_CARD, DEFAULT_MONSTER_CARD } from "@/types/card";
+import { type CardData, DEFAULT_CARD } from "@/types/card";
 import type { Party } from "@/types/party";
 import CardEditor from "@/components/CardEditor";
 import CardList from "@/components/CardList";
@@ -38,9 +38,8 @@ const MARGIN_SIDES: { side: MarginSide; label: string }[] = [
 
 const GUTTER_MAX_CM = 3;
 
-function newCard(cardType: CardType = "player"): CardData {
-  const base = cardType === "monster" ? DEFAULT_MONSTER_CARD : DEFAULT_CARD;
-  return { ...base, id: crypto.randomUUID(), characterName: "" };
+function newCard(): CardData {
+  return { ...DEFAULT_CARD, id: crypto.randomUUID(), characterName: "" };
 }
 
 function newParty(name: string): Party {
@@ -110,19 +109,16 @@ export default function InitiativeCardApp() {
     [activeParty.id],
   );
 
-  const handleAddCard = useCallback(
-    (cardType: CardType) => {
-      const card = newCard(cardType);
-      setParties((prev) =>
-        prev.map((p) =>
-          p.id !== activeParty.id
-            ? p
-            : { ...p, cards: [...p.cards, card], activeCardId: card.id },
-        ),
-      );
-    },
-    [activeParty.id],
-  );
+  const handleAddCard = useCallback(() => {
+    const card = newCard();
+    setParties((prev) =>
+      prev.map((p) =>
+        p.id !== activeParty.id
+          ? p
+          : { ...p, cards: [...p.cards, card], activeCardId: card.id },
+      ),
+    );
+  }, [activeParty.id]);
 
   const handleRemoveCard = useCallback(
     (id: string) => {
