@@ -1,6 +1,8 @@
 "use client";
 
+import { Fragment } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
+import { PALE_GREY } from "@/components/FrameText";
 import {
   PlayerFrame,
   SaveBox,
@@ -13,8 +15,15 @@ import {
   SCROLL_DRAGON_BOX,
   SCROLL_NODRAGON_BOX,
   StatBox,
+  DamageTypeBadge,
 } from "@/components/CardFrames";
-import { ABILITY_KEYS, ABILITY_LABELS, type CardData } from "@/types/card";
+import {
+  ABILITY_KEYS,
+  ABILITY_LABELS,
+  DAMAGE_TYPE_KEYS,
+  DAMAGE_TYPE_LABELS,
+  type CardData,
+} from "@/types/card";
 
 // Card face: 2.5in × 3.5in = 240 × 336 px. Minus 1px borders and 8px padding.
 export const FACE_W = 240;
@@ -179,6 +188,34 @@ export function DmFace({ card }: { card: CardData }) {
               value={card.stats[key].modifier}
               proficiency={card.stats[key].proficiency}
             />
+          ))}
+        </div>
+
+        {/* Damage types — resistant/immune, dashed dividers between
+            entries rather than an outer box. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-around",
+          }}
+        >
+          {DAMAGE_TYPE_KEYS.map((key, i) => (
+            <Fragment key={key}>
+              {i > 0 && (
+                <div
+                  style={{
+                    alignSelf: "stretch",
+                    borderLeft: `1px dashed ${PALE_GREY}`,
+                  }}
+                />
+              )}
+              <DamageTypeBadge
+                label={DAMAGE_TYPE_LABELS[key]}
+                damageType={key}
+                state={card.resistances[key]}
+              />
+            </Fragment>
           ))}
         </div>
       </div>

@@ -1,12 +1,27 @@
 "use client";
 
+import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
+  DAMAGE_TYPE_KEYS,
+  DAMAGE_TYPE_LABELS,
   type AbilityKey,
   type AbilityStat,
   type CardData,
+  type DamageTypeKey,
+  type ResistanceState,
 } from "@/types/card";
+
+const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
+
+/** Case-insensitive match against the known class list; undefined means
+ *  the card's class isn't one of them, i.e. the "Custom" option applies. */
+function knownClassFor(characterClass: string) {
+  return CLASS_OPTIONS.find(
+    (c) => c.toLowerCase() === characterClass.trim().toLowerCase(),
+  );
+}
 
 interface CardEditorProps {
   card: CardData;
@@ -70,6 +85,13 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     });
   }
 
+  function setResistance(key: DamageTypeKey, state: ResistanceState) {
+    onChange({
+      ...card,
+      resistances: { ...card.resistances, [key]: state },
+    });
+  }
+
   return (
     <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
       {/* Identity */}
@@ -83,11 +105,31 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           />
         </Field>
         <Field label="Class">
-          <input
+          <select
             className={inputClass}
-            value={card.characterClass}
-            onChange={(e) => set("characterClass", e.target.value)}
-          />
+            value={knownClassFor(card.characterClass) ?? "Custom"}
+            onChange={(e) =>
+              set(
+                "characterClass",
+                e.target.value === "Custom" ? "" : e.target.value,
+              )
+            }
+          >
+            {CLASS_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value="Custom">Custom</option>
+          </select>
+          {!knownClassFor(card.characterClass) && (
+            <input
+              className={inputClass + " mt-1"}
+              placeholder="Class name"
+              value={card.characterClass}
+              onChange={(e) => set("characterClass", e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
@@ -172,6 +214,50 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             </label>
           </div>
         ))}
+      </div>
+
+      {/* Damage resistances */}
+      <SectionHeading>Damage Types</SectionHeading>
+      <div className="flex flex-col gap-1">
+        {DAMAGE_TYPE_KEYS.map((key) => {
+          const state = card.resistances[key];
+          return (
+            <div
+              key={key}
+              className="flex items-center justify-between gap-2 text-sm text-[var(--text-primary)]"
+            >
+              <span>{DAMAGE_TYPE_LABELS[key]}</span>
+              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={state === "resistant"}
+                    onChange={(e) =>
+                      setResistance(
+                        key,
+                        e.target.checked ? "resistant" : "neither",
+                      )
+                    }
+                  />
+                  Resist
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={state === "immune"}
+                    onChange={(e) =>
+                      setResistance(
+                        key,
+                        e.target.checked ? "immune" : "neither",
+                      )
+                    }
+                  />
+                  Immune
+                </label>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

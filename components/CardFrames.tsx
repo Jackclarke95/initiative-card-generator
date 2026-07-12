@@ -10,8 +10,9 @@
 import Image from "next/image";
 import { useId } from "react";
 import { stretchPath } from "@/components/svgNineSlice";
-import { FrameText, INK, LABEL_GREY } from "@/components/FrameText";
+import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
+import type { DamageTypeKey, ResistanceState } from "@/types/card";
 
 interface FrameProps {
   width: number;
@@ -149,6 +150,215 @@ export const StatBox = ({
     valuePosition="middle"
   />
 ); // alias for InitiativeCard.tsx usage
+
+// ── Damage type glyphs — one hand-drawn icon per 5e damage type ───────
+// Each is a flat solid shape (no IconFrame bezel) on a 24×24 grid, sized
+// to sit above the 2-letter code and resistance ring in DamageTypeBadge.
+// "#fff" punches match the card's own paper-white background, the same
+// literal used elsewhere in this file for carving gaps out of ink fills.
+const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
+  bludgeoning: (
+    <>
+      <rect x={11} y={6} width={2} height={17} rx={1} />
+      <rect x={6} y={2.5} width={12} height={6} rx={1} />
+    </>
+  ),
+  // One unified polygon rather than a separate head + shaft, so there's
+  // no seam where they'd otherwise only touch along a single edge.
+  piercing: <polygon points="12,2 16,10 13,10 13,22 11,22 11,10 8,10" />,
+  // Blade lengthened relative to the hilt (guard/grip/pommel), overall
+  // tip-to-pommel length unchanged from the earlier angled version. The
+  // blade itself is a short tip narrowing to a point, then a straight
+  // parallel-sided section for the rest of its length, rather than
+  // tapering the whole way down.
+  slashing: (
+    <>
+      <polygon points="12,1 13.4,5 13.4,17 10.6,17 10.6,5" />
+      <rect x={7} y={17} width={10} height={1.4} rx={0.6} />
+      <rect x={11} y={18.4} width={2} height={3} rx={1} />
+      <circle cx={12} cy={22.2} r={1.6} />
+    </>
+  ),
+  acid: (
+    <>
+      <rect x={10.2} y={1.5} width={3.6} height={2} rx={0.6} />
+      <rect x={10.5} y={2.8} width={3} height={5.5} />
+      <polygon points="10.5,8 13.5,8 19,21 5,21" />
+      <circle cx={10.2} cy={15} r={1.1} fill="#fff" />
+      <circle cx={14} cy={17} r={0.9} fill="#fff" />
+    </>
+  ),
+  // 3 crossing branches (6 tips total), each tip forking into a small
+  // "crow's foot" at 60° off the branch's own axis — the angle real
+  // hexagonal ice crystals branch at — instead of a separate floating
+  // tip piece at each end.
+  cold: (
+    <>
+      <rect x={11} y={2} width={2} height={20} rx={1} />
+      <rect x={11} y={2} width={2} height={20} rx={1} transform="rotate(60 12 12)" />
+      <rect x={11} y={2} width={2} height={20} rx={1} transform="rotate(120 12 12)" />
+      <g fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+        {[0, 60, 120, 180, 240, 300].map((angle) => (
+          <g key={angle} transform={`rotate(${angle} 12 12)`}>
+            <line x1={12} y1={6} x2={9} y2={4.3} />
+            <line x1={12} y1={6} x2={15} y2={4.3} />
+          </g>
+        ))}
+      </g>
+    </>
+  ),
+  // Back to a plain raindrop body (each side is one smooth curve from
+  // base to tip, so there's no mid-height kink/"shoulder") with just a
+  // small flick right at the apex for "wavy," plus a smaller matching
+  // raindrop shape punched out as the hot white core.
+  fire: (
+    <>
+      <path d="M12,22 C16.2,22 20,19 20,14.5 C20,10 15,7 13.6,2.6 C13.3,1.6 12.9,1.2 12.6,1.4 C10,6.3 4,9.2 4,14.5 C4,19 7.8,22 12,22 Z" />
+      <path
+        d="M12,12 C10.3,13.7 9.5,15.5 9.5,17.2 C9.5,18.9 10.5,19.8 12,19.8 C13.5,19.8 14.5,18.9 14.5,17.2 C14.5,15.5 13.7,13.7 12,12 Z"
+        fill="#fff"
+      />
+    </>
+  ),
+  force: (
+    <polygon points="12,2 13.7,7.8 19.1,4.9 16.2,10.3 22,12 16.2,13.7 19.1,19.1 13.7,16.2 12,22 10.3,16.2 4.9,19.1 7.8,13.7 2,12 7.8,10.3 4.9,4.9 10.3,7.8" />
+  ),
+  lightning: <polygon points="13,2 6,14 11,14 9,22 18,10 12,10" />,
+  necrotic: (
+    <>
+      <circle cx={12} cy={9} r={7} />
+      <polygon points="6,12 18,12 15,20 9,20" />
+      <circle cx={9.3} cy={9} r={1.6} fill="#fff" />
+      <circle cx={14.7} cy={9} r={1.6} fill="#fff" />
+      <polygon points="12,10.5 11,13 13,13" fill="#fff" />
+    </>
+  ),
+  poison: (
+    <>
+      <g transform="rotate(35 12 16.5)">
+        <rect x={2} y={15.4} width={20} height={2.2} rx={1.1} />
+        <circle cx={3} cy={16.5} r={1.8} />
+        <circle cx={21} cy={16.5} r={1.8} />
+      </g>
+      <g transform="rotate(-35 12 16.5)">
+        <rect x={2} y={15.4} width={20} height={2.2} rx={1.1} />
+        <circle cx={3} cy={16.5} r={1.8} />
+        <circle cx={21} cy={16.5} r={1.8} />
+      </g>
+      <circle cx={12} cy={9} r={5.5} />
+      <polygon points="7.5,11 16.5,11 14.5,17 9.5,17" />
+      <circle cx={10} cy={9} r={1.3} fill="#fff" />
+      <circle cx={14} cy={9} r={1.3} fill="#fff" />
+    </>
+  ),
+  // A head in silhouette with psychic waves rippling off it — each wave
+  // an arc running from about 8 o'clock to 4 o'clock (240° the long way,
+  // over the crown) rather than a full ring, so they read as radiating
+  // outward from the head instead of surrounding it.
+  // Two true semicircle waves (flat side down) sharing a pivot, with the
+  // head+shoulders nested inside the waves' dome rather than hanging
+  // below them. Adding shoulders pushed the whole composition taller, so
+  // it's shifted up to keep its span (~3 to 23) in line with the other
+  // icons instead of sitting shorter and lower than its siblings.
+  psychic: (
+    <>
+      <g fill="none" stroke="currentColor" strokeWidth={1.15} strokeLinecap="round">
+        <path d="M3,12 A9,9 0 0,1 21,12" />
+        <path d="M6,12 A6,6 0 0,1 18,12" />
+      </g>
+      <ellipse cx={12} cy={12.8} rx={4.3} ry={5.2} />
+      <polygon points="9,16 15,16 18,23 6,23" />
+    </>
+  ),
+  radiant: (
+    <>
+      <circle cx={12} cy={12} r={5.5} />
+      <rect x={11} y={3} width={2} height={4} rx={1} />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(45 12 12)" />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(90 12 12)" />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(135 12 12)" />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(180 12 12)" />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(225 12 12)" />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(270 12 12)" />
+      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(315 12 12)" />
+    </>
+  ),
+  thunder: (
+    <>
+      <path d="M8,10a4,4 0 1,1 8,0" />
+      <polygon points="8,10 16,10 18,15 6,15" />
+      <ellipse cx={12} cy={15.5} rx={6.5} ry={1.6} />
+      <rect x={11} y={1.2} width={2} height={2.6} rx={1} />
+      <rect x={11.3} y={15.5} width={1.4} height={3} rx={0.7} />
+      <circle cx={12} cy={18.8} r={1.3} />
+      <g fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+        <path d="M20,10 a5,5 0 0 1 0,8" />
+        <path d="M22.2,12 a2.2,2.2 0 0 1 0,4" />
+      </g>
+    </>
+  ),
+};
+
+// ── Damage type badge — icon, 2-letter code, resistance/immunity mark ──
+// Every damage type gets a same-size ring so the row never jitters; only
+// its color and fill escalate: grey hollow ring (neither), black
+// ring+dot (resistant), fully filled circle (immune) — chosen over a
+// half-filled "gauge" variant because a centered dot and a full fill are
+// both easy pen/pencil marks on a printed blank card, where someone may
+// hand-fill this in rather than it always being generated digitally.
+export function DamageTypeBadge({
+  label,
+  damageType,
+  state,
+}: {
+  label: string;
+  damageType: DamageTypeKey;
+  state: ResistanceState;
+}) {
+  const color = state === "neither" ? PALE_GREY : INK;
+  const r = 2.6;
+  const cx = r + 1;
+  const cy = r + 1;
+  const size = r * 2 + 2;
+
+  return (
+    <div
+      title={label}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 1,
+      }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width={13}
+        height={13}
+        fill="currentColor"
+        style={{ color, flexShrink: 0 }}
+      >
+        {DAMAGE_TYPE_ICONS[damageType]}
+      </svg>
+      <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color }}>
+        {label.slice(0, 2)}
+      </span>
+      <svg width={size} height={size} style={{ flexShrink: 0 }}>
+        {state === "immune" ? (
+          // Matches the ring's outer edge (r + half its stroke width),
+          // so the filled dot reads as the same overall size as the ring
+          // rather than looking smaller than it.
+          <circle cx={cx} cy={cy} r={r + 0.5} fill={color} />
+        ) : (
+          <>
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={1} />
+            {state === "resistant" && <circle cx={cx} cy={cy} r={r * 0.5} fill={color} />}
+          </>
+        )}
+      </svg>
+    </div>
+  );
+}
 
 // ── CharBox.svg (319.34 × 79.51) — bracketed name box ─────────────────
 

@@ -25,6 +25,49 @@ export const ABILITY_LABELS: Record<AbilityKey, string> = {
 
 export type AbilityStats = Record<AbilityKey, AbilityStat>;
 
+// Order: Bludgeoning/Piercing/Slashing first (the physical types), then
+// the rest alphabetically — matches how the DM face lays them out.
+export const DAMAGE_TYPE_KEYS = [
+  "bludgeoning",
+  "piercing",
+  "slashing",
+  "acid",
+  "cold",
+  "fire",
+  "force",
+  "lightning",
+  "necrotic",
+  "poison",
+  "psychic",
+  "radiant",
+  "thunder",
+] as const;
+export type DamageTypeKey = (typeof DAMAGE_TYPE_KEYS)[number];
+
+export const DAMAGE_TYPE_LABELS: Record<DamageTypeKey, string> = {
+  bludgeoning: "Bludgeoning",
+  piercing: "Piercing",
+  slashing: "Slashing",
+  acid: "Acid",
+  cold: "Cold",
+  fire: "Fire",
+  force: "Force",
+  lightning: "Lightning",
+  necrotic: "Necrotic",
+  poison: "Poison",
+  psychic: "Psychic",
+  radiant: "Radiant",
+  thunder: "Thunder",
+};
+
+export type ResistanceState = "neither" | "resistant" | "immune";
+
+export type Resistances = Record<DamageTypeKey, ResistanceState>;
+
+export const DEFAULT_RESISTANCES: Resistances = Object.fromEntries(
+  DAMAGE_TYPE_KEYS.map((key) => [key, "neither"]),
+) as Resistances;
+
 export interface CardData {
   id: string;
 
@@ -44,6 +87,9 @@ export interface CardData {
 
   // Ability scores
   stats: AbilityStats;
+
+  // Damage resistances/immunities
+  resistances: Resistances;
 
   // Visuals
   portraitUrl: string;
@@ -71,6 +117,7 @@ export const DEFAULT_CARD: CardData = {
     wis: { modifier: "+0", proficiency: false },
     cha: { modifier: "+2", proficiency: false },
   },
+  resistances: DEFAULT_RESISTANCES,
   portraitUrl: "",
   preset: "tactician",
   toggles: {

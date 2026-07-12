@@ -4,6 +4,10 @@
 
 export const INK = "#111";
 export const LABEL_GREY = "#6b6b6b";
+// Shared by the damage-type row: the "neither" state's text/ring color and
+// the dashed separators between entries — same pale grey so the unmarked
+// state visually recedes into the row's own dividers.
+export const PALE_GREY = "#ccc";
 
 interface FrameTextProps {
   width: number;
