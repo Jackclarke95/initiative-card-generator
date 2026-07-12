@@ -163,14 +163,7 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
       <rect x={6} y={2.5} width={12} height={6} rx={1} />
     </>
   ),
-  // One unified polygon rather than a separate head + shaft, so there's
-  // no seam where they'd otherwise only touch along a single edge.
   piercing: <polygon points="12,2 16,10 13,10 13,22 11,22 11,10 8,10" />,
-  // Blade lengthened relative to the hilt (guard/grip/pommel), overall
-  // tip-to-pommel length unchanged from the earlier angled version. The
-  // blade itself is a short tip narrowing to a point, then a straight
-  // parallel-sided section for the rest of its length, rather than
-  // tapering the whole way down.
   slashing: (
     <>
       <polygon points="12,1 13.4,5 13.4,17 10.6,17 10.6,5" />
@@ -188,10 +181,6 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
       <circle cx={14} cy={17} r={0.9} fill="#fff" />
     </>
   ),
-  // 3 crossing branches (6 tips total), each tip forking into a small
-  // "crow's foot" at 60° off the branch's own axis — the angle real
-  // hexagonal ice crystals branch at — instead of a separate floating
-  // tip piece at each end.
   cold: (
     <>
       <rect x={11} y={2} width={2} height={20} rx={1} />
@@ -207,10 +196,6 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
       </g>
     </>
   ),
-  // Back to a plain raindrop body (each side is one smooth curve from
-  // base to tip, so there's no mid-height kink/"shoulder") with just a
-  // small flick right at the apex for "wavy," plus a smaller matching
-  // raindrop shape punched out as the hot white core.
   fire: (
     <>
       <path d="M12,22 C15.8,22 19.2,19 19.2,14.5 C19.2,10 14.7,7 13.4,2.6 C13.2,1.6 12.8,1.2 12.5,1.4 C10.2,6.3 4.8,9.2 4.8,14.5 C4.8,19 8.2,22 12,22 Z" />
@@ -251,15 +236,6 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
       <circle cx={14} cy={9} r={1.3} fill="#fff" />
     </>
   ),
-  // A head in silhouette with psychic waves rippling off it — each wave
-  // an arc running from about 8 o'clock to 4 o'clock (240° the long way,
-  // over the crown) rather than a full ring, so they read as radiating
-  // outward from the head instead of surrounding it.
-  // Two true semicircle waves (flat side down) sharing a pivot, with the
-  // head+shoulders nested inside the waves' dome rather than hanging
-  // below them. Adding shoulders pushed the whole composition taller, so
-  // it's shifted up to keep its span (~3 to 23) in line with the other
-  // icons instead of sitting shorter and lower than its siblings.
   psychic: (
     <>
       <g fill="none" stroke="currentColor" strokeWidth={1.15} strokeLinecap="round">
