@@ -39,7 +39,7 @@ function newCard(): CardData {
 
 export default function Home() {
   const [cards, setCards] = useState<CardData[]>(() => [
-    { ...DEFAULT_CARD, id: crypto.randomUUID() },
+    { ...DEFAULT_CARD },
   ]);
   const [activeId, setActiveId] = useState<string>(() => cards[0].id);
   const [gutterCm, setGutterCm] = useState(1);

@@ -183,14 +183,15 @@ export async function exportAllCardsAsPdf(
 
   const doc = new jsPDF({ unit: "in", format: [pageWidthIn, pageHeightIn] });
 
-  for (let i = 0; i < cards.length; i++) {
+  let placed = 0;
+  for (const card of cards) {
     const node = document.querySelector<HTMLElement>(
-      `[data-card-id="${cards[i].id}"]`,
+      `[data-card-id="${card.id}"]`,
     );
     if (!node) continue;
 
-    const posOnPage = i % perPage;
-    if (i > 0 && posOnPage === 0) doc.addPage([pageWidthIn, pageHeightIn]);
+    const posOnPage = placed % perPage;
+    if (placed > 0 && posOnPage === 0) doc.addPage([pageWidthIn, pageHeightIn]);
 
     const col = posOnPage % cols;
     const row = Math.floor(posOnPage / cols);
@@ -200,6 +201,7 @@ export async function exportAllCardsAsPdf(
     let dataUrl = await renderCardDataUrl(node, "png");
     if (useRotated) dataUrl = await rotateImage90(dataUrl);
     doc.addImage(dataUrl, "PNG", x, y, placedWidthIn, placedHeightIn);
+    placed++;
   }
 
   doc.save("initiative-cards.pdf");
