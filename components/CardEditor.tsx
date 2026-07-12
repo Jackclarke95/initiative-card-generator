@@ -1,6 +1,7 @@
 "use client";
 
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
+import { MONSTER_TYPE_LOGO_MAP } from "@/components/MonsterLogos";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -9,18 +10,18 @@ import {
   type AbilityKey,
   type AbilityStat,
   type CardData,
+  type CardType,
   type DamageTypeKey,
   type ResistanceState,
 } from "@/types/card";
 
 const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
+const MONSTER_TYPE_OPTIONS = Object.keys(MONSTER_TYPE_LOGO_MAP);
 
-/** Case-insensitive match against the known class list; undefined means
- *  the card's class isn't one of them, i.e. the "Custom" option applies. */
-function knownClassFor(characterClass: string) {
-  return CLASS_OPTIONS.find(
-    (c) => c.toLowerCase() === characterClass.trim().toLowerCase(),
-  );
+/** Case-insensitive match against a known option list; undefined means
+ *  the card's value isn't one of them, i.e. the "Custom" option applies. */
+function knownOptionFor(options: string[], value: string) {
+  return options.find((o) => o.toLowerCase() === value.trim().toLowerCase());
 }
 
 interface CardEditorProps {
@@ -118,11 +119,40 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     });
   }
 
+  const isMonster = card.cardType === "monster";
+  const typeOptions = isMonster ? MONSTER_TYPE_OPTIONS : CLASS_OPTIONS;
+  const knownType = knownOptionFor(typeOptions, card.characterClass);
+
+  function setCardType(cardType: CardType) {
+    onChange({ ...card, cardType, characterClass: "" });
+  }
+
   return (
     <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
       <div className="grid grid-cols-2 gap-2">
+        <Field label="Type">
+          <div
+            className="flex rounded overflow-hidden border"
+            style={{ borderColor: "var(--border)" }}
+          >
+            {(["player", "monster"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setCardType(t)}
+                className="flex-1 py-1 text-xs font-semibold transition-colors"
+                style={{
+                  background: card.cardType === t ? "var(--accent)" : "transparent",
+                  color: card.cardType === t ? "#fff" : "var(--text-muted)",
+                }}
+              >
+                {t === "player" ? "Player" : "Monster"}
+              </button>
+            ))}
+          </div>
+        </Field>
         <Field label="Name">
           <input
             className={inputClass}
@@ -130,10 +160,10 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             onChange={(e) => set("characterName", e.target.value)}
           />
         </Field>
-        <Field label="Class">
+        <Field label={isMonster ? "Creature Type" : "Class"}>
           <select
             className={inputClass}
-            value={knownClassFor(card.characterClass) ?? "Custom"}
+            value={knownType ?? "Custom"}
             onChange={(e) =>
               set(
                 "characterClass",
@@ -141,17 +171,17 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
               )
             }
           >
-            {CLASS_OPTIONS.map((c) => (
+            {typeOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
             <option value="Custom">Custom</option>
           </select>
-          {!knownClassFor(card.characterClass) && (
+          {!knownType && (
             <input
               className={inputClass + " mt-1"}
-              placeholder="Class name"
+              placeholder={isMonster ? "Creature type" : "Class name"}
               value={card.characterClass}
               onChange={(e) => set("characterClass", e.target.value)}
             />
@@ -178,14 +208,16 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             onChange={(e) => setNum("maxHp", e.target.value)}
           />
         </Field>
-        <Field label="Save DC">
-          <input
-            className={numClass}
-            type="number"
-            value={card.spellSaveDC ?? ""}
-            onChange={(e) => setNum("spellSaveDC", e.target.value)}
-          />
-        </Field>
+        {!isMonster && (
+          <Field label="Save DC">
+            <input
+              className={numClass}
+              type="number"
+              value={card.spellSaveDC ?? ""}
+              onChange={(e) => setNum("spellSaveDC", e.target.value)}
+            />
+          </Field>
+        )}
         <Field label="Passive Perception">
           <input
             className={numClass}
@@ -194,14 +226,16 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             onChange={(e) => setNum("passivePerception", e.target.value)}
           />
         </Field>
-        <Field label="Passive Insight">
-          <input
-            className={numClass}
-            type="number"
-            value={card.passiveInsight ?? ""}
-            onChange={(e) => setNum("passiveInsight", e.target.value)}
-          />
-        </Field>
+        {!isMonster && (
+          <Field label="Passive Insight">
+            <input
+              className={numClass}
+              type="number"
+              value={card.passiveInsight ?? ""}
+              onChange={(e) => setNum("passiveInsight", e.target.value)}
+            />
+          </Field>
+        )}
         <Field label="Speed (ft)">
           <input
             className={numClass}
@@ -215,32 +249,37 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
         </Field>
       </div>
 
-      {/* Ability scores */}
-      <SectionHeading>Ability Scores</SectionHeading>
-      <div className="grid grid-cols-2 gap-2">
-        {ABILITY_KEYS.map((key) => (
-          <div key={key} className="flex items-end gap-2">
-            <Field label={ABILITY_LABELS[key]}>
-              <input
-                className={inputClass}
-                value={card.stats[key].modifier}
-                placeholder="+0"
-                onChange={(e) => setStat(key, { modifier: e.target.value })}
-              />
-            </Field>
-            <label className="flex items-center gap-1 pb-1.5 text-xs text-[var(--text-muted)] whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={card.stats[key].proficiency}
-                onChange={(e) =>
-                  setStat(key, { proficiency: e.target.checked })
-                }
-              />
-              Prof.
-            </label>
+      {/* Ability scores — DM face for monsters skips this block, so
+          there's nothing to edit here for them. */}
+      {!isMonster && (
+        <>
+          <SectionHeading>Ability Scores</SectionHeading>
+          <div className="grid grid-cols-2 gap-2">
+            {ABILITY_KEYS.map((key) => (
+              <div key={key} className="flex items-end gap-2">
+                <Field label={ABILITY_LABELS[key]}>
+                  <input
+                    className={inputClass}
+                    value={card.stats[key].modifier}
+                    placeholder="+0"
+                    onChange={(e) => setStat(key, { modifier: e.target.value })}
+                  />
+                </Field>
+                <label className="flex items-center gap-1 pb-1.5 text-xs text-[var(--text-muted)] whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={card.stats[key].proficiency}
+                    onChange={(e) =>
+                      setStat(key, { proficiency: e.target.checked })
+                    }
+                  />
+                  Prof.
+                </label>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {/* Damage resistances */}
       <SectionHeading>Resistances</SectionHeading>

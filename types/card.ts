@@ -1,5 +1,7 @@
 export type LayoutPreset = "tactician" | "minimalist";
 
+export type CardType = "player" | "monster";
+
 export interface CardToggles {
   showPassives: boolean;
   showSpellSaveDC: boolean;
@@ -70,8 +72,11 @@ export const DEFAULT_RESISTANCES: Resistances = Object.fromEntries(
 
 export interface CardData {
   id: string;
+  cardType: CardType;
 
-  // Identity
+  // Identity — for monsters, characterClass holds the creature type
+  // (e.g. "Dragon", "Undead") and drives the monster icon lookup instead
+  // of the class logo lookup.
   characterName: string;
   characterClass: string;
 
@@ -101,6 +106,7 @@ export interface CardData {
 
 export const DEFAULT_CARD: CardData = {
   id: "default",
+  cardType: "player",
   characterName: "Aelindra",
   characterClass: "Paladin",
   ac: 18,
@@ -123,6 +129,33 @@ export const DEFAULT_CARD: CardData = {
   toggles: {
     showPassives: true,
     showSpellSaveDC: true,
+    showPortrait: false,
+  },
+};
+
+export const DEFAULT_MONSTER_CARD: CardData = {
+  id: "default-monster",
+  cardType: "monster",
+  characterName: "Adult Red Dragon",
+  characterClass: "Dragon",
+  ac: 19,
+  maxHp: 256,
+  speed: 40,
+  passivePerception: 23,
+  stats: {
+    str: { modifier: "+10", proficiency: false },
+    dex: { modifier: "+0", proficiency: false },
+    con: { modifier: "+9", proficiency: false },
+    int: { modifier: "+2", proficiency: false },
+    wis: { modifier: "+4", proficiency: false },
+    cha: { modifier: "+6", proficiency: false },
+  },
+  resistances: { ...DEFAULT_RESISTANCES, fire: "immune" },
+  portraitUrl: "",
+  preset: "tactician",
+  toggles: {
+    showPassives: true,
+    showSpellSaveDC: false,
     showPortrait: false,
   },
 };

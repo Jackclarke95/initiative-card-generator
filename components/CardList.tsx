@@ -1,12 +1,12 @@
 "use client";
 
-import type { CardData } from "@/types/card";
+import type { CardData, CardType } from "@/types/card";
 
 interface CardListProps {
   cards: CardData[];
   activeId: string;
   onSelect: (id: string) => void;
-  onAdd: () => void;
+  onAdd: (cardType: CardType) => void;
   onRemove: (id: string) => void;
 }
 
@@ -29,13 +29,22 @@ export default function CardList({
         >
           Cards ({cards.length})
         </h2>
-        <button
-          onClick={onAdd}
-          className="px-2 py-1 rounded text-xs font-semibold"
-          style={{ background: "var(--surface-raised)", color: "var(--text-primary)" }}
-        >
-          + Add
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={() => onAdd("player")}
+            className="px-2 py-1 rounded text-xs font-semibold"
+            style={{ background: "var(--surface-raised)", color: "var(--text-primary)" }}
+          >
+            + Player
+          </button>
+          <button
+            onClick={() => onAdd("monster")}
+            className="px-2 py-1 rounded text-xs font-semibold"
+            style={{ background: "var(--surface-raised)", color: "var(--text-primary)" }}
+          >
+            + Monster
+          </button>
+        </div>
       </div>
       <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
         {cards.map((card) => (
