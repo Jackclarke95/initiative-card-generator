@@ -93,7 +93,10 @@ export default function Home() {
   );
 
   function setMargin(side: MarginSide, value: number) {
-    setPdfSettings((prev) => ({ ...prev, margins: { ...prev.margins, [side]: value } }));
+    setPdfSettings((prev) => ({
+      ...prev,
+      margins: { ...prev.margins, [side]: value },
+    }));
   }
 
   // PDF always covers the whole deck, so picking it forces (and locks)
@@ -108,22 +111,38 @@ export default function Home() {
     setExporting(true);
     try {
       if (exportChoice === "pdf") {
-        await exportAllCardsAsPdf(cards, pdfSettings.paper, pdfSettings.margins, gutterCm);
+        await exportAllCardsAsPdf(
+          cards,
+          pdfSettings.paper,
+          pdfSettings.margins,
+          gutterCm,
+        );
       } else if (exportScope === "all") {
         await exportAllCards(cards, exportChoice);
       } else {
         const node = document.querySelector<HTMLElement>(
           `[data-card-id="${activeId}"]`,
         );
-        if (node) await exportCard(node, exportChoice, activeCard.characterName);
+        if (node)
+          await exportCard(node, exportChoice, activeCard.characterName);
       }
     } catch (err) {
       console.error(`Failed to export ${exportChoice}`, err);
-      alert(`Failed to export ${exportChoice.toUpperCase()}. See console for details.`);
+      alert(
+        `Failed to export ${exportChoice.toUpperCase()}. See console for details.`,
+      );
     } finally {
       setExporting(false);
     }
-  }, [cards, activeId, activeCard, exportScope, exportChoice, pdfSettings, gutterCm]);
+  }, [
+    cards,
+    activeId,
+    activeCard,
+    exportScope,
+    exportChoice,
+    pdfSettings,
+    gutterCm,
+  ]);
 
   return (
     <div
@@ -152,7 +171,10 @@ export default function Home() {
           </div>
 
           <label className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+            <span
+              className="text-[10px] uppercase tracking-wide"
+              style={{ color: "var(--text-muted)" }}
+            >
               Fold gutter: {gutterCm.toFixed(1)} cm
             </span>
             <input
@@ -165,12 +187,36 @@ export default function Home() {
               className="w-full accent-[var(--accent)]"
             />
           </label>
-          <div className="flex justify-center mt-2">
-            <FoldedCardPreview
-              card={activeCard}
-              gutterHeightCm={gutterCm}
-              maxGutterHeightCm={GUTTER_MAX_CM}
-            />
+          <div className="flex justify-center items-start gap-10 mt-2">
+            <div className="flex flex-col items-center gap-2">
+              <span
+                className="text-[10px] uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Player side
+              </span>
+              <FoldedCardPreview
+                card={activeCard}
+                gutterHeightCm={gutterCm}
+                maxGutterHeightCm={GUTTER_MAX_CM}
+                face="player"
+              />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <span
+                className="text-[10px] uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
+                DM side
+              </span>
+              <FoldedCardPreview
+                card={activeCard}
+                gutterHeightCm={gutterCm}
+                maxGutterHeightCm={GUTTER_MAX_CM}
+                face="dm"
+                mirrored
+              />
+            </div>
           </div>
 
           <div
@@ -186,9 +232,14 @@ export default function Home() {
             <div className="flex items-center gap-1.5">
               <select
                 value={exportChoice}
-                onChange={(e) => handleFormatChange(e.target.value as ExportChoice)}
+                onChange={(e) =>
+                  handleFormatChange(e.target.value as ExportChoice)
+                }
                 className="bg-[var(--surface-raised)] border rounded px-1.5 py-1.5 text-xs uppercase"
-                style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                style={{
+                  borderColor: "var(--border)",
+                  color: "var(--text-primary)",
+                }}
               >
                 <option value="svg">SVG</option>
                 <option value="png">PNG</option>
@@ -200,7 +251,8 @@ export default function Home() {
                 style={{ borderColor: "var(--border)" }}
               >
                 {(["current", "all"] as const).map((scope) => {
-                  const disabled = scope === "current" && exportChoice === "pdf";
+                  const disabled =
+                    scope === "current" && exportChoice === "pdf";
                   return (
                     <button
                       key={scope}
@@ -208,8 +260,12 @@ export default function Home() {
                       disabled={disabled}
                       className="flex-1 py-1.5 text-xs font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       style={{
-                        background: exportScope === scope ? "var(--accent)" : "transparent",
-                        color: exportScope === scope ? "#fff" : "var(--text-muted)",
+                        background:
+                          exportScope === scope
+                            ? "var(--accent)"
+                            : "transparent",
+                        color:
+                          exportScope === scope ? "#fff" : "var(--text-muted)",
                       }}
                     >
                       {scope === "current" ? "Current" : "All"}
@@ -230,16 +286,25 @@ export default function Home() {
             {exportChoice === "pdf" && (
               <div className="grid grid-cols-2 gap-2 mt-1">
                 <label className="flex flex-col gap-0.5 col-span-2">
-                  <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                  <span
+                    className="text-[10px] uppercase tracking-wide"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     Paper (portrait — card orientation auto-fits)
                   </span>
                   <select
                     value={pdfSettings.paper}
                     onChange={(e) =>
-                      setPdfSettings((prev) => ({ ...prev, paper: e.target.value as PaperPreset }))
+                      setPdfSettings((prev) => ({
+                        ...prev,
+                        paper: e.target.value as PaperPreset,
+                      }))
                     }
                     className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                    style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                    style={{
+                      borderColor: "var(--border)",
+                      color: "var(--text-primary)",
+                    }}
                   >
                     {(Object.keys(PAPER_LABELS) as PaperPreset[]).map((p) => (
                       <option key={p} value={p}>
@@ -250,7 +315,10 @@ export default function Home() {
                 </label>
                 {MARGIN_SIDES.map(({ side, label }) => (
                   <label key={side} className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                    <span
+                      className="text-[10px] uppercase tracking-wide"
+                      style={{ color: "var(--text-muted)" }}
+                    >
                       {label} margin (cm)
                     </span>
                     <input
@@ -259,9 +327,14 @@ export default function Home() {
                       max={5}
                       step={0.1}
                       value={pdfSettings.margins[side]}
-                      onChange={(e) => setMargin(side, parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setMargin(side, parseFloat(e.target.value) || 0)
+                      }
                       className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                      style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                      style={{
+                        borderColor: "var(--border)",
+                        color: "var(--text-primary)",
+                      }}
                     />
                   </label>
                 ))}

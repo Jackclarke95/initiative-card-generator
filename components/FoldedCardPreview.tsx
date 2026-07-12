@@ -1,6 +1,6 @@
 "use client";
 
-import { DmFace, FACE_W, FACE_H } from "@/components/CardFaces";
+import { DmFace, PlayerFace, FACE_W, FACE_H } from "@/components/CardFaces";
 import type { CardData } from "@/types/card";
 
 interface FoldedCardPreviewProps {
@@ -11,6 +11,12 @@ interface FoldedCardPreviewProps {
    *  changes how "open" the book looks without the surrounding form
    *  growing or shrinking. */
   maxGutterHeightCm: number;
+  /** Which face sits on the visible front panel. */
+  face?: "dm" | "player";
+  /** Mirrors the whole wedge left-right, so the front panel faces
+   *  right instead of left — the face content is counter-mirrored so
+   *  it still reads normally, only the fold's direction flips. */
+  mirrored?: boolean;
 }
 
 const SCALE = 0.25;
@@ -58,6 +64,8 @@ export default function FoldedCardPreview({
   card,
   gutterHeightCm,
   maxGutterHeightCm,
+  face = "dm",
+  mirrored = false,
 }: FoldedCardPreviewProps) {
   // Physically the fold sits at the gutter's midline, leaving half its
   // height as the visible ridge — but at this scale that read as too
@@ -102,35 +110,61 @@ export default function FoldedCardPreview({
   const c = (p01.x - p00.x) / FACE_H;
   const d = (p01.y - p00.y) / FACE_H;
 
+  const FaceComponent =
+    face === "player" ? (
+      <PlayerFace card={card} rotated={false} />
+    ) : (
+      <DmFace card={card} />
+    );
+
   return (
-    <svg width={viewW} height={viewH} viewBox={`0 0 ${viewW} ${viewH}`}>
-      {/* Back panel — the other half of the fold, drawn first so the
-          front panel and ridge sit visually in front of it. */}
-      <polygon
-        points={toPolygon([back.bl, back.br, back.tr, back.tl], offset)}
-        fill="#e2e2e2"
-        stroke="var(--card-border)"
-        strokeWidth={0.5}
-      />
-      {/* Ridge — the ~half-gutter fold connecting the two panels */}
-      {D > 0.4 && (
+    <div
+      style={{
+        display: "inline-block",
+        lineHeight: 0,
+        transform: mirrored ? "scaleX(-1)" : undefined,
+      }}
+    >
+      <svg width={viewW} height={viewH} viewBox={`0 0 ${viewW} ${viewH}`}>
+        {/* Back panel — the other half of the fold, drawn first so the
+            front panel and ridge sit visually in front of it. */}
         <polygon
-          points={toPolygon([front.tl, front.tr, back.tr, back.tl], offset)}
-          fill="#b8b8b8"
+          points={toPolygon([back.bl, back.br, back.tr, back.tl], offset)}
+          fill="#e2e2e2"
           stroke="var(--card-border)"
           strokeWidth={0.5}
         />
-      )}
-      {/* Front panel — the real DM face, sheared onto the quad above */}
-      <foreignObject
-        x={0}
-        y={0}
-        width={FACE_W}
-        height={FACE_H}
-        transform={`matrix(${a} ${b} ${c} ${d} ${p00.x} ${p00.y})`}
-      >
-        <DmFace card={card} />
-      </foreignObject>
-    </svg>
+        {/* Ridge — the ~half-gutter fold connecting the two panels */}
+        {D > 0.4 && (
+          <polygon
+            points={toPolygon([front.tl, front.tr, back.tr, back.tl], offset)}
+            fill="#b8b8b8"
+            stroke="var(--card-border)"
+            strokeWidth={0.5}
+          />
+        )}
+        {/* Front panel — the real face, sheared onto the quad above.
+            When the wedge itself is mirrored, this inner div carries an
+            opposite mirror so the artwork still reads normally — only
+            the fold's direction flips. */}
+        <foreignObject
+          x={0}
+          y={0}
+          width={FACE_W}
+          height={FACE_H}
+          transform={`matrix(${a} ${b} ${c} ${d} ${p00.x} ${p00.y})`}
+        >
+          <div
+            style={{
+              width: FACE_W,
+              height: FACE_H,
+              transform: mirrored ? "scaleX(-1)" : undefined,
+            }}
+          >
+            {FaceComponent}
+          </div>
+        </foreignObject>
+      </svg>
+    </div>
   );
 }
