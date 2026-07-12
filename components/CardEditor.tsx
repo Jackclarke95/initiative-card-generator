@@ -62,6 +62,32 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
+const RESISTANCE_CYCLE: ResistanceState[] = ["neither", "resistant", "immune"];
+
+function nextResistanceState(state: ResistanceState): ResistanceState {
+  return RESISTANCE_CYCLE[
+    (RESISTANCE_CYCLE.indexOf(state) + 1) % RESISTANCE_CYCLE.length
+  ];
+}
+
+const RESISTANCE_LABELS: Record<ResistanceState, string> = {
+  neither: "None",
+  resistant: "Resistant",
+  immune: "Immune",
+};
+
+function TriStateResistanceBox({ state }: { state: ResistanceState }) {
+  return (
+    <span
+      aria-hidden
+      className="flex h-4 w-4 items-center justify-center rounded-sm border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--accent)] leading-none"
+    >
+      {state === "resistant" && "–"}
+      {state === "immune" && "✓"}
+    </span>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────
 
 export default function CardEditor({ card, onChange }: CardEditorProps) {
@@ -217,45 +243,33 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       </div>
 
       {/* Damage resistances */}
-      <SectionHeading>Damage Types</SectionHeading>
+      <SectionHeading>Resistances</SectionHeading>
       <div className="flex flex-col gap-1">
         {DAMAGE_TYPE_KEYS.map((key) => {
           const state = card.resistances[key];
           return (
-            <div
+            <button
               key={key}
+              type="button"
+              role="checkbox"
+              aria-checked={
+                state === "neither"
+                  ? "false"
+                  : state === "immune"
+                    ? "true"
+                    : "mixed"
+              }
+              onClick={() => setResistance(key, nextResistanceState(state))}
               className="flex items-center justify-between gap-2 text-sm text-[var(--text-primary)]"
             >
-              <span>{DAMAGE_TYPE_LABELS[key]}</span>
-              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={state === "resistant"}
-                    onChange={(e) =>
-                      setResistance(
-                        key,
-                        e.target.checked ? "resistant" : "neither",
-                      )
-                    }
-                  />
-                  Resist
-                </label>
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={state === "immune"}
-                    onChange={(e) =>
-                      setResistance(
-                        key,
-                        e.target.checked ? "immune" : "neither",
-                      )
-                    }
-                  />
-                  Immune
-                </label>
-              </div>
-            </div>
+              <span className="flex items-center gap-2">
+                <TriStateResistanceBox state={state} />
+                {DAMAGE_TYPE_LABELS[key]}
+              </span>
+              <span className="text-xs text-[var(--text-muted)]">
+                {RESISTANCE_LABELS[state]}
+              </span>
+            </button>
           );
         })}
       </div>
