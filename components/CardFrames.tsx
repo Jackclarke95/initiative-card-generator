@@ -184,9 +184,28 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
   cold: (
     <>
       <rect x={11} y={2} width={2} height={20} rx={1} />
-      <rect x={11} y={2} width={2} height={20} rx={1} transform="rotate(60 12 12)" />
-      <rect x={11} y={2} width={2} height={20} rx={1} transform="rotate(120 12 12)" />
-      <g fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+      <rect
+        x={11}
+        y={2}
+        width={2}
+        height={20}
+        rx={1}
+        transform="rotate(60 12 12)"
+      />
+      <rect
+        x={11}
+        y={2}
+        width={2}
+        height={20}
+        rx={1}
+        transform="rotate(120 12 12)"
+      />
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      >
         {[0, 60, 120, 180, 240, 300].map((angle) => (
           <g key={angle} transform={`rotate(${angle} 12 12)`}>
             <line x1={12} y1={6} x2={9} y2={4.3} />
@@ -206,16 +225,25 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
     </>
   ),
   force: (
-    <polygon points="12,2 13.7,7.8 19.1,4.9 16.2,10.3 22,12 16.2,13.7 19.1,19.1 13.7,16.2 12,22 10.3,16.2 4.9,19.1 7.8,13.7 2,12 7.8,10.3 4.9,4.9 10.3,7.8" />
+    <polygon
+      points="12,2 13.7,7.8 19.1,4.9 16.2,10.3 22,12 16.2,13.7 19.1,19.1 13.7,16.2 12,22 10.3,16.2 4.9,19.1 7.8,13.7 2,12 7.8,10.3 4.9,4.9 10.3,7.8"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinejoin="round"
+    />
   ),
   lightning: <polygon points="13,2 6,14 11,14 9,22 18,10 12,10" />,
+  // A reaper's scythe: a curved blade tapering to a point, mounted via a
+  // small collar (with its little locking-pin nub) onto a straight
+  // vertical shaft that ends in a round pommel.
   necrotic: (
     <>
-      <circle cx={12} cy={9} r={7} />
-      <polygon points="6,12 18,12 15,20 9,20" />
-      <circle cx={9.3} cy={9} r={1.6} fill="#fff" />
-      <circle cx={14.7} cy={9} r={1.6} fill="#fff" />
-      <polygon points="12,10.5 11,13 13,13" fill="#fff" />
+      <path d="M12,7 C9,10 3,12 1,13 C4,8 8,5 11,4 C11.3,5 11.7,6 12,7 Z" />
+      <rect x={9.5} y={3} width={4} height={5} rx={1} />
+      <rect x={10.7} y={1.3} width={1.6} height={1.8} rx={0.4} />
+      <rect x={10.5} y={6} width={2} height={16} rx={1} />
+      <circle cx={11.5} cy={22} r={1.6} />
     </>
   ),
   poison: (
@@ -238,7 +266,12 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
   ),
   psychic: (
     <>
-      <g fill="none" stroke="currentColor" strokeWidth={1.15} strokeLinecap="round">
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.15}
+        strokeLinecap="round"
+      >
         <path d="M3,12 A9,9 0 0,1 21,12" />
         <path d="M6,12 A6,6 0 0,1 18,12" />
       </g>
@@ -250,26 +283,95 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
     <>
       <circle cx={12} cy={12} r={5.5} />
       <rect x={11} y={3} width={2} height={4} rx={1} />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(45 12 12)" />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(90 12 12)" />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(135 12 12)" />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(180 12 12)" />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(225 12 12)" />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(270 12 12)" />
-      <rect x={11} y={3} width={2} height={4} rx={1} transform="rotate(315 12 12)" />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(45 12 12)"
+      />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(90 12 12)"
+      />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(135 12 12)"
+      />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(180 12 12)"
+      />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(225 12 12)"
+      />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(270 12 12)"
+      />
+      <rect
+        x={11}
+        y={3}
+        width={2}
+        height={4}
+        rx={1}
+        transform="rotate(315 12 12)"
+      />
     </>
   ),
+  // Three rings radiating from a filled core, the outer two built from
+  // identical outward-bulging bezier segments tiled around by rotation
+  // (same trick as the radiant icon's rays) so they read as rippling
+  // rumbles rather than perfect compass-drawn circles. The outermost is
+  // also dotted.
   thunder: (
     <>
-      <path d="M8,10a4,4 0 1,1 8,0" />
-      <polygon points="8,10 16,10 18,15 6,15" />
-      <ellipse cx={12} cy={15.5} rx={6.5} ry={1.6} />
-      <rect x={11} y={1.2} width={2} height={2.6} rx={1} />
-      <rect x={11.3} y={15.5} width={1.4} height={3} rx={0.7} />
-      <circle cx={12} cy={18.8} r={1.3} />
-      <g fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
-        <path d="M20,10 a5,5 0 0 1 0,8" />
-        <path d="M22.2,12 a2.2,2.2 0 0 1 0,4" />
+      <circle cx={12} cy={12} r={2.4} />
+      <g fill="none" stroke="currentColor" strokeWidth={1.3}>
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+          <path
+            key={angle}
+            d="M18.2,12 C19.2,13.9 18.5,15.8 16.38,16.38"
+            transform={`rotate(${angle} 12 12)`}
+          />
+        ))}
+      </g>
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.3}
+        strokeLinecap="round"
+        strokeDasharray="0.01,3"
+      >
+        {[0, 60, 120, 180, 240, 300].map((angle) => (
+          <path
+            key={angle}
+            d="M21,12 C22.34,15.76 20.43,19.07 16.5,19.79"
+            transform={`rotate(${angle} 12 12)`}
+          />
+        ))}
       </g>
     </>
   ),
@@ -327,8 +429,17 @@ export function DamageTypeBadge({
           <circle cx={cx} cy={cy} r={r + 0.5} fill={color} />
         ) : (
           <>
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={1} />
-            {state === "resistant" && <circle cx={cx} cy={cy} r={r * 0.5} fill={color} />}
+            <circle
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              stroke={color}
+              strokeWidth={1}
+            />
+            {state === "resistant" && (
+              <circle cx={cx} cy={cy} r={r * 0.5} fill={color} />
+            )}
           </>
         )}
       </svg>
