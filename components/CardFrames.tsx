@@ -219,19 +219,25 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
     <>
       <path d="M12,22 C15.8,22 19.2,19 19.2,14.5 C19.2,10 14.7,7 13.4,2.6 C13.2,1.6 12.8,1.2 12.5,1.4 C10.2,6.3 4.8,9.2 4.8,14.5 C4.8,19 8.2,22 12,22 Z" />
       <path
-        d="M12,10.8 C10,12.8 9,15 9,17 C9,19.1 10.2,20.2 12,20.2 C13.8,20.2 15,19.1 15,17 C15,15 14,12.8 12,10.8 Z"
+        d="M12,8.8 C10,10.8 9,13 9,15 C9,17.1 10.2,18.2 12,18.2 C13.8,18.2 15,17.1 15,15 C15,13 14,10.8 12,8.8 Z"
         fill="#fff"
       />
     </>
   ),
+  // A punch/impact burst: three tapering speed-lines trailing into a
+  // ring, like a bolt of force landing on a point — rather than a star.
   force: (
-    <polygon
-      points="12,2 13.7,7.8 19.1,4.9 16.2,10.3 22,12 16.2,13.7 19.1,19.1 13.7,16.2 12,22 10.3,16.2 4.9,19.1 7.8,13.7 2,12 7.8,10.3 4.9,4.9 10.3,7.8"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinejoin="round"
-    />
+    <>
+      <polygon points="12.5,7 1,9 9,11 4,12.5 10,13.5 7,15.5 12.5,17" />
+      <circle
+        cx={16}
+        cy={12}
+        r={4.75}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={3.5}
+      />
+    </>
   ),
   lightning: <polygon points="13,2 6,14 11,14 9,22 18,10 12,10" />,
   // A reaper's scythe: a curved blade tapering to a point, mounted via a
@@ -239,11 +245,11 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
   // vertical shaft that ends in a round pommel.
   necrotic: (
     <>
-      <path d="M12,7 C9,10 3,12 1,13 C4,8 8,5 11,4 C11.3,5 11.7,6 12,7 Z" />
-      <rect x={9.5} y={3} width={4} height={5} rx={1} />
-      <rect x={10.7} y={1.3} width={1.6} height={1.8} rx={0.4} />
-      <rect x={10.5} y={6} width={2} height={16} rx={1} />
-      <circle cx={11.5} cy={22} r={1.6} />
+      <path d="M14.5,7 C11.5,10 5.5,12 3.5,13 C6.5,8 10.5,5 13.5,4 C13.8,5 14.2,6 14.5,7 Z" />
+      <rect x={12} y={3} width={4} height={5} rx={1} />
+      <rect x={13.2} y={1.3} width={1.6} height={1.8} rx={0.4} />
+      <rect x={13} y={6} width={2} height={16} rx={1} />
+      <circle cx={14} cy={22} r={1.6} />
     </>
   ),
   poison: (
@@ -279,100 +285,86 @@ const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
       <polygon points="9,16 15,16 18,23 6,23" />
     </>
   ),
+  // Beams float clear of the core (a 1.5-unit gap to its r=5.5 edge)
+  // rather than touching it, so they read as orbiting rays.
   radiant: (
     <>
       <circle cx={12} cy={12} r={5.5} />
-      <rect x={11} y={3} width={2} height={4} rx={1} />
+      <rect x={11} y={2} width={2} height={3} rx={1} />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(45 12 12)"
       />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(90 12 12)"
       />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(135 12 12)"
       />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(180 12 12)"
       />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(225 12 12)"
       />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(270 12 12)"
       />
       <rect
         x={11}
-        y={3}
+        y={2}
         width={2}
-        height={4}
+        height={3}
         rx={1}
         transform="rotate(315 12 12)"
       />
     </>
   ),
-  // Three rings radiating from a filled core, the outer two built from
-  // identical outward-bulging bezier segments tiled around by rotation
-  // (same trick as the radiant icon's rays) so they read as rippling
-  // rumbles rather than perfect compass-drawn circles. The outermost is
-  // also dotted.
+  // Two concentric octagrams (eight-pointed stars), same orientation,
+  // rather than a single star or plain rings.
   thunder: (
     <>
-      <circle cx={12} cy={12} r={2.4} />
-      <g fill="none" stroke="currentColor" strokeWidth={1.3}>
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
-          <path
-            key={angle}
-            d="M18.2,12 C19.2,13.9 18.5,15.8 16.38,16.38"
-            transform={`rotate(${angle} 12 12)`}
-          />
-        ))}
-      </g>
-      <g
+      <polygon
+        points="12,2 13.7,7.8 19.1,4.9 16.2,10.3 22,12 16.2,13.7 19.1,19.1 13.7,16.2 12,22 10.3,16.2 4.9,19.1 7.8,13.7 2,12 7.8,10.3 4.9,4.9 10.3,7.8"
         fill="none"
         stroke="currentColor"
         strokeWidth={1.3}
-        strokeLinecap="round"
-        strokeDasharray="0.01,3"
-      >
-        {[0, 60, 120, 180, 240, 300].map((angle) => (
-          <path
-            key={angle}
-            d="M21,12 C22.34,15.76 20.43,19.07 16.5,19.79"
-            transform={`rotate(${angle} 12 12)`}
-          />
-        ))}
-      </g>
+      />
+      <polygon
+        points="20.3,12 15.5,13.5 17.9,17.9 13.5,15.5 12,20.3 10.5,15.5 6.2,17.9 8.6,13.5 3.8,12 8.6,10.5 6.2,6.2 10.5,8.6 12,3.8 13.5,8.6 17.9,6.2 15.5,10.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.3}
+      />
     </>
   ),
 };
