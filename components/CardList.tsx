@@ -7,7 +7,6 @@ interface CardListProps {
   activeId: string;
   onSelect: (id: string) => void;
   onAdd: () => void;
-  onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -16,7 +15,6 @@ export default function CardList({
   activeId,
   onSelect,
   onAdd,
-  onDuplicate,
   onRemove,
 }: CardListProps) {
   return (
@@ -52,16 +50,6 @@ export default function CardList({
           >
             <span className="truncate">{card.characterName || "Untitled"}</span>
             <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDuplicate(card.id);
-                }}
-                title="Duplicate"
-                className="w-5 h-5 flex items-center justify-center rounded opacity-80 hover:opacity-100"
-              >
-                ⧉
-              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
