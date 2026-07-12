@@ -359,17 +359,9 @@ export default function Home() {
 
       {/* Preview */}
       <main className="flex-1 overflow-auto flex items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-4">
-          <p
-            className="text-xs uppercase tracking-widest mb-2"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Live Preview
-          </p>
-          {/* Scale the spread up so it's comfortable to review on screen */}
-          <div style={{ transform: "scale(1.5)" }}>
-            <CardSpread card={activeCard} />
-          </div>
+        {/* Scale the spread up so it's comfortable to review on screen */}
+        <div style={{ transform: "scale(1.5)" }}>
+          <CardSpread card={activeCard} />
         </div>
       </main>
 

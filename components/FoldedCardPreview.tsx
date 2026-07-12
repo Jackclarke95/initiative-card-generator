@@ -23,6 +23,11 @@ const SCALE = 0.25;
 const PX_PER_CM = 96 / 2.54;
 const COS30 = Math.cos(Math.PI / 6);
 const SIN30 = Math.sin(Math.PI / 6);
+// Panels splay this many degrees past a flat 90° from the ridge, so the
+// fold reads as an open tent rather than a book lying perfectly flat.
+const TILT_DEG = -5;
+const COS_TILT = Math.cos((TILT_DEG * Math.PI) / 180);
+const SIN_TILT = Math.sin((TILT_DEG * Math.PI) / 180);
 
 interface Point {
   x: number;
@@ -39,12 +44,25 @@ function project(x: number, y: number, z: number): Point {
   };
 }
 
-function panelCorners(w: number, h: number, z: number) {
+// A panel hinged at its top edge (y = h, depth hingeZ) and tilted about
+// that hinge by TILT_DEG so its bottom edge swings further past
+// hingeZ — the top edge (the ridge) is untouched, only the free bottom
+// edge splays out, same as a tent panel leaning open past vertical.
+// `tiltSign` flips which way the bottom edge swings: the front and
+// back panels need opposite signs so they splay apart into a "V"
+// rather than both leaning the same way.
+function panelCorners(w: number, h: number, hingeZ: number, tiltSign: 1 | -1) {
+  function corner(x: number, y: number): Point {
+    const dy = y - h; // 0 at the hinge, -h at the bottom edge
+    const tiltedY = h + dy * COS_TILT;
+    const tiltedZ = hingeZ + tiltSign * dy * SIN_TILT;
+    return project(x, tiltedY, tiltedZ);
+  }
   return {
-    bl: project(0, 0, z),
-    br: project(w, 0, z),
-    tr: project(w, h, z),
-    tl: project(0, h, z),
+    bl: corner(0, 0),
+    br: corner(w, 0),
+    tr: corner(w, h),
+    tl: corner(0, h),
   };
 }
 
@@ -75,11 +93,11 @@ export default function FoldedCardPreview({
   const D = Math.max(0, gutterHeightCm * PX_PER_CM * SCALE);
   const maxD = Math.max(0, maxGutterHeightCm * PX_PER_CM * SCALE);
 
-  const front = panelCorners(W, H, 0);
-  const back = panelCorners(W, H, -D);
+  const front = panelCorners(W, H, 0, 1);
+  const back = panelCorners(W, H, -D, -1);
   // The widest the back panel could ever swing to — used only to fix
   // the SVG's own dimensions, not to place anything.
-  const maxBack = panelCorners(W, H, -maxD);
+  const maxBack = panelCorners(W, H, -maxD, -1);
 
   const bounds = [
     front.bl,
