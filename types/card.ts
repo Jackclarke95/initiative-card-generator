@@ -66,6 +66,10 @@ export type ResistanceState = "neither" | "resistant" | "immune";
 
 export type Resistances = Record<DamageTypeKey, ResistanceState>;
 
+// How each damage type is rendered on the card: its icon, its 2-letter
+// initials, or both stacked together (the original look).
+export type DamageDisplayMode = "icon" | "initials" | "both";
+
 export const DEFAULT_RESISTANCES: Resistances = Object.fromEntries(
   DAMAGE_TYPE_KEYS.map((key) => [key, "neither"]),
 ) as Resistances;
@@ -92,6 +96,7 @@ export interface CardData {
 
   // Damage resistances/immunities
   resistances: Resistances;
+  damageDisplayMode: DamageDisplayMode;
 
   // DM's freeform notes, printed in the box at the bottom of the DM face.
   notes?: string;
@@ -118,6 +123,7 @@ export function emptyCard(id: string): CardData {
       cha: { modifier: "", proficiency: false },
     },
     resistances: DEFAULT_RESISTANCES,
+    damageDisplayMode: "both",
     portraitUrl: "",
     preset: "tactician",
     toggles: {

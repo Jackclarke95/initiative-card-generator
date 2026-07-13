@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { type CardData, emptyCard } from "@/types/card";
 import type { Party } from "@/types/party";
 import CardEditor from "@/components/CardEditor";
@@ -504,7 +510,7 @@ export default function InitiativeCardApp() {
                           exportScope === scope ? "#fff" : "var(--text-muted)",
                       }}
                     >
-                      {scope === "current" ? "Current" : "All"}
+                      {scope === "current" ? "Current Cards" : "All Cards"}
                     </button>
                   );
                 })}
@@ -526,7 +532,7 @@ export default function InitiativeCardApp() {
                     className="text-[10px] uppercase tracking-wide"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    Paper (portrait — card orientation auto-fits)
+                    Page size
                   </span>
                   <select
                     value={pdfSettings.paper}

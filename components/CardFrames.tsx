@@ -12,7 +12,11 @@ import type { IconType } from "react-icons";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
-import type { DamageTypeKey, ResistanceState } from "@/types/card";
+import type {
+  DamageDisplayMode,
+  DamageTypeKey,
+  ResistanceState,
+} from "@/types/card";
 import {
   GiAcid,
   GiBroadsword,
@@ -193,10 +197,12 @@ export function DamageTypeBadge({
   label,
   damageType,
   state,
+  displayMode = "both",
 }: {
   label: string;
   damageType: DamageTypeKey;
   state: ResistanceState;
+  displayMode?: DamageDisplayMode;
 }) {
   const color = state === "neither" ? PALE_GREY : INK;
   const r = 2.6;
@@ -215,10 +221,14 @@ export function DamageTypeBadge({
         gap: 1,
       }}
     >
-      <ReactIcon size={12} style={{ color: INK, flexShrink: 0 }} />
-      <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}>
-        {label.slice(0, 2)}
-      </span>
+      {displayMode !== "initials" && (
+        <ReactIcon size={12} style={{ color: INK, flexShrink: 0 }} />
+      )}
+      {displayMode !== "icon" && (
+        <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}>
+          {label.slice(0, 2)}
+        </span>
+      )}
       <svg width={size} height={size} style={{ flexShrink: 0 }}>
         {state === "immune" ? (
           // Matches the ring's outer edge (r + half its stroke width),

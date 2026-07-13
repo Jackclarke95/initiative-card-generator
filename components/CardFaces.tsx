@@ -222,6 +222,7 @@ export function DmFace({ card }: { card: CardData }) {
               label={DAMAGE_TYPE_LABELS[key]}
               damageType={key}
               state={card.resistances[key]}
+              displayMode={card.damageDisplayMode}
             />
           </Fragment>
         ))}

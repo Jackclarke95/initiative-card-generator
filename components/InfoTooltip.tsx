@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiInfo } from "react-icons/fi";
+import { MdInfoOutline } from "react-icons/md";
 
 interface InfoTooltipProps {
   text: string;
@@ -29,10 +29,7 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
     const rect = iconRef.current.getBoundingClientRect();
 
     let left = rect.left + rect.width / 2 - WIDTH / 2;
-    left = Math.min(
-      Math.max(left, MARGIN),
-      window.innerWidth - WIDTH - MARGIN,
-    );
+    left = Math.min(Math.max(left, MARGIN), window.innerWidth - WIDTH - MARGIN);
 
     const spaceBelow = window.innerHeight - rect.bottom;
     const above = spaceBelow < EST_HEIGHT + MARGIN && rect.top > spaceBelow;
@@ -45,12 +42,12 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
     <>
       <span
         ref={iconRef}
-        className="flex items-center justify-center w-3.5 h-3.5 cursor-help shrink-0"
+        className="flex items-center justify-center w-3.5 h-3.5 shrink-0"
         style={{ color: "var(--text-muted)" }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        <FiInfo size={13} />
+        <MdInfoOutline size={14} />
       </span>
       {open &&
         pos &&

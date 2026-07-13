@@ -1,15 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
+import ConfirmModal from "@/components/ConfirmModal";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
   DAMAGE_TYPE_KEYS,
   DAMAGE_TYPE_LABELS,
+  emptyCard,
   type AbilityKey,
   type AbilityStat,
   type CardData,
+  type DamageDisplayMode,
   type DamageTypeKey,
   type ResistanceState,
 } from "@/types/card";
@@ -97,6 +101,14 @@ const RESISTANCE_LABELS: Record<ResistanceState, string> = {
   immune: "Immune",
 };
 
+const DAMAGE_DISPLAY_LABELS: Record<DamageDisplayMode, string> = {
+  icon: "Icon",
+  initials: "Initials",
+  both: "Both",
+};
+
+const DAMAGE_DISPLAY_MODES: DamageDisplayMode[] = ["icon", "initials", "both"];
+
 function TriStateResistanceBox({ state }: { state: ResistanceState }) {
   return (
     <span
@@ -112,6 +124,8 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 // ── Main component ────────────────────────────────────────────────────
 
 export default function CardEditor({ card, onChange }: CardEditorProps) {
+  const [confirmingClear, setConfirmingClear] = useState(false);
+
   function set<K extends keyof CardData>(key: K, value: CardData[K]) {
     onChange({ ...card, [key]: value });
   }
@@ -145,6 +159,16 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setConfirmingClear(true)}
+          className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+        >
+          Clear card
+        </button>
+      </div>
+
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
       <div className="grid grid-cols-2 gap-2">
@@ -199,21 +223,21 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       >
         Vitals
       </SectionHeading>
-      <div className="grid gap-2">
-        <Field label="AC">
-          <input
-            className={numClass}
-            type="number"
-            value={card.ac ?? ""}
-            onChange={(e) => setNum("ac", e.target.value)}
-          />
-        </Field>
+      <div className="grid grid-cols-3 gap-2">
         <Field label="Max HP">
           <input
             className={numClass}
             type="number"
             value={card.maxHp ?? ""}
             onChange={(e) => setNum("maxHp", e.target.value)}
+          />
+        </Field>
+        <Field label="AC">
+          <input
+            className={numClass}
+            type="number"
+            value={card.ac ?? ""}
+            onChange={(e) => setNum("ac", e.target.value)}
           />
         </Field>
         <Field label="Save DC">
@@ -224,20 +248,12 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             onChange={(e) => setNum("spellSaveDC", e.target.value)}
           />
         </Field>
-        <Field label="Passive Perception">
+        <Field label="Perception">
           <input
             className={numClass}
             type="number"
             value={card.passivePerception ?? ""}
             onChange={(e) => setNum("passivePerception", e.target.value)}
-          />
-        </Field>
-        <Field label="Passive Insight">
-          <input
-            className={numClass}
-            type="number"
-            value={card.passiveInsight ?? ""}
-            onChange={(e) => setNum("passiveInsight", e.target.value)}
           />
         </Field>
         <Field label="Speed (ft)">
@@ -251,6 +267,14 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             onChange={(e) => setNum("speed", e.target.value)}
           />
         </Field>
+        <Field label="Insight">
+          <input
+            className={numClass}
+            type="number"
+            value={card.passiveInsight ?? ""}
+            onChange={(e) => setNum("passiveInsight", e.target.value)}
+          />
+        </Field>
       </div>
 
       {/* Ability scores */}
@@ -260,27 +284,28 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       >
         Ability Scores
       </SectionHeading>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {ABILITY_KEYS.map((key) => (
-          <div key={key} className="flex items-end gap-2">
-            <Field label={ABILITY_LABELS[key]}>
-              <input
-                className={inputClass}
-                value={card.stats[key].modifier}
-                placeholder="+0"
-                onChange={(e) => setStat(key, { modifier: e.target.value })}
-              />
-            </Field>
-            <label className="flex items-center gap-1 pb-1.5 text-xs text-[var(--text-muted)] whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={card.stats[key].proficiency}
-                onChange={(e) =>
-                  setStat(key, { proficiency: e.target.checked })
-                }
-              />
-              Prof.
+          <div key={key} className="flex flex-col gap-0.5">
+            <label className="flex items-center justify-between gap-1 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
+              <span>{ABILITY_LABELS[key]}</span>
+              <span className="flex items-center gap-1 normal-case font-normal whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={card.stats[key].proficiency}
+                  onChange={(e) =>
+                    setStat(key, { proficiency: e.target.checked })
+                  }
+                />
+                Proficient
+              </span>
             </label>
+            <input
+              className={inputClass}
+              value={card.stats[key].modifier}
+              placeholder="+0"
+              onChange={(e) => setStat(key, { modifier: e.target.value })}
+            />
           </div>
         ))}
       </div>
@@ -292,6 +317,36 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       >
         Resistances
       </SectionHeading>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
+          Display type
+        </span>
+        <div
+          className="flex rounded overflow-hidden border"
+          style={{ borderColor: "var(--border)" }}
+        >
+          {DAMAGE_DISPLAY_MODES.map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => set("damageDisplayMode", mode)}
+              className="flex-1 px-2.5 py-1 text-xs font-semibold transition-colors"
+              style={{
+                background:
+                  card.damageDisplayMode === mode
+                    ? "var(--accent)"
+                    : "transparent",
+                color:
+                  card.damageDisplayMode === mode
+                    ? "#fff"
+                    : "var(--text-muted)",
+              }}
+            >
+              {DAMAGE_DISPLAY_LABELS[mode]}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="flex flex-col gap-1">
         {DAMAGE_TYPE_KEYS.map((key) => {
           const state = card.resistances[key];
@@ -339,6 +394,19 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           onChange={(e) => set("notes", e.target.value)}
         />
       </Field>
+
+      {confirmingClear && (
+        <ConfirmModal
+          title="Clear card"
+          message="Reset this card to a blank state? This cannot be undone."
+          confirmLabel="Clear"
+          onConfirm={() => {
+            onChange(emptyCard(card.id));
+            setConfirmingClear(false);
+          }}
+          onCancel={() => setConfirmingClear(false)}
+        />
+      )}
     </div>
   );
 }
