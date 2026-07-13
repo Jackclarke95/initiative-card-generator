@@ -145,11 +145,14 @@ export default function FoldedCardPreview({
     >
       <svg width={viewW} height={viewH} viewBox={`0 0 ${viewW} ${viewH}`}>
         {/* Back panel — the other half of the fold, drawn first so the
-            front panel and ridge sit visually in front of it. */}
+            front panel and ridge sit visually in front of it. A fixed
+            black stroke (rather than the app's theme-dependent
+            --border) keeps the wedge's edges legible against both a
+            light and dark app background. */}
         <polygon
           points={toPolygon([back.bl, back.br, back.tr, back.tl], offset)}
           fill="#e2e2e2"
-          stroke="var(--card-border)"
+          stroke="#000"
           strokeWidth={0.5}
         />
         {/* Ridge — the ~half-gutter fold connecting the two panels */}
@@ -157,7 +160,7 @@ export default function FoldedCardPreview({
           <polygon
             points={toPolygon([front.tl, front.tr, back.tr, back.tl], offset)}
             fill="#b8b8b8"
-            stroke="var(--card-border)"
+            stroke="#000"
             strokeWidth={0.5}
           />
         )}
@@ -182,6 +185,16 @@ export default function FoldedCardPreview({
             {FaceComponent}
           </div>
         </foreignObject>
+        {/* Outline the front panel on top of the face content — the
+            face's own .card-face border is a subtle theme-neutral grey
+            that can wash out against the app chrome, so this adds a
+            crisp black edge instead. */}
+        <polygon
+          points={toPolygon([front.bl, front.br, front.tr, front.tl], offset)}
+          fill="none"
+          stroke="#000"
+          strokeWidth={0.5}
+        />
       </svg>
     </div>
   );

@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* ── App UI variables ───────────────────────────────────────────────── */
-:root {
+:root,
+[data-theme="dark"] {
   --background: #1a1a2e;
   --surface: #16213e;
   --surface-raised: #0f3460;
@@ -9,8 +10,12 @@
   --text-primary: #eaeaea;
   --text-muted: #8892b0;
   --border: #2d3561;
+}
 
-  /* Card-specific */
+/* Card-specific colors are the printed card's own palette, not the app
+   chrome — they stay fixed across themes, so they live outside the
+   dark/light blocks above. */
+:root {
   --card-width: 2.5in;
   --card-height: 3.5in;
   --card-bg: #ffffff;
@@ -25,6 +30,16 @@
 
   --font-card: system-ui, sans-serif;
   --font-ui: var(--font-geist-sans, system-ui, sans-serif);
+}
+
+[data-theme="light"] {
+  --background: #f2f3f9;
+  --surface: #ffffff;
+  --surface-raised: #eceef7;
+  --accent: #cf2f56;
+  --text-primary: #1b1e2e;
+  --text-muted: #667088;
+  --border: #dadde8;
 }
 
 @theme inline {

@@ -12,6 +12,7 @@ import ExportArea from "@/components/ExportArea";
 import CardSpread from "@/components/CardSpread";
 import FoldedCardPreview from "@/components/FoldedCardPreview";
 import InfoTooltip from "@/components/InfoTooltip";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   exportCard,
   exportAllCards,
@@ -249,16 +250,19 @@ export default function InitiativeCardApp() {
           className="px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--border)" }}
         >
-          <div className="mb-3">
-            <h1
-              className="text-sm font-bold tracking-wide"
-              style={{ color: "var(--accent)" }}
-            >
-              Initiative Cards
-            </h1>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              D&amp;D 5e DM Screen
-            </p>
+          <div className="mb-3 flex items-start justify-between gap-2">
+            <div>
+              <h1
+                className="text-sm font-bold tracking-wide"
+                style={{ color: "var(--accent)" }}
+              >
+                Initiative Cards
+              </h1>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                D&amp;D 5e DM Screen
+              </p>
+            </div>
+            <ThemeToggle />
           </div>
 
           <label className="flex flex-col gap-0.5">

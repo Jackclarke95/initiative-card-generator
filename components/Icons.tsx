@@ -130,6 +130,42 @@ export function MagnifyingGlassIcon({
   );
 }
 
+export function SunIcon({
+  size = 16,
+  color = "currentColor",
+  className,
+}: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      className={className}
+    >
+      <path d="M12 17a5 5 0 100-10 5 5 0 000 10zm0-14a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zm0 17a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9-6a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm14.36 6.36a1 1 0 01-1.41 0l-.71-.71a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zM6.76 7.05a1 1 0 01-1.41 0l-.71-.71A1 1 0 116.05 4.93l.71.71a1 1 0 010 1.41zm11.6-2.83a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zM6.05 17.95a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0z" />
+    </svg>
+  );
+}
+
+export function MoonIcon({
+  size = 16,
+  color = "currentColor",
+  className,
+}: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      className={className}
+    >
+      <path d="M20.74 14.51a8.5 8.5 0 01-10.25-10.25.5.5 0 00-.63-.63A9.5 9.5 0 1021.37 15.14a.5.5 0 00-.63-.63z" />
+    </svg>
+  );
+}
+
 export function SparkleIcon({
   size = 16,
   color = "currentColor",
