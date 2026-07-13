@@ -229,6 +229,12 @@ export function DmFace({ card }: { card: CardData }) {
     ),
   ].filter(Boolean);
 
+  // Total optional sections above Notes; how many of those are currently
+  // hidden decides how much extra breathing room the rest get once Notes
+  // itself is off (see below).
+  const SPREADABLE_SECTION_COUNT = 4;
+  const hiddenSectionCount = SPREADABLE_SECTION_COUNT - sections.length;
+
   return (
     <div
       className="card-face"
@@ -240,10 +246,20 @@ export function DmFace({ card }: { card: CardData }) {
           display: "flex",
           flexDirection: "column",
           ...(showNotes
-            ? { gap: S.gap }
+            ? { gap: S.gap * (1 + hiddenSectionCount) }
             : {
+                // No elastic Notes filler left, so the remaining sections
+                // spread across the full height instead: justify-content
+                // keeps the first section flush to the top and the last
+                // flush to the bottom (or centers a lone survivor), while
+                // the explicit gap below sets a growing minimum between
+                // them — doubling per extra hidden section — so the more
+                // sections are removed, the more deliberate space shows up
+                // between what's left, on top of whatever space-between
+                // adds automatically.
                 justifyContent:
                   sections.length > 1 ? "space-between" : "center",
+                gap: S.gap,
               }),
         }}
       >
