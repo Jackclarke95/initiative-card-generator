@@ -11,6 +11,7 @@ import NamePartyModal from "@/components/NamePartyModal";
 import ExportArea from "@/components/ExportArea";
 import CardSpread from "@/components/CardSpread";
 import FoldedCardPreview from "@/components/FoldedCardPreview";
+import InfoTooltip from "@/components/InfoTooltip";
 import {
   exportCard,
   exportAllCards,
@@ -44,7 +45,12 @@ function newCard(): CardData {
 
 function newParty(name: string): Party {
   const card = newCard();
-  return { id: crypto.randomUUID(), name, cards: [card], activeCardId: card.id };
+  return {
+    id: crypto.randomUUID(),
+    name,
+    cards: [card],
+    activeCardId: card.id,
+  };
 }
 
 function defaultParties(): Party[] {
@@ -102,7 +108,10 @@ export default function InitiativeCardApp() {
         prev.map((p) =>
           p.id !== activeParty.id
             ? p
-            : { ...p, cards: p.cards.map((c) => (c.id === updated.id ? updated : c)) },
+            : {
+                ...p,
+                cards: p.cards.map((c) => (c.id === updated.id ? updated : c)),
+              },
         ),
       );
     },
@@ -139,7 +148,9 @@ export default function InitiativeCardApp() {
   const handleSelectCard = useCallback(
     (id: string) => {
       setParties((prev) =>
-        prev.map((p) => (p.id !== activeParty.id ? p : { ...p, activeCardId: id })),
+        prev.map((p) =>
+          p.id !== activeParty.id ? p : { ...p, activeCardId: id },
+        ),
       );
     },
     [activeParty.id],
@@ -154,7 +165,9 @@ export default function InitiativeCardApp() {
 
   const handleRenameParty = useCallback((id: string, name: string) => {
     setParties((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, name: name || "Untitled Party" } : p)),
+      prev.map((p) =>
+        p.id === id ? { ...p, name: name || "Untitled Party" } : p,
+      ),
     );
   }, []);
 
@@ -249,10 +262,11 @@ export default function InitiativeCardApp() {
 
           <label className="flex flex-col gap-0.5">
             <span
-              className="text-[10px] uppercase tracking-wide"
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wide"
               style={{ color: "var(--text-muted)" }}
             >
               Fold gutter: {gutterCm.toFixed(1)} cm
+              <InfoTooltip text="Sets the blank strip between the two faces so the printed sheet folds around the thickness of your DM screen. Leave at 0 for a flat, two-sided card with no gap." />
             </span>
             <input
               type="range"

@@ -64,7 +64,7 @@ function Slot({
 export function DmFace({ card }: { card: CardData }) {
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
-  const S = { shW: 52, shH: 60, gap: 10 };
+  const S = { shW: 52, shH: 60, gap: 5 };
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
   const iconH = S.shH;
@@ -110,7 +110,7 @@ export function DmFace({ card }: { card: CardData }) {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 6,
+            gap: 3,
           }}
         >
           <div
@@ -198,6 +198,7 @@ export function DmFace({ card }: { card: CardData }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-around",
+            marginTop: 4,
           }}
         >
           {DAMAGE_TYPE_KEYS.map((key, i) => (
