@@ -99,30 +99,26 @@ export interface CardData {
   toggles: CardToggles;
 }
 
-export const DEFAULT_CARD: CardData = {
-  id: "default",
-  characterName: "Aelindra",
-  characterClass: "Paladin",
-  ac: 18,
-  maxHp: 52,
-  speed: 30,
-  passivePerception: 12,
-  passiveInsight: 14,
-  spellSaveDC: 14,
-  stats: {
-    str: { modifier: "+5", proficiency: true },
-    dex: { modifier: "+2", proficiency: false },
-    con: { modifier: "+3", proficiency: true },
-    int: { modifier: "-1", proficiency: false },
-    wis: { modifier: "+0", proficiency: false },
-    cha: { modifier: "+2", proficiency: false },
-  },
-  resistances: DEFAULT_RESISTANCES,
-  portraitUrl: "",
-  preset: "tactician",
-  toggles: {
-    showPassives: true,
-    showSpellSaveDC: true,
-    showPortrait: false,
-  },
-};
+export function emptyCard(id: string): CardData {
+  return {
+    id,
+    characterName: "",
+    characterClass: "",
+    stats: {
+      str: { modifier: "", proficiency: false },
+      dex: { modifier: "", proficiency: false },
+      con: { modifier: "", proficiency: false },
+      int: { modifier: "", proficiency: false },
+      wis: { modifier: "", proficiency: false },
+      cha: { modifier: "", proficiency: false },
+    },
+    resistances: DEFAULT_RESISTANCES,
+    portraitUrl: "",
+    preset: "tactician",
+    toggles: {
+      showPassives: true,
+      showSpellSaveDC: true,
+      showPortrait: false,
+    },
+  };
+}

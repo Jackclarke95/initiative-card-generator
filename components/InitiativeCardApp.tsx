@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { type CardData, DEFAULT_CARD } from "@/types/card";
+import { type CardData, emptyCard } from "@/types/card";
 import type { Party } from "@/types/party";
 import CardEditor from "@/components/CardEditor";
 import CardList from "@/components/CardList";
@@ -40,7 +40,7 @@ const MARGIN_SIDES: { side: MarginSide; label: string }[] = [
 const GUTTER_MAX_CM = 3;
 
 function newCard(): CardData {
-  return { ...DEFAULT_CARD, id: crypto.randomUUID(), characterName: "" };
+  return emptyCard(crypto.randomUUID());
 }
 
 function newParty(name: string): Party {
@@ -54,12 +54,13 @@ function newParty(name: string): Party {
 }
 
 function defaultParties(): Party[] {
+  const card = newCard();
   return [
     {
       id: crypto.randomUUID(),
       name: "Untitled Party",
-      cards: [{ ...DEFAULT_CARD }],
-      activeCardId: DEFAULT_CARD.id,
+      cards: [card],
+      activeCardId: card.id,
     },
   ];
 }

@@ -153,7 +153,7 @@ export function DmFace({ card }: { card: CardData }) {
             <Slot width={slotW}>
               <Star
                 value={card.passivePerception}
-                label="P. P."
+                label="PP"
                 width={starW}
                 height={iconH}
               />
