@@ -95,7 +95,7 @@ export function VitalBox({
 }) {
   const dotR = height * 0.075;
   const dotCx = width / 2;
-  const dotCy = height * 0.87;
+  const dotCy = height * 0.83;
   return (
     <div style={{ position: "relative", width, height }}>
       <VitalBoxFrame width={width} height={height} />
