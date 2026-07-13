@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { type CardData, emptyCard } from "@/types/card";
 import type { Party } from "@/types/party";
 import CardEditor from "@/components/CardEditor";
@@ -39,6 +39,13 @@ const MARGIN_SIDES: { side: MarginSide; label: string }[] = [
 ];
 
 const GUTTER_MAX_CM = 3;
+
+// The center preview scales the whole card spread up or down to fill
+// whatever space is available: never bigger than the original
+// "comfortable to review" 2x, never smaller than true size (1x) —
+// below that the cards read as tiny rather than just compact.
+const PREVIEW_MAX_SCALE = 2;
+const PREVIEW_MIN_SCALE = 1;
 
 function newCard(): CardData {
   return emptyCard(crypto.randomUUID());
@@ -80,6 +87,54 @@ export default function InitiativeCardApp() {
   });
 
   const [gutterCm, setGutterCm] = useState(1);
+
+  // Live preview sizing: measure the available box in the center pane
+  // against the spread's natural (unscaled) footprint in both a
+  // side-by-side and a stacked arrangement, then pick whichever
+  // direction lets the cards render biggest, clamped to a sensible
+  // scale range.
+  const previewBoxRef = useRef<HTMLDivElement>(null);
+  const rowMeasureRef = useRef<HTMLDivElement>(null);
+  const columnMeasureRef = useRef<HTMLDivElement>(null);
+  const [previewLayout, setPreviewLayout] = useState<{
+    scale: number;
+    direction: "row" | "column";
+  }>({ scale: PREVIEW_MAX_SCALE, direction: "row" });
+
+  useLayoutEffect(() => {
+    const box = previewBoxRef.current;
+    const rowEl = rowMeasureRef.current;
+    const columnEl = columnMeasureRef.current;
+    if (!box || !rowEl || !columnEl) return;
+
+    const recompute = () => {
+      const availW = box.clientWidth;
+      const availH = box.clientHeight;
+      const rowW = rowEl.scrollWidth;
+      const rowH = rowEl.scrollHeight;
+      const columnW = columnEl.scrollWidth;
+      const columnH = columnEl.scrollHeight;
+      if (!availW || !availH || !rowW || !rowH || !columnW || !columnH) return;
+
+      const rowScale = Math.min(availW / rowW, availH / rowH);
+      const columnScale = Math.min(availW / columnW, availH / columnH);
+      const direction = columnScale > rowScale ? "column" : "row";
+      const rawScale = direction === "column" ? columnScale : rowScale;
+
+      setPreviewLayout({
+        scale: Math.min(
+          PREVIEW_MAX_SCALE,
+          Math.max(PREVIEW_MIN_SCALE, rawScale),
+        ),
+        direction,
+      });
+    };
+
+    recompute();
+    const observer = new ResizeObserver(recompute);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
 
   const [exportScope, setExportScope] = useState<ExportScope>("current");
   const [exportChoice, setExportChoice] = useState<ExportChoice>("png");
@@ -274,11 +329,43 @@ export default function InitiativeCardApp() {
         </div>
       </aside>
 
-      {/* Center: live preview */}
-      <main className="flex-1 overflow-auto flex items-center justify-center p-8">
-        {/* Scale the spread up so it's comfortable to review on screen */}
-        <div style={{ transform: "scale(2)" }}>
-          <CardSpread card={activeCard} />
+      {/* Center: live preview — scaled to fill whatever space is
+          available, side by side or stacked, whichever renders bigger. */}
+      <main className="flex-1 overflow-auto p-8">
+        <div
+          ref={previewBoxRef}
+          className="w-full h-full flex items-center justify-center"
+        >
+          <div style={{ transform: `scale(${previewLayout.scale})` }}>
+            <CardSpread card={activeCard} direction={previewLayout.direction} />
+          </div>
+        </div>
+
+        {/* Off-screen, unscaled copies used only to measure the
+            spread's natural footprint in each direction. The wrapper is
+            pinned to zero size with overflow hidden so it can never
+            grow the page's scrollable area; each measured child gets an
+            explicit max-content width so it reports its true natural
+            size instead of being squeezed to fit the zero-width
+            wrapper. */}
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            overflow: "hidden",
+            visibility: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div ref={rowMeasureRef} style={{ width: "max-content" }}>
+            <CardSpread card={activeCard} direction="row" />
+          </div>
+          <div ref={columnMeasureRef} style={{ width: "max-content" }}>
+            <CardSpread card={activeCard} direction="column" />
+          </div>
         </div>
       </main>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
+import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -294,6 +295,7 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       <div className="flex flex-col gap-1">
         {DAMAGE_TYPE_KEYS.map((key) => {
           const state = card.resistances[key];
+          const ReactIcon = DAMAGE_TYPE_REACT_ICONS[key];
           return (
             <button
               key={key}
@@ -311,6 +313,7 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             >
               <span className="flex items-center gap-2">
                 <TriStateResistanceBox state={state} />
+                <ReactIcon size={14} />
                 {DAMAGE_TYPE_LABELS[key]}
               </span>
               <span className="text-xs text-[var(--text-muted)]">

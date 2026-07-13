@@ -8,10 +8,26 @@
 // personal print tool, not for public distribution.
 
 import { useId } from "react";
+import type { IconType } from "react-icons";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
 import type { DamageTypeKey, ResistanceState } from "@/types/card";
+import {
+  GiAcid,
+  GiBroadsword,
+  GiDeathSkull,
+  GiEnlightenment,
+  GiFlame,
+  GiPocketBow,
+  GiPowerLightning,
+  GiPsychicWaves,
+  GiRollingEnergy,
+  GiSnake,
+  GiSnowflake1,
+  GiSonicBoom,
+  GiThorHammer,
+} from "react-icons/gi";
 
 interface FrameProps {
   width: number;
@@ -150,222 +166,20 @@ export const StatBox = ({
   />
 ); // alias for InitiativeCard.tsx usage
 
-// ── Damage type glyphs — one hand-drawn icon per 5e damage type ───────
-// Each is a flat solid shape (no IconFrame bezel) on a 24×24 grid, sized
-// to sit above the 2-letter code and resistance ring in DamageTypeBadge.
-// "#fff" punches match the card's own paper-white background, the same
-// literal used elsewhere in this file for carving gaps out of ink fills.
-const DAMAGE_TYPE_ICONS: Record<DamageTypeKey, React.ReactNode> = {
-  bludgeoning: (
-    <>
-      <rect x={11} y={6} width={2} height={17} rx={1} />
-      <rect x={6} y={2.5} width={12} height={6} rx={1} />
-    </>
-  ),
-  piercing: <polygon points="12,2 16,10 13,10 13,22 11,22 11,10 8,10" />,
-  slashing: (
-    <>
-      <polygon points="12,1 13.4,5 13.4,17 10.6,17 10.6,5" />
-      <rect x={7} y={17} width={10} height={1.4} rx={0.6} />
-      <rect x={11} y={18.4} width={2} height={3} rx={1} />
-      <circle cx={12} cy={22.2} r={1.6} />
-    </>
-  ),
-  acid: (
-    <>
-      <rect x={10.2} y={1.5} width={3.6} height={2} rx={0.6} />
-      <rect x={10.5} y={2.8} width={3} height={5.5} />
-      <polygon points="10.5,8 13.5,8 19,21 5,21" />
-      <circle cx={10.2} cy={15} r={1.1} fill="#fff" />
-      <circle cx={14} cy={17} r={0.9} fill="#fff" />
-    </>
-  ),
-  cold: (
-    <>
-      <rect x={11} y={2} width={2} height={20} rx={1} />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={20}
-        rx={1}
-        transform="rotate(60 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={20}
-        rx={1}
-        transform="rotate(120 12 12)"
-      />
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      >
-        {[0, 60, 120, 180, 240, 300].map((angle) => (
-          <g key={angle} transform={`rotate(${angle} 12 12)`}>
-            <line x1={12} y1={6} x2={9} y2={4.3} />
-            <line x1={12} y1={6} x2={15} y2={4.3} />
-          </g>
-        ))}
-      </g>
-    </>
-  ),
-  fire: (
-    <>
-      <path d="M12,22 C15.8,22 19.2,19 19.2,14.5 C19.2,10 14.7,7 13.4,2.6 C13.2,1.6 12.8,1.2 12.5,1.4 C10.2,6.3 4.8,9.2 4.8,14.5 C4.8,19 8.2,22 12,22 Z" />
-      <path
-        d="M12,8.8 C10,10.8 9,13 9,15 C9,17.1 10.2,18.2 12,18.2 C13.8,18.2 15,17.1 15,15 C15,13 14,10.8 12,8.8 Z"
-        fill="#fff"
-      />
-    </>
-  ),
-  // A punch/impact burst: three tapering speed-lines trailing into a
-  // ring, like a bolt of force landing on a point — rather than a star.
-  force: (
-    <>
-      <polygon points="12.5,7 1,9 9,11 4,12.5 10,13.5 7,15.5 12.5,17" />
-      <circle
-        cx={16}
-        cy={12}
-        r={4.75}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={3.5}
-      />
-    </>
-  ),
-  lightning: <polygon points="13,2 6,14 11,14 9,22 18,10 12,10" />,
-  // A reaper's scythe: a curved blade tapering to a point, mounted via a
-  // small collar (with its little locking-pin nub) onto a straight
-  // vertical shaft that ends in a round pommel.
-  necrotic: (
-    <>
-      <path d="M14.5,7 C11.5,10 5.5,12 3.5,13 C6.5,8 10.5,5 13.5,4 C13.8,5 14.2,6 14.5,7 Z" />
-      <rect x={12} y={3} width={4} height={5} rx={1} />
-      <rect x={13.2} y={1.3} width={1.6} height={1.8} rx={0.4} />
-      <rect x={13} y={6} width={2} height={16} rx={1} />
-      <circle cx={14} cy={22} r={1.6} />
-    </>
-  ),
-  poison: (
-    <>
-      <g transform="rotate(35 12 16.5)">
-        <rect x={2} y={15.4} width={20} height={2.2} rx={1.1} />
-        <circle cx={3} cy={16.5} r={1.8} />
-        <circle cx={21} cy={16.5} r={1.8} />
-      </g>
-      <g transform="rotate(-35 12 16.5)">
-        <rect x={2} y={15.4} width={20} height={2.2} rx={1.1} />
-        <circle cx={3} cy={16.5} r={1.8} />
-        <circle cx={21} cy={16.5} r={1.8} />
-      </g>
-      <circle cx={12} cy={9} r={5.5} />
-      <polygon points="7.5,11 16.5,11 14.5,17 9.5,17" />
-      <circle cx={10} cy={9} r={1.3} fill="#fff" />
-      <circle cx={14} cy={9} r={1.3} fill="#fff" />
-    </>
-  ),
-  psychic: (
-    <>
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.15}
-        strokeLinecap="round"
-      >
-        <path d="M3,12 A9,9 0 0,1 21,12" />
-        <path d="M6,12 A6,6 0 0,1 18,12" />
-      </g>
-      <ellipse cx={12} cy={12.8} rx={4.3} ry={5.2} />
-      <polygon points="9,16 15,16 18,23 6,23" />
-    </>
-  ),
-  // Beams float clear of the core (a 1.5-unit gap to its r=5.5 edge)
-  // rather than touching it, so they read as orbiting rays.
-  radiant: (
-    <>
-      <circle cx={12} cy={12} r={5.5} />
-      <rect x={11} y={2} width={2} height={3} rx={1} />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(45 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(90 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(135 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(180 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(225 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(270 12 12)"
-      />
-      <rect
-        x={11}
-        y={2}
-        width={2}
-        height={3}
-        rx={1}
-        transform="rotate(315 12 12)"
-      />
-    </>
-  ),
-  // Two concentric octagrams (eight-pointed stars), same orientation,
-  // rather than a single star or plain rings.
-  thunder: (
-    <>
-      <polygon
-        points="12,2 13.7,7.8 19.1,4.9 16.2,10.3 22,12 16.2,13.7 19.1,19.1 13.7,16.2 12,22 10.3,16.2 4.9,19.1 7.8,13.7 2,12 7.8,10.3 4.9,4.9 10.3,7.8"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.3}
-      />
-      <polygon
-        points="20.3,12 15.5,13.5 17.9,17.9 13.5,15.5 12,20.3 10.5,15.5 6.2,17.9 8.6,13.5 3.8,12 8.6,10.5 6.2,6.2 10.5,8.6 12,3.8 13.5,8.6 17.9,6.2 15.5,10.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.3}
-      />
-    </>
-  ),
+export const DAMAGE_TYPE_REACT_ICONS: Record<DamageTypeKey, IconType> = {
+  bludgeoning: GiThorHammer,
+  piercing: GiPocketBow,
+  slashing: GiBroadsword,
+  acid: GiAcid,
+  cold: GiSnowflake1,
+  fire: GiFlame,
+  force: GiRollingEnergy,
+  lightning: GiPowerLightning,
+  necrotic: GiDeathSkull,
+  poison: GiSnake,
+  psychic: GiPsychicWaves,
+  radiant: GiEnlightenment,
+  thunder: GiSonicBoom,
 };
 
 // ── Damage type badge — icon, 2-letter code, resistance/immunity mark ──
@@ -389,6 +203,7 @@ export function DamageTypeBadge({
   const cx = r + 1;
   const cy = r + 1;
   const size = r * 2 + 2;
+  const ReactIcon = DAMAGE_TYPE_REACT_ICONS[damageType];
 
   return (
     <div
@@ -400,15 +215,7 @@ export function DamageTypeBadge({
         gap: 1,
       }}
     >
-      <svg
-        viewBox="0 0 24 24"
-        width={13}
-        height={13}
-        fill="currentColor"
-        style={{ color: INK, flexShrink: 0 }}
-      >
-        {DAMAGE_TYPE_ICONS[damageType]}
-      </svg>
+      <ReactIcon size={12} style={{ color: INK, flexShrink: 0 }} />
       <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}>
         {label.slice(0, 2)}
       </span>

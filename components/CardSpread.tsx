@@ -5,15 +5,26 @@ import type { CardData } from "@/types/card";
 
 interface CardSpreadProps {
   card: CardData;
+  /** "row" (side by side) fits wide viewports; "column" (stacked) lets
+   *  the cards render larger when the available space is tall and
+   *  narrow instead. */
+  direction?: "row" | "column";
 }
 
 // Both faces shown right-side up, side by side, with no fold gutter —
 // an easier arrangement to proof-read while editing than the
 // fold-ready layout (rotated player face, gutter, DM face) that
 // InitiativeCard renders for print/export.
-export default function CardSpread({ card }: CardSpreadProps) {
+export default function CardSpread({ card, direction = "row" }: CardSpreadProps) {
   return (
-    <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: direction,
+        gap: 16,
+        alignItems: direction === "row" ? "flex-start" : "center",
+      }}
+    >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         <span
           className="text-[10px] uppercase tracking-wide"
