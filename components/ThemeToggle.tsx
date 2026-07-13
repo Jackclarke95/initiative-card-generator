@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoonIcon, SunIcon } from "@/components/Icons";
+import { FiMoon, FiSun } from "react-icons/fi";
 import { applyTheme, getCurrentTheme, type Theme } from "@/lib/theme";
 
 export default function ThemeToggle() {
@@ -26,7 +26,7 @@ export default function ThemeToggle() {
         color: "var(--text-muted)",
       }}
     >
-      {theme === "dark" ? <SunIcon size={13} /> : <MoonIcon size={13} />}
+      {theme === "dark" ? <FiSun size={13} /> : <FiMoon size={13} />}
     </button>
   );
 }

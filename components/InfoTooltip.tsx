@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { FiInfo } from "react-icons/fi";
 
 interface InfoTooltipProps {
   text: string;
@@ -44,15 +45,12 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
     <>
       <span
         ref={iconRef}
-        className="flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] cursor-help shrink-0"
-        style={{
-          color: "var(--text-muted)",
-          border: "1px solid var(--text-muted)",
-        }}
+        className="flex items-center justify-center w-3.5 h-3.5 cursor-help shrink-0"
+        style={{ color: "var(--text-muted)" }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        ?
+        <FiInfo size={13} />
       </span>
       {open &&
         pos &&

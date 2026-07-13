@@ -241,30 +241,83 @@ export default function InitiativeCardApp() {
       className="flex h-screen overflow-hidden"
       style={{ background: "var(--background)" }}
     >
-      {/* Sidebar */}
+      {/* Left: card configuration */}
       <aside
-        className="flex flex-col w-72 shrink-0 border-r overflow-hidden"
+        className="flex flex-col w-[26rem] shrink-0 border-r overflow-hidden"
         style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
         <div
           className="px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--border)" }}
         >
-          <div className="mb-3 flex items-start justify-between gap-2">
-            <div>
-              <h1
-                className="text-sm font-bold tracking-wide"
-                style={{ color: "var(--accent)" }}
-              >
-                Initiative Cards
-              </h1>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                D&amp;D 5e DM Screen
-              </p>
-            </div>
-            <ThemeToggle />
-          </div>
+          <h1
+            className="text-sm font-bold tracking-wide"
+            style={{ color: "var(--accent)" }}
+          >
+            Initiative Cards
+          </h1>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            D&amp;D 5e DM Screen
+          </p>
+        </div>
 
+        <CardList
+          cards={activeParty.cards}
+          activeId={activeCard.id}
+          onSelect={handleSelectCard}
+          onAdd={handleAddCard}
+          onRemove={handleRemoveCard}
+        />
+
+        <div className="flex-1 overflow-y-auto">
+          <CardEditor card={activeCard} onChange={handleChange} />
+        </div>
+      </aside>
+
+      {/* Center: live preview */}
+      <main className="flex-1 overflow-auto flex items-center justify-center p-8">
+        {/* Scale the spread up so it's comfortable to review on screen */}
+        <div style={{ transform: "scale(2)" }}>
+          <CardSpread card={activeCard} />
+        </div>
+      </main>
+
+      {/* Right: page & export configuration */}
+      <aside
+        className="flex flex-col w-[26rem] shrink-0 border-l overflow-hidden"
+        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+      >
+        <div
+          className="px-4 py-3 border-b shrink-0 flex items-start justify-between gap-2"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div>
+            <h2
+              className="text-sm font-bold tracking-wide"
+              style={{ color: "var(--accent)" }}
+            >
+              Print &amp; Export
+            </h2>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              Fold layout, paper, and file output
+            </p>
+          </div>
+          <ThemeToggle />
+        </div>
+
+        <PartySelector
+          parties={parties}
+          activePartyId={activeParty.id}
+          onSelect={setActivePartyId}
+          onAdd={handleAddParty}
+          onRename={handleRenameParty}
+          onRequestDelete={(id) => {
+            const party = parties.find((p) => p.id === id);
+            if (party) setPartyPendingDelete(party);
+          }}
+        />
+
+        <div className="px-4 py-4 flex flex-col gap-4 overflow-y-auto">
           <label className="flex flex-col gap-0.5">
             <span
               className="flex items-center gap-1 text-[10px] uppercase tracking-wide"
@@ -283,7 +336,7 @@ export default function InitiativeCardApp() {
               className="w-full accent-[var(--accent)]"
             />
           </label>
-          <div className="flex justify-center items-start gap-10 mt-2">
+          <div className="flex justify-center items-start gap-10">
             <div className="flex flex-col items-center gap-2">
               <span
                 className="text-[10px] uppercase tracking-wide"
@@ -316,7 +369,7 @@ export default function InitiativeCardApp() {
           </div>
 
           <div
-            className="mt-3 pt-3 border-t flex flex-col gap-2"
+            className="pt-3 border-t flex flex-col gap-2"
             style={{ borderColor: "var(--border)" }}
           >
             <span
@@ -438,39 +491,7 @@ export default function InitiativeCardApp() {
             )}
           </div>
         </div>
-
-        <PartySelector
-          parties={parties}
-          activePartyId={activeParty.id}
-          onSelect={setActivePartyId}
-          onAdd={handleAddParty}
-          onRename={handleRenameParty}
-          onRequestDelete={(id) => {
-            const party = parties.find((p) => p.id === id);
-            if (party) setPartyPendingDelete(party);
-          }}
-        />
-
-        <CardList
-          cards={activeParty.cards}
-          activeId={activeCard.id}
-          onSelect={handleSelectCard}
-          onAdd={handleAddCard}
-          onRemove={handleRemoveCard}
-        />
-
-        <div className="flex-1 overflow-y-auto">
-          <CardEditor card={activeCard} onChange={handleChange} />
-        </div>
       </aside>
-
-      {/* Preview */}
-      <main className="flex-1 overflow-auto flex items-center justify-center p-8">
-        {/* Scale the spread up so it's comfortable to review on screen */}
-        <div style={{ transform: "scale(2)" }}>
-          <CardSpread card={activeCard} />
-        </div>
-      </main>
 
       <ExportArea cards={activeParty.cards} gutterHeightCm={gutterCm} />
 
