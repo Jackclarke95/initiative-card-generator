@@ -289,7 +289,7 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
           dragon
           width={SCROLL_W}
           height={SCROLL_H}
-          value={card.characterName || "—"}
+          value={card.characterName}
         />
       </div>
     </div>

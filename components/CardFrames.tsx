@@ -406,11 +406,11 @@ export function DamageTypeBadge({
         width={13}
         height={13}
         fill="currentColor"
-        style={{ color, flexShrink: 0 }}
+        style={{ color: INK, flexShrink: 0 }}
       >
         {DAMAGE_TYPE_ICONS[damageType]}
       </svg>
-      <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color }}>
+      <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}>
         {label.slice(0, 2)}
       </span>
       <svg width={size} height={size} style={{ flexShrink: 0 }}>
