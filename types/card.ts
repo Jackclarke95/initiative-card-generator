@@ -1,9 +1,11 @@
 export type LayoutPreset = "tactician" | "minimalist";
 
 export interface CardToggles {
-  showPassives: boolean;
-  showSpellSaveDC: boolean;
-  showPortrait: boolean;
+  showName: boolean;
+  showVitals: boolean;
+  showAbilityScores: boolean;
+  showDefences: boolean;
+  showNotes: boolean;
 }
 
 export interface AbilityStat {
@@ -119,9 +121,11 @@ export function emptyCard(id: string): CardData {
     portraitUrl: "",
     preset: "tactician",
     toggles: {
-      showPassives: true,
-      showSpellSaveDC: true,
-      showPortrait: false,
+      showName: true,
+      showVitals: true,
+      showAbilityScores: true,
+      showDefences: true,
+      showNotes: true,
     },
   };
 }

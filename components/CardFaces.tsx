@@ -86,6 +86,149 @@ export function DmFace({ card }: { card: CardData }) {
 
   const statGap = 4;
 
+  // Each of the five DM-face sections is independently optional. When
+  // Notes stays on, it keeps eating whatever space the hidden sections
+  // free up (its wrapper is flex:1, same as before). When Notes is off
+  // there's no elastic filler left, so the remaining sections switch to
+  // justify-content: space-between instead, spreading themselves across
+  // the full height with the first flush to the top and the last flush
+  // to the bottom — with only one section left, there's nothing to
+  // spread it against, so it's centered instead.
+  const toggles = card.toggles;
+  const showNotes = toggles.showNotes;
+
+  const sections = [
+    toggles.showName && (
+      <NameScroll
+        key="name"
+        value={card.characterName}
+        width={DM_SCROLL_W}
+        height={DM_SCROLL_H}
+      />
+    ),
+    toggles.showVitals && (
+      <div
+        key="vitals"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 1,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Slot width={slotW}>
+            <Heart
+              value={card.maxHp}
+              label={"HP"}
+              width={heartW}
+              height={iconH}
+            />
+          </Slot>
+          <Shield
+            value={card.ac}
+            label={"AC"}
+            width={badgeW}
+            height={iconH * 1.1}
+          />
+          <Slot width={slotW}>
+            <SaveBox
+              value={card.spellSaveDC}
+              label="DC"
+              width={saveW}
+              height={iconH}
+            />
+          </Slot>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Slot width={slotW}>
+            <Star
+              value={card.passivePerception}
+              label="PP"
+              width={starW}
+              height={iconH}
+            />
+          </Slot>
+          <Chevron
+            value={card.speed}
+            label="Speed"
+            width={chevronW}
+            height={iconH * 0.9}
+          />
+          <Slot width={slotW}>
+            <Orb
+              value={card.passiveInsight}
+              label="Insight"
+              width={orbW}
+              height={iconH * 1}
+            />
+          </Slot>
+        </div>
+      </div>
+    ),
+    toggles.showAbilityScores && (
+      <div
+        key="abilities"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: statGap,
+        }}
+      >
+        {ABILITY_KEYS.map((key) => (
+          <StatBox
+            key={key}
+            label={ABILITY_LABELS[key]}
+            value={card.stats[key].modifier}
+            proficiency={card.stats[key].proficiency}
+          />
+        ))}
+      </div>
+    ),
+    // Damage types — resistant/immune, dashed dividers between entries
+    // rather than an outer box.
+    toggles.showDefences && (
+      <div
+        key="defences"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-around",
+          marginTop: showNotes ? 4 : 0,
+        }}
+      >
+        {DAMAGE_TYPE_KEYS.map((key, i) => (
+          <Fragment key={key}>
+            {i > 0 && (
+              <div
+                style={{
+                  alignSelf: "stretch",
+                  borderLeft: `1px dashed ${PALE_GREY}`,
+                }}
+              />
+            )}
+            <DamageTypeBadge
+              label={DAMAGE_TYPE_LABELS[key]}
+              damageType={key}
+              state={card.resistances[key]}
+            />
+          </Fragment>
+        ))}
+      </div>
+    ),
+  ].filter(Boolean);
+
   return (
     <div
       className="card-face"
@@ -96,135 +239,28 @@ export function DmFace({ card }: { card: CardData }) {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          gap: S.gap,
+          ...(showNotes
+            ? { gap: S.gap }
+            : {
+                justifyContent:
+                  sections.length > 1 ? "space-between" : "center",
+              }),
         }}
       >
-        {/* Identity rows — scroll for the name, then the vital stack */}
-        <NameScroll
-          value={card.characterName}
-          width={DM_SCROLL_W}
-          height={DM_SCROLL_H}
-        />
-
-        {/* Stat shapes — pushed to the bottom */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 1,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Slot width={slotW}>
-              <Heart
-                value={card.maxHp}
-                label={"HP"}
-                width={heartW}
-                height={iconH}
-              />
-            </Slot>
-            <Shield
-              value={card.ac}
-              label={"AC"}
-              width={badgeW}
-              height={iconH * 1.1}
-            />
-            <Slot width={slotW}>
-              <SaveBox
-                value={card.spellSaveDC}
-                label="DC"
-                width={saveW}
-                height={iconH}
-              />
-            </Slot>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Slot width={slotW}>
-              <Star
-                value={card.passivePerception}
-                label="PP"
-                width={starW}
-                height={iconH}
-              />
-            </Slot>
-            <Chevron
-              value={card.speed}
-              label="Speed"
-              width={chevronW}
-              height={iconH * 0.9}
-            />
-            <Slot width={slotW}>
-              <Orb
-                value={card.passiveInsight}
-                label="Insight"
-                width={orbW}
-                height={iconH * 1}
-              />
-            </Slot>
-          </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: statGap,
-          }}
-        >
-          {ABILITY_KEYS.map((key) => (
-            <StatBox
-              key={key}
-              label={ABILITY_LABELS[key]}
-              value={card.stats[key].modifier}
-              proficiency={card.stats[key].proficiency}
-            />
-          ))}
-        </div>
-
-        {/* Damage types — resistant/immune, dashed dividers between
-            entries rather than an outer box. */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-around",
-            marginTop: 4,
-          }}
-        >
-          {DAMAGE_TYPE_KEYS.map((key, i) => (
-            <Fragment key={key}>
-              {i > 0 && (
-                <div
-                  style={{
-                    alignSelf: "stretch",
-                    borderLeft: `1px dashed ${PALE_GREY}`,
-                  }}
-                />
-              )}
-              <DamageTypeBadge
-                label={DAMAGE_TYPE_LABELS[key]}
-                damageType={key}
-                state={card.resistances[key]}
-              />
-            </Fragment>
-          ))}
-        </div>
+        {sections}
 
         {/* Notes — eats whatever vertical space is left at the bottom */}
-        <div style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
-          <NotesBox value={card.notes} />
-        </div>
+        {showNotes && (
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              marginTop: sections.length > 0 ? 4 : 0,
+            }}
+          >
+            <NotesBox value={card.notes} />
+          </div>
+        )}
       </div>
     </div>
   );

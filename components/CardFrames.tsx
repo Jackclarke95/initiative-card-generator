@@ -1100,16 +1100,18 @@ export function NotesBox({
       >
         <div style={{ flex: 1, overflow: "hidden" }}>
           {value && (
-            <span
+            <div
               style={{
                 fontSize: 8,
                 lineHeight: 1.35,
                 color: INK,
                 whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                textAlign: "left",
               }}
             >
               {value}
-            </span>
+            </div>
           )}
         </div>
         <div

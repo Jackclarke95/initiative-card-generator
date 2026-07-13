@@ -467,7 +467,7 @@ export default function InitiativeCardApp() {
       {/* Preview */}
       <main className="flex-1 overflow-auto flex items-center justify-center p-8">
         {/* Scale the spread up so it's comfortable to review on screen */}
-        <div style={{ transform: "scale(1.5)" }}>
+        <div style={{ transform: "scale(2)" }}>
           <CardSpread card={activeCard} />
         </div>
       </main>

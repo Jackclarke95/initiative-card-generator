@@ -54,10 +54,30 @@ const numClass =
   inputClass +
   " [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none";
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({
+  children,
+  checked,
+  onToggle,
+}: {
+  children: React.ReactNode;
+  /** When provided, renders a checkbox for showing/hiding this section on
+   *  the DM face, alongside the heading text. */
+  checked?: boolean;
+  onToggle?: (checked: boolean) => void;
+}) {
   return (
-    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--accent)] mt-4 mb-2 border-b border-[var(--border)] pb-1">
-      {children}
+    <h3 className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-[var(--accent)] mt-4 mb-2 border-b border-[var(--border)] pb-1">
+      <span>{children}</span>
+      {onToggle && (
+        <label className="flex items-center gap-1 normal-case tracking-normal font-normal text-[var(--text-muted)]">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => onToggle(e.target.checked)}
+          />
+          Show on card
+        </label>
+      )}
     </h3>
   );
 }
@@ -118,6 +138,10 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     });
   }
 
+  function setToggle(key: keyof CardData["toggles"], value: boolean) {
+    onChange({ ...card, toggles: { ...card.toggles, [key]: value } });
+  }
+
   return (
     <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
       {/* Identity */}
@@ -129,6 +153,14 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             value={card.characterName}
             onChange={(e) => set("characterName", e.target.value)}
           />
+          <label className="flex items-center gap-1 mt-0.5 text-xs font-normal normal-case tracking-normal text-[var(--text-muted)]">
+            <input
+              type="checkbox"
+              checked={card.toggles.showName}
+              onChange={(e) => setToggle("showName", e.target.checked)}
+            />
+            Show on card
+          </label>
         </Field>
         <Field label="Class">
           <select
@@ -160,7 +192,12 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       </div>
 
       {/* Vitals */}
-      <SectionHeading>Vitals</SectionHeading>
+      <SectionHeading
+        checked={card.toggles.showVitals}
+        onToggle={(v) => setToggle("showVitals", v)}
+      >
+        Vitals
+      </SectionHeading>
       <div className="grid gap-2">
         <Field label="AC">
           <input
@@ -216,7 +253,12 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       </div>
 
       {/* Ability scores */}
-      <SectionHeading>Ability Scores</SectionHeading>
+      <SectionHeading
+        checked={card.toggles.showAbilityScores}
+        onToggle={(v) => setToggle("showAbilityScores", v)}
+      >
+        Ability Scores
+      </SectionHeading>
       <div className="grid grid-cols-2 gap-2">
         {ABILITY_KEYS.map((key) => (
           <div key={key} className="flex items-end gap-2">
@@ -243,7 +285,12 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       </div>
 
       {/* Damage resistances */}
-      <SectionHeading>Resistances</SectionHeading>
+      <SectionHeading
+        checked={card.toggles.showDefences}
+        onToggle={(v) => setToggle("showDefences", v)}
+      >
+        Resistances
+      </SectionHeading>
       <div className="flex flex-col gap-1">
         {DAMAGE_TYPE_KEYS.map((key) => {
           const state = card.resistances[key];
@@ -275,7 +322,12 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       </div>
 
       {/* Notes */}
-      <SectionHeading>Notes</SectionHeading>
+      <SectionHeading
+        checked={card.toggles.showNotes}
+        onToggle={(v) => setToggle("showNotes", v)}
+      >
+        Notes
+      </SectionHeading>
       <Field>
         <textarea
           className={inputClass + " min-h-20 resize-y"}
