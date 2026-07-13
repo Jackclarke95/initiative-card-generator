@@ -7,7 +7,6 @@
 // NOTE: these are Wizards of the Coast licensed-sheet assets — fine for a
 // personal print tool, not for public distribution.
 
-import Image from "next/image";
 import { useId } from "react";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
@@ -1058,33 +1057,77 @@ export function NameScroll({
   );
 }
 
-// ── DnD-Rolltemplate-Info PNGs (330 × 25/52/25) — 3-slice row frame ───
+// ── Notes box — a plain bordered rectangle ────────────────────────────
+// No room at the bottom of the card for anything fancier; stroke matches
+// the vital stack's outer border (IconFrame's default outerW).
 
-export function InfoTemplateFrame({ width, height }: FrameProps) {
-  const cap = Math.min((25 / 330) * width, height / 2);
-  const midH = height - cap * 2;
-  const img = (src: string, top: number, ih: number) => (
-    <Image
-      src={src}
-      alt=""
-      width={330}
-      height={52}
-      unoptimized
+export function InfoTemplateFrame() {
+  return (
+    <div
       style={{
         position: "absolute",
-        top,
-        left: 0,
-        width: width,
-        height: ih,
-        objectFit: "fill",
+        inset: 0,
+        border: `1.5px solid ${INK}`,
       }}
     />
   );
+}
+
+/** InfoTemplateFrame with a left-aligned block of free text — the DM's
+ *  notes section — and a caption centered along the bottom edge, styled
+ *  like the vital stack's own labels. Has no intrinsic height of its
+ *  own; wrap it in a `flex: 1` container to have it eat whatever space
+ *  is left at the bottom of the card. */
+export function NotesBox({
+  value,
+  label = "Notes",
+}: {
+  value?: string;
+  label?: string;
+}) {
   return (
-    <div style={{ position: "absolute", inset: 0 }}>
-      {img("/frames/DnD-Rolltemplate-Info-Top.png", 0, cap)}
-      {midH > 0.5 && img("/frames/DnD-Rolltemplate-Info-Middle.png", cap, midH)}
-      {img("/frames/DnD-Rolltemplate-Info-Bottom.png", height - cap, cap)}
+    <div style={{ position: "relative", height: "100%" }}>
+      <InfoTemplateFrame />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          padding: "4px 8px 3px",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          {value && (
+            <span
+              style={{
+                fontSize: 8,
+                lineHeight: 1.35,
+                color: INK,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {value}
+            </span>
+          )}
+        </div>
+        <div
+          style={{ display: "flex", justifyContent: "center", flexShrink: 0 }}
+        >
+          <span
+            style={{
+              fontSize: 6.5,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+              color: LABEL_GREY,
+            }}
+          >
+            {label}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

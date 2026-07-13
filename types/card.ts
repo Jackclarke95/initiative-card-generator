@@ -91,6 +91,9 @@ export interface CardData {
   // Damage resistances/immunities
   resistances: Resistances;
 
+  // DM's freeform notes, printed in the box at the bottom of the DM face.
+  notes?: string;
+
   // Visuals
   portraitUrl: string;
 

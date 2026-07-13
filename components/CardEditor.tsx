@@ -273,6 +273,17 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           );
         })}
       </div>
+
+      {/* Notes */}
+      <SectionHeading>Notes</SectionHeading>
+      <Field>
+        <textarea
+          className={inputClass + " min-h-20 resize-y"}
+          placeholder="DM-only notes, printed at the bottom of the DM face"
+          value={card.notes ?? ""}
+          onChange={(e) => set("notes", e.target.value)}
+        />
+      </Field>
     </div>
   );
 }

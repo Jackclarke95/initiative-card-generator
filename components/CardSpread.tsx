@@ -14,8 +14,24 @@ interface CardSpreadProps {
 export default function CardSpread({ card }: CardSpreadProps) {
   return (
     <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-      <PlayerFace card={card} rotated={false} />
-      <DmFace card={card} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        <span
+          className="text-[10px] uppercase tracking-wide"
+          style={{ color: "var(--text-muted)" }}
+        >
+          Player side
+        </span>
+        <PlayerFace card={card} rotated={false} />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        <span
+          className="text-[10px] uppercase tracking-wide"
+          style={{ color: "var(--text-muted)" }}
+        >
+          DM side
+        </span>
+        <DmFace card={card} />
+      </div>
     </div>
   );
 }

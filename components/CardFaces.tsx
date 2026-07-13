@@ -16,6 +16,7 @@ import {
   SCROLL_NODRAGON_BOX,
   StatBox,
   DamageTypeBadge,
+  NotesBox,
 } from "@/components/CardFrames";
 import {
   ABILITY_KEYS,
@@ -64,7 +65,7 @@ function Slot({
 export function DmFace({ card }: { card: CardData }) {
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
-  const S = { shW: 52, shH: 60, gap: 5 };
+  const S = { shW: 52, shH: 60, gap: 2 };
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
   const iconH = S.shH;
@@ -110,7 +111,7 @@ export function DmFace({ card }: { card: CardData }) {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 3,
+            gap: 1,
           }}
         >
           <div
@@ -218,6 +219,11 @@ export function DmFace({ card }: { card: CardData }) {
               />
             </Fragment>
           ))}
+        </div>
+
+        {/* Notes — eats whatever vertical space is left at the bottom */}
+        <div style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
+          <NotesBox value={card.notes} />
         </div>
       </div>
     </div>
