@@ -4,29 +4,41 @@ import { useState } from "react";
 import { FiMoon, FiSun } from "react-icons/fi";
 import { applyTheme, getCurrentTheme, type Theme } from "@/lib/theme";
 
+const OPTIONS: { theme: Theme; label: string; Icon: typeof FiSun }[] = [
+  { theme: "light", label: "Light", Icon: FiSun },
+  { theme: "dark", label: "Dark", Icon: FiMoon },
+];
+
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(() => getCurrentTheme());
 
-  function toggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+  function select(next: Theme) {
     applyTheme(next);
     setTheme(next);
   }
 
   return (
-    <button
-      onClick={toggle}
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      aria-label={
-        theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-      }
-      className="w-6 h-6 shrink-0 flex items-center justify-center rounded"
-      style={{
-        background: "var(--surface-raised)",
-        color: "var(--text-muted)",
-      }}
+    <div
+      className="flex rounded overflow-hidden border shrink-0"
+      style={{ borderColor: "var(--border)" }}
     >
-      {theme === "dark" ? <FiSun size={13} /> : <FiMoon size={13} />}
-    </button>
+      {OPTIONS.map(({ theme: optionTheme, label, Icon }) => (
+        <button
+          key={optionTheme}
+          onClick={() => select(optionTheme)}
+          title={`Switch to ${label.toLowerCase()} mode`}
+          aria-label={`Switch to ${label.toLowerCase()} mode`}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-semibold transition-colors"
+          style={{
+            background:
+              theme === optionTheme ? "var(--accent)" : "transparent",
+            color: theme === optionTheme ? "#fff" : "var(--text-muted)",
+          }}
+        >
+          <Icon size={12} />
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
