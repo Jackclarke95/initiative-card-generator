@@ -214,7 +214,7 @@ export function DmFace({ card }: { card: CardData }) {
     ),
     // Damage types — resistant/immune, dashed dividers between entries
     // rather than an outer box.
-    toggles.showDefences && (
+    card.damageDisplayMode !== "none" && (
       <div
         key="defences"
         style={{

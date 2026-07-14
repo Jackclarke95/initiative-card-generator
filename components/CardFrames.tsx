@@ -199,7 +199,7 @@ export function DamageTypeBadge({
   label,
   damageType,
   state,
-  displayMode = "both",
+  displayMode = "all",
 }: {
   label: string;
   damageType: DamageTypeKey;
@@ -223,10 +223,10 @@ export function DamageTypeBadge({
         gap: 1,
       }}
     >
-      {displayMode !== "initials" && (
+      {(displayMode === "all" || displayMode === "icon") && (
         <ReactIcon size={12} style={{ color: INK, flexShrink: 0 }} />
       )}
-      {displayMode !== "icon" && (
+      {(displayMode === "all" || displayMode === "initials") && (
         <span
           style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}
         >

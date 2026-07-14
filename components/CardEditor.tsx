@@ -62,19 +62,24 @@ function SectionHeading({
   children,
   checked,
   onToggle,
+  right,
 }: {
   children: React.ReactNode;
   /** When provided, renders a show/hide toggle for this section on the
    *  DM face, alongside the heading text. */
   checked?: boolean;
   onToggle?: (checked: boolean) => void;
+  /** Arbitrary content rendered on the right side of the heading instead
+   *  of the show/hide toggle — e.g. the resistances display-type toggle. */
+  right?: React.ReactNode;
 }) {
   return (
     <h3 className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-[var(--accent)] mt-4 mb-2 border-b border-[var(--border)] pb-1">
       <span>{children}</span>
-      {onToggle && (
-        <VisibilityToggle checked={checked ?? false} onChange={onToggle} />
-      )}
+      {right ??
+        (onToggle && (
+          <VisibilityToggle checked={checked ?? false} onChange={onToggle} />
+        ))}
     </h3>
   );
 }
@@ -94,12 +99,18 @@ const RESISTANCE_LABELS: Record<ResistanceState, string> = {
 };
 
 const DAMAGE_DISPLAY_LABELS: Record<DamageDisplayMode, string> = {
-  icon: "Icon",
+  all: "All",
+  icon: "Icons",
   initials: "Initials",
-  both: "Both",
+  none: "None",
 };
 
-const DAMAGE_DISPLAY_MODES: DamageDisplayMode[] = ["icon", "initials", "both"];
+const DAMAGE_DISPLAY_MODES: DamageDisplayMode[] = [
+  "all",
+  "icon",
+  "initials",
+  "none",
+];
 
 const ART_MODE_LABELS: Record<ArtMode, string> = {
   class: "Class Art",
@@ -378,25 +389,26 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
       {/* Damage resistances */}
       <SectionHeading
-        checked={card.toggles.showDefences}
-        onToggle={(v) => setToggle("showDefences", v)}
+        right={
+          <SegmentedToggle
+            options={DAMAGE_DISPLAY_MODES.map((mode) => ({
+              value: mode,
+              label: DAMAGE_DISPLAY_LABELS[mode],
+            }))}
+            value={card.damageDisplayMode}
+            onChange={(mode) => set("damageDisplayMode", mode)}
+          />
+        }
       >
         Resistances
       </SectionHeading>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
-          Display type
-        </span>
-        <SegmentedToggle
-          options={DAMAGE_DISPLAY_MODES.map((mode) => ({
-            value: mode,
-            label: DAMAGE_DISPLAY_LABELS[mode],
-          }))}
-          value={card.damageDisplayMode}
-          onChange={(mode) => set("damageDisplayMode", mode)}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <div
+        className="grid grid-cols-2 gap-x-4 gap-y-1"
+        style={{
+          gridAutoFlow: "column",
+          gridTemplateRows: `repeat(${Math.ceil(DAMAGE_TYPE_KEYS.length / 2)}, auto)`,
+        }}
+      >
         {DAMAGE_TYPE_KEYS.map((key) => {
           const state = card.resistances[key];
           const ReactIcon = DAMAGE_TYPE_REACT_ICONS[key];

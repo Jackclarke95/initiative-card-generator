@@ -12,7 +12,6 @@ export interface CardToggles {
   nameScrollDm: ScrollStyle;
   showVitals: boolean;
   showAbilityScores: boolean;
-  showDefences: boolean;
   showNotes: boolean;
 }
 
@@ -75,8 +74,10 @@ export type ResistanceState = "neither" | "resistant" | "immune";
 export type Resistances = Record<DamageTypeKey, ResistanceState>;
 
 // How each damage type is rendered on the card: its icon, its 2-letter
-// initials, or both stacked together (the original look).
-export type DamageDisplayMode = "icon" | "initials" | "both";
+// initials, or both stacked together (the original look). "none" is a
+// special case handled separately — it hides the whole resistances
+// section rather than just tweaking each badge's contents.
+export type DamageDisplayMode = "all" | "icon" | "initials" | "none";
 
 export const DEFAULT_RESISTANCES: Resistances = Object.fromEntries(
   DAMAGE_TYPE_KEYS.map((key) => [key, "neither"]),
@@ -133,7 +134,7 @@ export function emptyCard(id: string): CardData {
       cha: { modifier: "", proficiency: false },
     },
     resistances: DEFAULT_RESISTANCES,
-    damageDisplayMode: "both",
+    damageDisplayMode: "all",
     artMode: "class",
     portraitUrl: "",
     preset: "tactician",
@@ -142,7 +143,6 @@ export function emptyCard(id: string): CardData {
       nameScrollDm: "scroll",
       showVitals: true,
       showAbilityScores: true,
-      showDefences: true,
       showNotes: true,
     },
   };
