@@ -340,15 +340,6 @@ export default function InitiativeCardApp() {
           </p>
         </div>
 
-        <CardList
-          cards={activeParty.cards}
-          activeId={activeCard.id}
-          onSelect={handleSelectCard}
-          onAdd={handleAddCard}
-          onRemove={handleRemoveCard}
-          onReset={() => setConfirmingResetCard(true)}
-        />
-
         <div className="flex-1 overflow-y-auto">
           <CardEditor card={activeCard} onChange={handleChange} />
         </div>
@@ -427,6 +418,15 @@ export default function InitiativeCardApp() {
             const party = parties.find((p) => p.id === id);
             if (party) setPartyPendingDelete(party);
           }}
+        />
+
+        <CardList
+          cards={activeParty.cards}
+          activeId={activeCard.id}
+          onSelect={handleSelectCard}
+          onAdd={handleAddCard}
+          onRemove={handleRemoveCard}
+          onReset={() => setConfirmingResetCard(true)}
         />
 
         <div className="px-4 py-4 flex flex-col gap-4 overflow-y-auto">

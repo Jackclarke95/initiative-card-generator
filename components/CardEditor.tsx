@@ -124,7 +124,7 @@ const ART_MODE_LABELS: Record<ArtMode, string> = {
 const ART_MODES: ArtMode[] = ["class", "upload", "link", "none"];
 
 const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
-  scroll: "Scroll",
+  scroll: "Basic",
   dragon: "Dragon",
   party: "Party",
   none: "None",
