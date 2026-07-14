@@ -97,8 +97,11 @@ export function DmFace({ card }: { card: CardData }) {
   const toggles = card.toggles;
   const showNotes = toggles.showNotes;
 
+  const showNameOnDm =
+    toggles.showName === "dm" || toggles.showName === "both";
+
   const sections = [
-    toggles.showName && (
+    showNameOnDm && (
       <NameScroll
         key="name"
         value={card.characterName}
@@ -296,7 +299,13 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
   const classKey = Object.keys(CLASS_LOGO_MAP).find(
     (k) => k.toLowerCase() === card.characterClass.trim().toLowerCase(),
   );
-  const Logo = classKey ? CLASS_LOGO_MAP[classKey] : undefined;
+  const Logo =
+    card.artMode === "class" && classKey ? CLASS_LOGO_MAP[classKey] : undefined;
+  const useCustomArt =
+    (card.artMode === "upload" || card.artMode === "link") &&
+    !!card.portraitUrl;
+  const showNameOnPlayer =
+    card.toggles.showName === "player" || card.toggles.showName === "both";
 
   return (
     <div
@@ -333,25 +342,37 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
             paddingTop: SCROLL_H - 14,
           }}
         >
-          {Logo && <Logo size={220} />}
+          {useCustomArt ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.portraitUrl}
+              alt=""
+              crossOrigin="anonymous"
+              style={{ maxWidth: 220, maxHeight: 220, objectFit: "contain" }}
+            />
+          ) : (
+            Logo && <Logo size={220} />
+          )}
         </div>
       </>
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: (FACE_W - 2 - SCROLL_W) / 2,
-          width: SCROLL_W,
-          height: SCROLL_H,
-        }}
-      >
-        <NameScroll
-          dragon
-          width={SCROLL_W}
-          height={SCROLL_H}
-          value={card.characterName}
-        />
-      </div>
+      {showNameOnPlayer && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: (FACE_W - 2 - SCROLL_W) / 2,
+            width: SCROLL_W,
+            height: SCROLL_H,
+          }}
+        >
+          <NameScroll
+            dragon
+            width={SCROLL_W}
+            height={SCROLL_H}
+            value={card.characterName}
+          />
+        </div>
+      )}
     </div>
   );
 }

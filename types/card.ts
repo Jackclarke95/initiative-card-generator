@@ -1,7 +1,13 @@
 export type LayoutPreset = "tactician" | "minimalist";
 
+export type ArtMode = "class" | "upload" | "link" | "none";
+
+// Which face(s) print the character name — the player face's art scroll,
+// the DM face's name banner, both, or neither.
+export type NameVisibility = "player" | "dm" | "both" | "none";
+
 export interface CardToggles {
-  showName: boolean;
+  showName: NameVisibility;
   showVitals: boolean;
   showAbilityScores: boolean;
   showDefences: boolean;
@@ -101,7 +107,9 @@ export interface CardData {
   // DM's freeform notes, printed in the box at the bottom of the DM face.
   notes?: string;
 
-  // Visuals
+  // Visuals — class art draws an SVG logo for characterClass; custom art
+  // uses portraitUrl (an uploaded image's data URL, or a pasted image link).
+  artMode: ArtMode;
   portraitUrl: string;
 
   // Layout
@@ -124,10 +132,11 @@ export function emptyCard(id: string): CardData {
     },
     resistances: DEFAULT_RESISTANCES,
     damageDisplayMode: "both",
+    artMode: "class",
     portraitUrl: "",
     preset: "tactician",
     toggles: {
-      showName: true,
+      showName: "both",
       showVitals: true,
       showAbilityScores: true,
       showDefences: true,

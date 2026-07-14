@@ -18,6 +18,7 @@ import ExportArea from "@/components/ExportArea";
 import CardSpread from "@/components/CardSpread";
 import FoldedCardPreview from "@/components/FoldedCardPreview";
 import InfoTooltip from "@/components/InfoTooltip";
+import SegmentedToggle from "@/components/SegmentedToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   exportCard,
@@ -304,7 +305,7 @@ export default function InitiativeCardApp() {
     >
       {/* Left: card configuration */}
       <aside
-        className="flex flex-col w-[26rem] shrink-0 border-r overflow-hidden"
+        className="flex flex-col w-[28.6rem] shrink-0 border-r overflow-hidden"
         style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
         <div
@@ -377,7 +378,7 @@ export default function InitiativeCardApp() {
 
       {/* Right: page & export configuration */}
       <aside
-        className="flex flex-col w-[26rem] shrink-0 border-l overflow-hidden"
+        className="flex flex-col w-[23.4rem] shrink-0 border-l overflow-hidden"
         style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
         <div
@@ -488,33 +489,19 @@ export default function InitiativeCardApp() {
                 <option value="jpeg">JPEG</option>
                 <option value="pdf">PDF</option>
               </select>
-              <div
-                className="flex rounded overflow-hidden border flex-1"
-                style={{ borderColor: "var(--border)" }}
-              >
-                {(["current", "all"] as const).map((scope) => {
-                  const disabled =
-                    scope === "current" && exportChoice === "pdf";
-                  return (
-                    <button
-                      key={scope}
-                      onClick={() => !disabled && setExportScope(scope)}
-                      disabled={disabled}
-                      className="flex-1 py-1.5 text-xs font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      style={{
-                        background:
-                          exportScope === scope
-                            ? "var(--accent)"
-                            : "transparent",
-                        color:
-                          exportScope === scope ? "#fff" : "var(--text-muted)",
-                      }}
-                    >
-                      {scope === "current" ? "Current Cards" : "All Cards"}
-                    </button>
-                  );
-                })}
-              </div>
+              <SegmentedToggle
+                className="flex-1"
+                options={[
+                  {
+                    value: "current",
+                    label: "Current Cards",
+                    disabled: exportChoice === "pdf",
+                  },
+                  { value: "all", label: "All Cards" },
+                ]}
+                value={exportScope}
+                onChange={setExportScope}
+              />
               <button
                 onClick={handleExport}
                 disabled={exporting}

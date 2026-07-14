@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
 import ConfirmModal from "@/components/ConfirmModal";
+import SegmentedToggle from "@/components/SegmentedToggle";
+import VisibilityToggle from "@/components/VisibilityToggle";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -12,21 +14,15 @@ import {
   emptyCard,
   type AbilityKey,
   type AbilityStat,
+  type ArtMode,
   type CardData,
   type DamageDisplayMode,
   type DamageTypeKey,
+  type NameVisibility,
   type ResistanceState,
 } from "@/types/card";
 
 const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
-
-/** Case-insensitive match against the known class list; undefined means
- *  the card's class isn't one of them, i.e. the "Custom" option applies. */
-function knownClassFor(characterClass: string) {
-  return CLASS_OPTIONS.find(
-    (c) => c.toLowerCase() === characterClass.trim().toLowerCase(),
-  );
-}
 
 interface CardEditorProps {
   card: CardData;
@@ -37,15 +33,20 @@ interface CardEditorProps {
 
 function Field({
   label,
+  labelExtra,
   children,
 }: {
   label?: string;
+  /** Optional content rendered inline with the label, right-aligned — e.g.
+   *  a visibility toggle. */
+  labelExtra?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <label className="flex flex-col gap-0.5">
-      <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
-        {label}
+      <span className="flex items-center justify-between gap-2 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
+        <span>{label}</span>
+        {labelExtra}
       </span>
       {children}
     </label>
@@ -65,8 +66,8 @@ function SectionHeading({
   onToggle,
 }: {
   children: React.ReactNode;
-  /** When provided, renders a checkbox for showing/hiding this section on
-   *  the DM face, alongside the heading text. */
+  /** When provided, renders a show/hide toggle for this section on the
+   *  DM face, alongside the heading text. */
   checked?: boolean;
   onToggle?: (checked: boolean) => void;
 }) {
@@ -74,14 +75,7 @@ function SectionHeading({
     <h3 className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-[var(--accent)] mt-4 mb-2 border-b border-[var(--border)] pb-1">
       <span>{children}</span>
       {onToggle && (
-        <label className="flex items-center gap-1 normal-case tracking-normal font-normal text-[var(--text-muted)]">
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => onToggle(e.target.checked)}
-          />
-          Show on card
-        </label>
+        <VisibilityToggle checked={checked ?? false} onChange={onToggle} />
       )}
     </h3>
   );
@@ -109,6 +103,29 @@ const DAMAGE_DISPLAY_LABELS: Record<DamageDisplayMode, string> = {
 
 const DAMAGE_DISPLAY_MODES: DamageDisplayMode[] = ["icon", "initials", "both"];
 
+const ART_MODE_LABELS: Record<ArtMode, string> = {
+  class: "Class Art",
+  upload: "Upload Image",
+  link: "Image URL",
+  none: "No Art",
+};
+
+const ART_MODES: ArtMode[] = ["class", "upload", "link", "none"];
+
+const NAME_VISIBILITY_LABELS: Record<NameVisibility, string> = {
+  player: "Player",
+  dm: "DM",
+  both: "Both",
+  none: "None",
+};
+
+const NAME_VISIBILITY_MODES: NameVisibility[] = [
+  "both",
+  "player",
+  "dm",
+  "none",
+];
+
 function TriStateResistanceBox({ state }: { state: ResistanceState }) {
   return (
     <span
@@ -125,6 +142,7 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 
 export default function CardEditor({ card, onChange }: CardEditorProps) {
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [draggingArt, setDraggingArt] = useState(false);
 
   function set<K extends keyof CardData>(key: K, value: CardData[K]) {
     onChange({ ...card, [key]: value });
@@ -153,8 +171,18 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     });
   }
 
-  function setToggle(key: keyof CardData["toggles"], value: boolean) {
+  function setToggle<K extends keyof CardData["toggles"]>(
+    key: K,
+    value: CardData["toggles"][K],
+  ) {
     onChange({ ...card, toggles: { ...card.toggles, [key]: value } });
+  }
+
+  function handleArtUpload(file: File | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => set("portraitUrl", reader.result as string);
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -171,49 +199,94 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Name">
-          <input
-            className={inputClass}
-            value={card.characterName}
-            onChange={(e) => set("characterName", e.target.value)}
+      <Field
+        label="Name"
+        labelExtra={
+          <SegmentedToggle
+            options={NAME_VISIBILITY_MODES.map((mode) => ({
+              value: mode,
+              label: NAME_VISIBILITY_LABELS[mode],
+            }))}
+            value={card.toggles.showName}
+            onChange={(mode) => setToggle("showName", mode)}
+            size="xs"
           />
-          <label className="flex items-center gap-1 mt-0.5 text-xs font-normal normal-case tracking-normal text-[var(--text-muted)]">
-            <input
-              type="checkbox"
-              checked={card.toggles.showName}
-              onChange={(e) => setToggle("showName", e.target.checked)}
-            />
-            Show on card
-          </label>
-        </Field>
-        <Field label="Class">
+        }
+      >
+        <input
+          className={inputClass}
+          value={card.characterName}
+          onChange={(e) => set("characterName", e.target.value)}
+        />
+      </Field>
+
+      {/* Not a Field (<label>): a <label> wrapping a button group makes
+       *  clicking the heading text activate the first button, silently
+       *  overriding whichever mode was selected. */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
+          Card Art
+        </span>
+        <SegmentedToggle
+          options={ART_MODES.map((mode) => ({
+            value: mode,
+            label: ART_MODE_LABELS[mode],
+          }))}
+          value={card.artMode}
+          onChange={(mode) => set("artMode", mode)}
+        />
+        {card.artMode === "class" && (
           <select
-            className={inputClass}
-            value={knownClassFor(card.characterClass) ?? "Custom"}
-            onChange={(e) =>
-              set(
-                "characterClass",
-                e.target.value === "Custom" ? "" : e.target.value,
-              )
-            }
+            className={inputClass + " mt-1"}
+            value={card.characterClass}
+            onChange={(e) => set("characterClass", e.target.value)}
           >
+            <option value="">Select a class…</option>
             {CLASS_OPTIONS.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
-            <option value="Custom">Custom</option>
           </select>
-          {!knownClassFor(card.characterClass) && (
+        )}
+        {card.artMode === "link" && (
+          <input
+            className={inputClass + " mt-1"}
+            type="url"
+            placeholder="Image URL"
+            value={card.portraitUrl}
+            onChange={(e) => set("portraitUrl", e.target.value)}
+          />
+        )}
+        {card.artMode === "upload" && (
+          <label
+            className={
+              inputClass +
+              " mt-1 text-center cursor-pointer normal-case transition-colors"
+            }
+            style={{
+              borderColor: draggingArt ? "var(--accent)" : "var(--border)",
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDraggingArt(true);
+            }}
+            onDragLeave={() => setDraggingArt(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDraggingArt(false);
+              handleArtUpload(e.dataTransfer.files?.[0]);
+            }}
+          >
+            {draggingArt ? "Drop image…" : "Upload or drop image…"}
             <input
-              className={inputClass + " mt-1"}
-              placeholder="Class name"
-              value={card.characterClass}
-              onChange={(e) => set("characterClass", e.target.value)}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleArtUpload(e.target.files?.[0])}
             />
-          )}
-        </Field>
+          </label>
+        )}
       </div>
 
       {/* Vitals */}
@@ -321,31 +394,14 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
         <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
           Display type
         </span>
-        <div
-          className="flex rounded overflow-hidden border"
-          style={{ borderColor: "var(--border)" }}
-        >
-          {DAMAGE_DISPLAY_MODES.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => set("damageDisplayMode", mode)}
-              className="flex-1 px-2.5 py-1 text-xs font-semibold transition-colors"
-              style={{
-                background:
-                  card.damageDisplayMode === mode
-                    ? "var(--accent)"
-                    : "transparent",
-                color:
-                  card.damageDisplayMode === mode
-                    ? "#fff"
-                    : "var(--text-muted)",
-              }}
-            >
-              {DAMAGE_DISPLAY_LABELS[mode]}
-            </button>
-          ))}
-        </div>
+        <SegmentedToggle
+          options={DAMAGE_DISPLAY_MODES.map((mode) => ({
+            value: mode,
+            label: DAMAGE_DISPLAY_LABELS[mode],
+          }))}
+          value={card.damageDisplayMode}
+          onChange={(mode) => set("damageDisplayMode", mode)}
+        />
       </div>
       <div className="flex flex-col gap-1">
         {DAMAGE_TYPE_KEYS.map((key) => {

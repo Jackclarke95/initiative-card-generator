@@ -7,7 +7,7 @@
 // NOTE: these are Wizards of the Coast licensed-sheet assets — fine for a
 // personal print tool, not for public distribution.
 
-import { useId } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
@@ -874,27 +874,16 @@ export function NameScroll({
   );
 }
 
-// ── Notes box — a plain bordered rectangle ────────────────────────────
-// No room at the bottom of the card for anything fancier; stroke matches
-// the vital stack's outer border (IconFrame's default outerW).
+// ── Notes box — framed with the same 5eBorder as the player side ──────
+// Keeps the DM and player faces visually consistent. PlayerFrame's 9-slice
+// stretch needs concrete pixel dimensions, so a ResizeObserver measures
+// this box's actual (flex-determined) size on every layout change.
 
-export function InfoTemplateFrame() {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        border: `1.5px solid ${INK}`,
-      }}
-    />
-  );
-}
-
-/** InfoTemplateFrame with a left-aligned block of free text — the DM's
- *  notes section — and a caption centered along the bottom edge, styled
- *  like the vital stack's own labels. Has no intrinsic height of its
- *  own; wrap it in a `flex: 1` container to have it eat whatever space
- *  is left at the bottom of the card. */
+/** A left-aligned block of free text — the DM's notes section — framed
+ *  with the player-side border and a caption centered along the bottom
+ *  edge, styled like the vital stack's own labels. Has no intrinsic
+ *  height of its own; wrap it in a `flex: 1` container to have it eat
+ *  whatever space is left at the bottom of the card. */
 export function NotesBox({
   value,
   label = "Notes",
@@ -902,14 +891,30 @@ export function NotesBox({
   value?: string;
   label?: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize({ width, height });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div style={{ position: "relative", height: "100%" }}>
-      <InfoTemplateFrame />
+    <div ref={containerRef} style={{ position: "relative", height: "100%" }}>
+      {size.width > 0 && size.height > 0 && (
+        <PlayerFrame width={size.width} height={size.height} />
+      )}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          padding: "4px 8px 3px",
+          padding: "8px 12px 6px",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
