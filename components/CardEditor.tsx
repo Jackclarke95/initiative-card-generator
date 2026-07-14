@@ -390,7 +390,7 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           onChange={(mode) => set("damageDisplayMode", mode)}
         />
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         {DAMAGE_TYPE_KEYS.map((key) => {
           const state = card.resistances[key];
           const ReactIcon = DAMAGE_TYPE_REACT_ICONS[key];
