@@ -4,7 +4,6 @@ import { useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
 import SegmentedToggle from "@/components/SegmentedToggle";
-import VisibilityToggle from "@/components/VisibilityToggle";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -20,6 +19,7 @@ import {
   type NotesDisplayMode,
   type ResistanceState,
   type ScrollStyle,
+  type VitalsDisplayMode,
 } from "@/types/card";
 
 const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
@@ -62,26 +62,17 @@ const numClass =
 
 function SectionHeading({
   children,
-  checked,
-  onToggle,
   right,
 }: {
   children: React.ReactNode;
-  /** When provided, renders a show/hide toggle for this section on the
-   *  DM face, alongside the heading text. */
-  checked?: boolean;
-  onToggle?: (checked: boolean) => void;
-  /** Arbitrary content rendered on the right side of the heading instead
-   *  of the show/hide toggle — e.g. the resistances display-type toggle. */
+  /** Arbitrary content rendered on the right side of the heading — e.g. a
+   *  display-mode segmented toggle. */
   right?: React.ReactNode;
 }) {
   return (
     <h3 className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-[var(--accent)] mt-4 mb-2 border-b border-[var(--border)] pb-1">
       <span>{children}</span>
-      {right ??
-        (onToggle && (
-          <VisibilityToggle checked={checked ?? false} onChange={onToggle} />
-        ))}
+      {right}
     </h3>
   );
 }
@@ -150,6 +141,14 @@ const ABILITY_SCORE_MODES: AbilityScoreDisplayMode[] = [
   "compact",
   "none",
 ];
+
+const VITALS_MODE_LABELS: Record<VitalsDisplayMode, string> = {
+  full: "Full",
+  compact: "No Labels",
+  none: "None",
+};
+
+const VITALS_MODES: VitalsDisplayMode[] = ["full", "compact", "none"];
 
 const NOTES_DISPLAY_LABELS: Record<NotesDisplayMode, string> = {
   labeled: "Labeled",
@@ -328,8 +327,17 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
       {/* Vitals */}
       <SectionHeading
-        checked={card.toggles.showVitals}
-        onToggle={(v) => setToggle("showVitals", v)}
+        right={
+          <SegmentedToggle
+            options={VITALS_MODES.map((mode) => ({
+              value: mode,
+              label: VITALS_MODE_LABELS[mode],
+            }))}
+            value={card.toggles.vitals}
+            onChange={(mode) => setToggle("vitals", mode)}
+            size="sm"
+          />
+        }
       >
         Vitals
       </SectionHeading>

@@ -33,6 +33,9 @@ interface IconFrameProps {
   rivets?: ReadonlyArray<{ x: number; y: number }>;
   value?: React.ReactNode;
   label?: string;
+  /** Set false to keep the label's reserved space (so the value doesn't
+   *  shift) without printing its text. */
+  showLabel?: boolean;
   /** Gap between the label's baseline and the frame's bottom edge;
    *  defaults to 16% of the height to clear tapering/pointed bottoms. */
   bottomInset?: number;
@@ -52,6 +55,7 @@ export function IconFrame({
   rivets = [],
   value,
   label,
+  showLabel = true,
   bottomInset,
   maxValueSize = 24,
 }: IconFrameProps) {
@@ -112,6 +116,7 @@ export function IconFrame({
         height={height}
         value={value}
         label={label}
+        showLabel={showLabel}
         bottomInset={bottomInset ?? height * 0.16}
         maxValueSize={maxValueSize}
       />

@@ -110,6 +110,8 @@ export function DmFace({ card }: { card: CardData }) {
   const sectionGap = dmScrollTall ? Math.max(1, S.gap - 1) : S.gap;
 
   const abilityMode = toggles.abilityScores;
+  const vitalsMode = toggles.vitals;
+  const showVitalsLabels = vitalsMode === "full";
 
   const sections = [
     showNameOnDm && (
@@ -122,7 +124,7 @@ export function DmFace({ card }: { card: CardData }) {
         />
       </div>
     ),
-    toggles.showVitals && (
+    vitalsMode !== "none" && (
       <div
         key="vitals"
         style={{
@@ -145,6 +147,7 @@ export function DmFace({ card }: { card: CardData }) {
               label={"HP"}
               width={heartW}
               height={iconH}
+              showLabel={showVitalsLabels}
             />
           </Slot>
           <Shield
@@ -152,6 +155,7 @@ export function DmFace({ card }: { card: CardData }) {
             label={"AC"}
             width={badgeW}
             height={iconH * 1.1}
+            showLabel={showVitalsLabels}
           />
           <Slot width={slotW}>
             <SaveBox
@@ -159,6 +163,7 @@ export function DmFace({ card }: { card: CardData }) {
               label="DC"
               width={saveW}
               height={iconH}
+              showLabel={showVitalsLabels}
             />
           </Slot>
         </div>
@@ -175,6 +180,7 @@ export function DmFace({ card }: { card: CardData }) {
               label="PP"
               width={hexW}
               height={iconH}
+              showLabel={showVitalsLabels}
             />
           </Slot>
           <Chevron
@@ -182,6 +188,7 @@ export function DmFace({ card }: { card: CardData }) {
             label="Speed"
             width={chevronW}
             height={iconH * 0.9}
+            showLabel={showVitalsLabels}
           />
           <Slot width={slotW}>
             <Orb
@@ -189,6 +196,7 @@ export function DmFace({ card }: { card: CardData }) {
               label="Insight"
               width={orbW}
               height={iconH * 1}
+              showLabel={showVitalsLabels}
             />
           </Slot>
         </div>

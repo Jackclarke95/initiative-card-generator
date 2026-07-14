@@ -14,6 +14,10 @@ interface FrameTextProps {
   height: number;
   value?: React.ReactNode;
   label?: string;
+  /** Set false to keep the space `label` reserves (so the value sits
+   *  exactly where it would with the label showing) without actually
+   *  printing the label text — e.g. the vitals block's "Compact" mode. */
+  showLabel?: boolean;
   /** Gap between the label's baseline and the frame's bottom edge — bump
    *  this up for frames that taper or curve near the bottom (e.g. the shield). */
   bottomInset?: number;
@@ -49,6 +53,7 @@ export function FrameText({
   height,
   value,
   label,
+  showLabel = true,
   bottomInset = 3,
   sidePadding = 6,
   maxValueSize = 24,
@@ -108,12 +113,17 @@ export function FrameText({
     </div>
   );
 
+  // Rendered (rather than omitted) even when showLabel is false, and only
+  // visually hidden — an omitted element wouldn't take up any space in the
+  // flex column below, so the value's flex:1 box would expand to fill the
+  // whole frame instead of just what's left above the label's reserved zone.
   const labelEl = label && (
     <span
       style={{
         ...labelStyle,
         [labelPosition === "top" ? "paddingTop" : "paddingBottom"]: bottomInset,
         marginBottom: 3,
+        visibility: showLabel ? "visible" : "hidden",
       }}
     >
       {label}

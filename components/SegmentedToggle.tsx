@@ -52,7 +52,7 @@ export default function SegmentedToggle<T extends string>({
           aria-label={title ?? label}
           className={
             (fill ? "flex-1 " : "") +
-            "flex items-center justify-center gap-1 font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed " +
+            "flex items-center justify-center gap-1 whitespace-nowrap font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed " +
             SIZE_CLASSES[size]
           }
           style={{

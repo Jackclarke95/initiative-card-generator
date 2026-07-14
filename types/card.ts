@@ -18,10 +18,15 @@ export type NotesDisplayMode = "labeled" | "unlabeled" | "none";
 // whenever the row is visible.
 export type AbilityScoreDisplayMode = "full" | "compact" | "none";
 
+// How the vitals block prints: each badge with its label (HP/AC/DC/etc.),
+// the same badges with the labels dropped and the value printed a little
+// larger, or the whole block hidden entirely.
+export type VitalsDisplayMode = "full" | "compact" | "none";
+
 export interface CardToggles {
   nameScrollPlayer: ScrollStyle;
   nameScrollDm: ScrollStyle;
-  showVitals: boolean;
+  vitals: VitalsDisplayMode;
   abilityScores: AbilityScoreDisplayMode;
   notesDisplayMode: NotesDisplayMode;
 }
@@ -152,7 +157,7 @@ export function emptyCard(id: string): CardData {
     toggles: {
       nameScrollPlayer: "dragon",
       nameScrollDm: "scroll",
-      showVitals: true,
+      vitals: "full",
       abilityScores: "full",
       notesDisplayMode: "labeled",
     },

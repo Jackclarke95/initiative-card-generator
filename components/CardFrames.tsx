@@ -254,6 +254,8 @@ export function DamageTypeBadge({
         flexDirection: "column",
         alignItems: "center",
         gap: 1,
+        width: 14,
+        flexShrink: 0,
       }}
     >
       {(displayMode === "all" || displayMode === "icon") && (
@@ -261,7 +263,13 @@ export function DamageTypeBadge({
       )}
       {(displayMode === "all" || displayMode === "initials") && (
         <span
-          style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}
+          style={{
+            fontSize: 7,
+            fontWeight: 600,
+            lineHeight: 1,
+            color: INK,
+            textAlign: "center",
+          }}
         >
           {label.slice(0, 2)}
         </span>
@@ -554,13 +562,20 @@ const SHIELD_RIVETS = [
   { x: -20.5, y: -9.91 },
 ];
 
-/** Shield-shaped stat frame with value + label, e.g. "18" over "AC". */
+/** Shield-shaped stat frame with value + label, e.g. "18" over "AC". Pass
+ *  `showLabel={false}` to drop the label — the vitals block's "Compact"
+ *  display mode. */
 export function Shield({
   width,
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  showLabel = true,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <IconFrame
       width={width}
@@ -570,6 +585,7 @@ export function Shield({
       rivets={SHIELD_RIVETS}
       value={value}
       label={label}
+      showLabel={showLabel}
     />
   );
 }
@@ -581,13 +597,20 @@ export function Shield({
 const HEART_SHAPE =
   "M28.8,8.1C25.92,4.6,21.48,2.4,16.92,2.4C8.76,2.4,2.4,9,2.4,17.4C2.4,27.7,11.28,36.1,24.84,48.8L28.8,52.5L32.76,48.8C46.32,36.1,55.2,27.7,55.2,17.4C55.2,9,48.84,2.4,40.68,2.4C36.12,2.4,31.68,4.6,28.8,8.1Z";
 
-/** Heart-shaped stat frame with value + label, e.g. "52" over "HP". */
+/** Heart-shaped stat frame with value + label, e.g. "52" over "HP". Pass
+ *  `showLabel={false}` to drop the label — the vitals block's "Compact"
+ *  display mode. */
 export function Heart({
   width,
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  showLabel = true,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <IconFrame
       width={width}
@@ -596,6 +619,7 @@ export function Heart({
       viewBox="0 0 57.6 55.08"
       value={value}
       label={label}
+      showLabel={showLabel}
     />
   );
 }
@@ -609,13 +633,20 @@ export function Heart({
 const SAVE_SHAPE =
   "M28.8,7.4C21.6,3.23,12.8,1.4,4,2.4L4,47.5C12.8,46.5,21.6,48.33,28.8,52.5C36,48.33,44.8,46.5,53.6,47.5L53.6,2.4C44.8,1.4,36,3.23,28.8,7.4Z";
 
-/** Save-DC stat frame with value + label, e.g. "14" over "Save". */
+/** Save-DC stat frame with value + label, e.g. "14" over "Save". Pass
+ *  `showLabel={false}` to drop the label — the vitals block's "Compact"
+ *  display mode. */
 export function SaveBox({
   width,
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  showLabel = true,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <IconFrame
       width={width}
@@ -624,6 +655,7 @@ export function SaveBox({
       viewBox="0 0 57.6 55.08"
       value={value}
       label={label}
+      showLabel={showLabel}
     />
   );
 }
@@ -636,13 +668,20 @@ export function SaveBox({
 // the value.
 const CHEVRON_SHAPE = "M2.2,2L45.1,2L52.8,24L45.1,46L2.2,46L9.9,24Z";
 
-/** Chevron stat frame with value + label, e.g. "30" over "Speed". */
+/** Chevron stat frame with value + label, e.g. "30" over "Speed". Pass
+ *  `showLabel={false}` to drop the label — the vitals block's "Compact"
+ *  display mode. */
 export function Chevron({
   width,
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  showLabel = true,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <IconFrame
       width={width}
@@ -651,6 +690,7 @@ export function Chevron({
       viewBox="0 0 55 48"
       value={value}
       label={label}
+      showLabel={showLabel}
     />
   );
 }
@@ -685,7 +725,12 @@ export function Hexagon({
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  showLabel = true,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <IconFrame
       width={width}
@@ -694,6 +739,7 @@ export function Hexagon({
       viewBox="0 0 56.8 49.83"
       value={value}
       label={label}
+      showLabel={showLabel}
     />
   );
 }
@@ -715,7 +761,12 @@ export function Orb({
   height,
   value,
   label,
-}: FrameProps & { value?: React.ReactNode; label?: string }) {
+  showLabel = true,
+}: FrameProps & {
+  value?: React.ReactNode;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <IconFrame
       width={width}
@@ -724,6 +775,7 @@ export function Orb({
       viewBox="1.4 -0.4 54.8 54.8"
       value={value}
       label={label}
+      showLabel={showLabel}
     />
   );
 }
