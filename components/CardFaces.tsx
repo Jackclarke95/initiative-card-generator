@@ -20,8 +20,8 @@ import {
 import { useCardEdit } from "@/components/CardEditContext";
 import {
   EditableValue,
+  EditableOverlay,
   EditableHit,
-  ClassPicker,
   useEditMenu,
 } from "@/components/InlineEdit";
 import { nextResistanceState } from "@/lib/cardUpdate";
@@ -72,10 +72,6 @@ const NOTES_MENU = NOTES_DISPLAY_MODES.map((m) => ({
   value: m,
   label: NOTES_DISPLAY_LABELS[m],
 }));
-const ART_MENU = ART_MODES.map((m) => ({
-  value: m,
-  label: ART_MODE_LABELS[m],
-}));
 
 // Height of the transparent hit strip laid over a StatBox's proficiency dot,
 // matching VitalBox's reserved dot zone (dotR*2 + dotTopGap + dotBottomGap =
@@ -85,6 +81,13 @@ const DOT_HIT_H = 12;
 // ARIA tri-state for a resistance dot, mirroring CardEditor's checkbox.
 function resistanceAriaChecked(state: ResistanceState): boolean | "mixed" {
   return state === "immune" ? true : state === "resistant" ? "mixed" : false;
+}
+
+// Vertical position of the straight editable name line within the banner box.
+// The styled scrolls (dragon/party/spell) carry artwork above the ribbon, so
+// their ribbon sits lower; the plain scroll is centered.
+function nameInputTop(variant: ScrollStyle): string {
+  return variant === "scroll" || variant === "none" ? "50%" : "63%";
 }
 
 // Card face: 2.5in × 3.5in = 240 × 336 px. Minus 1px borders and 8px padding.
@@ -201,20 +204,14 @@ export function DmFace({ card }: { card: CardData }) {
     update?.setToggle("notesDisplayMode", v),
   );
 
-  // Wraps a vitals badge in a transparent, click-to-edit number overlay
-  // (inert unless the face is inside CardEditProvider).
+  // Makes a vitals badge's number editable in place (inert unless the face
+  // is inside CardEditProvider).
   const editVital = (
     field: VitalField,
     label: string,
     node: React.ReactNode,
   ) => (
-    <EditableValue
-      value={card[field]}
-      numeric
-      commit={(raw) => update?.setNum(field, raw)}
-      label={label}
-      inputStyle={{ fontSize: 18 }}
-    >
+    <EditableValue commit={(raw) => update?.setNum(field, raw)} label={label}>
       {node}
     </EditableValue>
   );
@@ -223,14 +220,15 @@ export function DmFace({ card }: { card: CardData }) {
     showNameOnDm && (
       <div
         key="name"
+        className={editable ? "edit-section" : undefined}
         style={{ flexShrink: 0 }}
         onContextMenu={nameMenu.onContextMenu}
       >
-        <EditableValue
+        <EditableOverlay
           value={card.characterName}
           commit={(raw) => update?.set("characterName", raw)}
           label="Character name"
-          inputStyle={{ fontSize: 15 }}
+          inputStyle={{ fontSize: 15, top: nameInputTop(dmScrollVariant) }}
         >
           <NameScroll
             value={card.characterName}
@@ -238,13 +236,14 @@ export function DmFace({ card }: { card: CardData }) {
             width={DM_SCROLL_W}
             height={scrollHeightFor(dmScrollVariant, DM_SCROLL_W)}
           />
-        </EditableValue>
+        </EditableOverlay>
         {nameMenu.menu}
       </div>
     ),
     vitalsMode !== "none" && (
       <div
         key="vitals"
+        className={editable ? "edit-section" : undefined}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -349,6 +348,7 @@ export function DmFace({ card }: { card: CardData }) {
     abilityMode !== "none" && (
       <div
         key="abilities"
+        className={editable ? "edit-section" : undefined}
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -360,10 +360,8 @@ export function DmFace({ card }: { card: CardData }) {
         {ABILITY_KEYS.map((key) => (
           <EditableValue
             key={key}
-            value={card.stats[key].modifier}
             commit={(raw) => update?.setStat(key, { modifier: raw })}
             label={`${ABILITY_LABELS[key]} modifier`}
-            inputStyle={{ fontSize: 13, paddingBottom: DOT_HIT_H }}
             overlay={
               <EditableHit
                 label={`${ABILITY_LABELS[key]} proficiency`}
@@ -400,6 +398,7 @@ export function DmFace({ card }: { card: CardData }) {
     card.damageDisplayMode !== "none" && (
       <div
         key="defences"
+        className={editable ? "edit-section" : undefined}
         style={{
           display: "flex",
           alignItems: "center",
@@ -494,6 +493,7 @@ export function DmFace({ card }: { card: CardData }) {
         {/* Notes — eats whatever vertical space is left at the bottom */}
         {showNotes && (
           <div
+            className={editable ? "edit-section" : undefined}
             style={{
               flex: 1,
               minHeight: 0,
@@ -502,16 +502,9 @@ export function DmFace({ card }: { card: CardData }) {
             onContextMenu={notesMenu.onContextMenu}
           >
             <EditableValue
-              value={card.notes}
               commit={(raw) => update?.set("notes", raw)}
               label="DM notes"
               multiline
-              align="left"
-              inputStyle={{
-                fontSize: 8,
-                lineHeight: 1.35,
-                padding: "8px 12px 18px",
-              }}
               wrapperStyle={{ height: "100%" }}
             >
               <NotesBox
@@ -537,7 +530,7 @@ interface PlayerFaceProps {
 }
 
 export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
-  const { update } = useCardEdit();
+  const { editable, update } = useCardEdit();
   const classKey = Object.keys(CLASS_LOGO_MAP).find(
     (k) => k.toLowerCase() === card.characterClass.trim().toLowerCase(),
   );
@@ -555,9 +548,25 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
     update?.setToggle("nameScrollPlayer", v),
   );
   // Right-click the art to switch art style (mirrors the sidebar's "Card
-  // Art" toggle). Picking a specific class stays a left-click (ClassPicker).
-  const artMenu = useEditMenu(ART_MENU, card.artMode, (v) =>
-    update?.set("artMode", v),
+  // Art" toggle). "Class Art" carries a second-level submenu for picking the
+  // specific class, which sets the mode and class together.
+  const artMenu = useEditMenu(
+    ART_MODES.map((m) =>
+      m === "class"
+        ? {
+            value: m,
+            label: ART_MODE_LABELS[m],
+            submenu: CLASS_OPTIONS.map((c) => ({
+              label: c,
+              selected: c === card.characterClass,
+              onSelect: () =>
+                update?.patch({ artMode: "class", characterClass: c }),
+            })),
+          }
+        : { value: m, label: ART_MODE_LABELS[m] },
+    ),
+    card.artMode,
+    (v) => update?.set("artMode", v),
   );
 
   const contentW = FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2;
@@ -603,14 +612,15 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
       >
         {showNameOnPlayer && (
           <div
+            className={editable ? "edit-section" : undefined}
             style={{ flexShrink: 0, marginTop: 4 }}
             onContextMenu={nameMenu.onContextMenu}
           >
-            <EditableValue
+            <EditableOverlay
               value={card.characterName}
               commit={(raw) => update?.set("characterName", raw)}
               label="Character name"
-              inputStyle={{ fontSize: 15 }}
+              inputStyle={{ fontSize: 15, top: nameInputTop(playerScrollVariant) }}
             >
               <NameScroll
                 variant={playerScrollVariant}
@@ -618,11 +628,12 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
                 height={scrollH}
                 value={card.characterName}
               />
-            </EditableValue>
+            </EditableOverlay>
             {nameMenu.menu}
           </div>
         )}
         <div
+          className={editable ? "edit-section" : undefined}
           style={{
             position: "relative",
             flex: 1,
@@ -656,17 +667,8 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
             // distorting even when that leftover space isn't square).
             Logo && <Logo size={contentH} className="max-w-full max-h-full" />
           )}
-          {/* Left-click the class art to pick a class; right-click anywhere
-              in the art area to switch art style (both inert unless editing).
-              Class picker is class-mode only; uploaded/linked images stay a
-              sidebar-only concern. */}
-          {card.artMode === "class" && (
-            <ClassPicker
-              value={card.characterClass}
-              options={CLASS_OPTIONS}
-              onPick={(cls) => update?.set("characterClass", cls)}
-            />
-          )}
+          {/* Right-click anywhere in the art area to switch art style, or
+              hover "Class Art" for the class submenu (inert unless editing). */}
           {artMenu.menu}
         </div>
       </div>

@@ -2,6 +2,8 @@
 // sits at the bottom, inside the frame, in medium grey; the value fills
 // whatever space is left above it.
 
+import { useEditableText } from "@/components/fieldEdit";
+
 export const INK = "#111";
 export const LABEL_GREY = "#6b6b6b";
 // Shared by the damage-type row: the "neither" state's text/ring color and
@@ -55,15 +57,20 @@ export function FrameText({
   label,
   showLabel = true,
   bottomInset = 3,
-  sidePadding = 6,
+  sidePadding = 5,
   maxValueSize = 24,
   labelPosition = "bottom",
   valueMarginTop = 10,
 }: FrameTextProps) {
-  const labelLines = label ? label.split("\n").length : 0;
+  // Only reserve label space when the label is actually shown. When it's
+  // hidden (e.g. the "compact" vitals/abilities modes) the value grows into
+  // that space instead of leaving it blank.
+  const labelShown = !!label && showLabel;
+  const labelLines = labelShown ? label.split("\n").length : 0;
   const labelLineH = 6.5 * 1.3;
-  const labelZoneH = label ? labelLineH * labelLines + bottomInset : 0;
-  const valueAreaH = Math.max(0, height - labelZoneH) * 0.92;
+  const labelZoneH = labelShown ? labelLineH * labelLines + bottomInset : 0;
+  // Leave a modest margin between the value and the frame.
+  const valueAreaH = Math.max(0, height - labelZoneH) * 0.9;
   const hasValue = value !== undefined && value !== null && value !== "";
   const fontSize = fitValueFontSize(
     value,
@@ -72,19 +79,37 @@ export function FrameText({
     maxValueSize,
   );
 
-  const valueSpan = hasValue && (
+  // In the editable preview the value text itself becomes the input (no
+  // overlay): the real, auto-fit glyphs are what you type into. `edit` is
+  // null everywhere else, so this renders as a plain span as before.
+  const editText =
+    typeof value === "string" || typeof value === "number" ? String(value) : "";
+  const edit = useEditableText(editText);
+
+  const valueStyle: React.CSSProperties = {
+    fontWeight: "bold",
+    fontSize,
+    lineHeight: 1,
+    color: INK,
+    whiteSpace: "nowrap",
+    marginTop: valueMarginTop,
+  };
+
+  const valueSpan = edit ? (
     <span
+      {...edit.bind}
       style={{
-        fontWeight: "bold",
-        fontSize,
-        lineHeight: 1,
-        color: INK,
-        whiteSpace: "nowrap",
-        marginTop: valueMarginTop,
+        ...valueStyle,
+        display: "block",
+        width: "100%",
+        minHeight: fontSize,
+        textAlign: "center",
+        outline: "none",
+        cursor: "text",
       }}
-    >
-      {value}
-    </span>
+    />
+  ) : (
+    hasValue && <span style={valueStyle}>{value}</span>
   );
 
   const labelStyle = {
@@ -108,22 +133,33 @@ export function FrameText({
         justifyContent: "center",
         overflow: "hidden",
       }}
+      // Clicking anywhere in the value area (incl. an empty field, which has
+      // no glyphs to hit) focuses the editable text and drops the caret at
+      // the end. Clicks that land on the editable text itself fall through to
+      // the browser's native caret placement.
+      onMouseDown={
+        edit
+          ? (e) => {
+              if (!(e.target as HTMLElement).isContentEditable) {
+                e.preventDefault();
+                edit.focusEnd();
+              }
+            }
+          : undefined
+      }
     >
       {valueSpan}
     </div>
   );
 
-  // Rendered (rather than omitted) even when showLabel is false, and only
-  // visually hidden — an omitted element wouldn't take up any space in the
-  // flex column below, so the value's flex:1 box would expand to fill the
-  // whole frame instead of just what's left above the label's reserved zone.
-  const labelEl = label && (
+  // Only rendered when shown — when hidden, its space is reclaimed by the
+  // value (see labelZoneH above) rather than left blank.
+  const labelEl = labelShown && (
     <span
       style={{
         ...labelStyle,
         [labelPosition === "top" ? "paddingTop" : "paddingBottom"]: bottomInset,
         marginBottom: 3,
-        visibility: showLabel ? "visible" : "hidden",
       }}
     >
       {label}

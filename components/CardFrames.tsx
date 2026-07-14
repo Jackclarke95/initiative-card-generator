@@ -11,6 +11,7 @@ import { useId, useLayoutEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
+import { useEditableText } from "@/components/fieldEdit";
 import { IconFrame } from "@/components/IconFrame";
 import { PARTY_SCROLL, PARTY_SCROLL_INK } from "@/components/PartyScrollArt";
 import { SPELL_SCROLL_OPS } from "@/components/SpellScrollArt";
@@ -947,17 +948,24 @@ export function NameScroll({
   value,
   label,
   variant = "dragon",
+  hideValue = false,
 }: FrameProps & {
   value?: React.ReactNode;
   label?: string;
   variant?: Exclude<ScrollStyle, "none">;
+  /** Suppress the curved name text (keeping the banner). Used while the name
+   *  is being edited, when a straight editable line stands in for it. */
+  hideValue?: boolean;
 }) {
   const box = scrollBox(variant);
   const curve = SCROLL.nameCurve;
   const curveLength = NAME_CURVE_LENGTH;
   const pathId = useId();
   const text =
-    typeof value === "string" || typeof value === "number" ? String(value) : "";
+    !hideValue &&
+    (typeof value === "string" || typeof value === "number")
+      ? String(value)
+      : "";
   const usableWidth = curveLength * 0.85;
   const fontSize = text
     ? Math.max(
@@ -1067,6 +1075,9 @@ export function NotesBox({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  // When inside the editable preview, the notes text is edited directly (the
+  // caret sits in the real wrapped text); null everywhere else.
+  const edit = useEditableText(value ?? "");
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -1078,6 +1089,15 @@ export function NotesBox({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  const textStyle: React.CSSProperties = {
+    fontSize: 8,
+    lineHeight: 1.35,
+    color: INK,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    textAlign: "left",
+  };
 
   return (
     <div ref={containerRef} style={{ position: "relative", height: "100%" }}>
@@ -1095,19 +1115,19 @@ export function NotesBox({
         }}
       >
         <div style={{ flex: 1, overflow: "hidden" }}>
-          {value && (
+          {edit ? (
             <div
+              {...edit.bind}
               style={{
-                fontSize: 8,
-                lineHeight: 1.35,
-                color: INK,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                textAlign: "left",
+                ...textStyle,
+                height: "100%",
+                outline: "none",
+                cursor: "text",
+                overflow: "auto",
               }}
-            >
-              {value}
-            </div>
+            />
+          ) : (
+            value && <div style={textStyle}>{value}</div>
           )}
         </div>
         {showLabel && (

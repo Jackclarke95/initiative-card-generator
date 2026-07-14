@@ -16,6 +16,8 @@ import type {
 
 export interface CardUpdater {
   set<K extends keyof CardData>(key: K, value: CardData[K]): void;
+  /** Set several top-level fields at once (e.g. art mode + class together). */
+  patch(partial: Partial<CardData>): void;
   /** Numeric field: "" clears to undefined; otherwise parseInt (NaN → undefined). */
   setNum<K extends keyof CardData>(key: K, raw: string): void;
   setStat(key: AbilityKey, patch: Partial<AbilityStat>): void;
@@ -33,6 +35,10 @@ export function createCardUpdater(
 ): CardUpdater {
   function set<K extends keyof CardData>(key: K, value: CardData[K]) {
     onChange({ ...card, [key]: value });
+  }
+
+  function patch(partial: Partial<CardData>) {
+    onChange({ ...card, ...partial });
   }
 
   function setNum<K extends keyof CardData>(key: K, raw: string) {
@@ -65,7 +71,7 @@ export function createCardUpdater(
     onChange({ ...card, toggles: { ...card.toggles, [key]: value } });
   }
 
-  return { set, setNum, setStat, setResistance, setToggle };
+  return { set, patch, setNum, setStat, setResistance, setToggle };
 }
 
 export const RESISTANCE_CYCLE: ResistanceState[] = [

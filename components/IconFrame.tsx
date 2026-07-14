@@ -57,7 +57,7 @@ export function IconFrame({
   label,
   showLabel = true,
   bottomInset,
-  maxValueSize = 24,
+  maxValueSize = 26,
 }: IconFrameProps) {
   const clipId = useId();
   const [minX, minY, vbW, vbH] = viewBox.split(/[\s,]+/).map(Number);

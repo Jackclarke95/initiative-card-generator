@@ -1,127 +1,187 @@
 "use client";
 
-// Thin overlay primitives that turn the (otherwise read-only) card preview
-// into a click-to-edit surface. They sit ON TOP of the real frame components
-// without changing them: the frame keeps painting the genuine value, and the
-// overlay just captures keystrokes/clicks and shows a caret.
+// Primitives that turn the (otherwise read-only) card preview into a
+// click-to-edit surface:
+//   • EditableValue  — the value text edits IN PLACE (the frame renders its
+//                      real value as a contentEditable element; see fieldEdit).
+//   • EditableOverlay — a transparent caret input for values that can't be
+//                      contentEditable (the curved-SVG character name).
+//   • EditableHit    — a transparent click target for the dots.
+//   • ClassPicker / useEditMenu — the art picker and right-click menus.
 //
-// All three short-circuit to a static render when editing is off (no provider
-// → useCardEdit().editable === false), so the export/folded/measurement
+// All short-circuit to a static render when editing is off (no provider →
+// useCardEdit().editable === false), so the export/folded/measurement
 // consumers stay byte-identical to before.
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useCardEdit } from "@/components/CardEditContext";
+import { FieldEditProvider } from "@/components/fieldEdit";
+import { INK } from "@/components/FrameText";
 
 // ── EditableValue ─────────────────────────────────────────────────────
-// A transparent, controlled <input>/<textarea> laid over a value. Its text
-// is invisible (color:transparent) so the frame's real, auto-fit text shows
-// through; only the caret is visible. Every keystroke commits live, so the
-// preview + sidebar update as you type.
+// Marks a frame's value as editable in place: it provides a FieldBinding via
+// context, and the text-rendering frame (FrameText / NotesBox) picks that up
+// to turn its own real value element into a contentEditable field. There's no
+// overlay input — you type directly into the displayed glyphs. Inert (renders
+// just the frame) when not in the editable preview.
 
 interface EditableValueProps {
-  /** Current committed value (drives the controlled input). */
-  value: string | number | undefined;
-  /** Raw string → wherever it belongs (setNum / setStat / set live here). */
+  /** Latest text → the right updater (setNum / setStat / set live here). */
   commit: (raw: string) => void;
-  /** The frame that renders the real value beneath the overlay. */
-  children: React.ReactNode;
   label: string;
   multiline?: boolean;
-  numeric?: boolean;
-  align?: "center" | "left";
-  /** Extra style for the overlay control (font-size, paddingBottom, …). */
-  inputStyle?: React.CSSProperties;
-  /** Extra style for the position:relative wrapper. */
-  wrapperStyle?: React.CSSProperties;
-  /** Rendered inside the wrapper, above the input — e.g. a proficiency-dot
-   *  hit target that shares this element's relative box. Only shown while
-   *  editing. */
+  /** The frame that renders — and, while editing, hosts the caret in — the value. */
+  children: React.ReactNode;
+  /** Rendered alongside the frame in a relative wrapper — e.g. a
+   *  proficiency-dot hit target. */
   overlay?: React.ReactNode;
+  /** Extra style for the wrapper (e.g. height:100% so notes fills its box). */
+  wrapperStyle?: React.CSSProperties;
 }
 
 export function EditableValue({
+  commit,
+  label,
+  multiline = false,
+  children,
+  overlay,
+  wrapperStyle,
+}: EditableValueProps) {
+  const { editable } = useCardEdit();
+  if (!editable) return <>{children}</>;
+
+  // The wrapper carries the whole-frame hover/focus highlight (.edit-frame)
+  // and hosts any overlay (the proficiency dot). It shrink-wraps the frame,
+  // so layout is unchanged.
+  return (
+    <div className="edit-frame" style={{ position: "relative", ...wrapperStyle }}>
+      <FieldEditProvider binding={{ commit, label, multiline }}>
+        {children}
+      </FieldEditProvider>
+      {overlay}
+    </div>
+  );
+}
+
+// ── EditableOverlay ───────────────────────────────────────────────────
+// A transparent <input> laid over a value whose text can't be made directly
+// editable — currently just the character name, which rides a curved SVG
+// path. The input's text is invisible (color:transparent); the frame's real
+// (curved) text shows through and updates live, and only the caret shows.
+
+interface EditableOverlayProps {
+  value: string | number | undefined;
+  commit: (raw: string) => void;
+  children: React.ReactNode;
+  label: string;
+  align?: "center" | "left";
+  numeric?: boolean;
+  inputStyle?: React.CSSProperties;
+  wrapperStyle?: React.CSSProperties;
+}
+
+export function EditableOverlay({
   value,
   commit,
   children,
   label,
-  multiline = false,
-  numeric = false,
   align = "center",
+  numeric = false,
   inputStyle,
   wrapperStyle,
-  overlay,
-}: EditableValueProps) {
+}: EditableOverlayProps) {
   const { editable } = useCardEdit();
   // Value at focus-time, so Esc can restore it (edits are applied live).
   const snapshot = useRef("");
-
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [focused, setFocused] = useState(false);
   if (!editable) return <>{children}</>;
 
   const shown = value == null ? "" : String(value);
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    if (e.nativeEvent.isComposing) return; // let IME finish
-    if (e.key === "Escape") {
-      e.preventDefault();
-      commit(snapshot.current);
-      e.currentTarget.blur();
-    } else if (e.key === "Enter") {
-      // Multiline: plain Enter inserts a newline; Cmd/Ctrl+Enter finishes.
-      if (multiline && !(e.metaKey || e.ctrlKey)) return;
-      e.preventDefault();
-      e.currentTarget.blur();
-    }
-  };
-
-  const shared = {
-    className: "edit-hit",
-    "aria-label": label,
-    value: shown,
-    onFocus: (
-      e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => {
-      snapshot.current = e.currentTarget.value;
-      e.currentTarget.select();
-    },
-    onChange: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => commit(e.currentTarget.value),
-    onKeyDown: handleKeyDown,
-    style: {
-      position: "absolute" as const,
-      inset: 0,
-      width: "100%",
-      height: "100%",
-      boxSizing: "border-box" as const,
-      margin: 0,
-      border: "none",
-      outline: "none",
-      color: "transparent",
-      caretColor: "var(--accent)",
-      fontFamily: "inherit",
-      fontWeight: "bold" as const,
-      textAlign: align,
-      cursor: "text",
-      ...inputStyle,
-    },
-  };
+  // While focused, hide the curved SVG text and show a straight, real,
+  // selectable editable line in its place (same editing feel as the other
+  // fields). The curve returns on blur. This is why the input's own text is
+  // visible only while focused — otherwise it would ghost over the curve.
+  const framed = isValidElement(children)
+    ? cloneElement(
+        children as React.ReactElement<{ hideValue?: boolean }>,
+        { hideValue: focused },
+      )
+    : children;
 
   return (
-    <div style={{ position: "relative", ...wrapperStyle }}>
-      {children}
-      {multiline ? (
-        <textarea {...shared} style={{ ...shared.style, resize: "none" }} />
-      ) : (
-        <input
-          {...shared}
-          inputMode={numeric ? "numeric" : undefined}
-          spellCheck={false}
-        />
-      )}
-      {overlay}
+    <div
+      className="edit-frame"
+      style={{ position: "relative", ...wrapperStyle }}
+      // Clicking the banner outside the text line still starts editing —
+      // focus the input and drop the caret at the end. The text line itself
+      // (the input) handles its own clicks natively.
+      onMouseDown={(e) => {
+        const el = inputRef.current;
+        if (e.button === 0 && el && e.target !== el) {
+          e.preventDefault();
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      }}
+    >
+      {framed}
+      <input
+        ref={inputRef}
+        aria-label={label}
+        value={shown}
+        inputMode={numeric ? "numeric" : undefined}
+        spellCheck={false}
+        onFocus={(e) => {
+          snapshot.current = e.currentTarget.value;
+          setFocused(true);
+        }}
+        onBlur={() => setFocused(false)}
+        onChange={(e) => commit(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return; // let IME finish
+          if (e.key === "Escape") {
+            e.preventDefault();
+            commit(snapshot.current);
+            e.currentTarget.blur();
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        style={{
+          // A full-width, one-line-tall band at the text's vertical position
+          // (not the whole box) so the text cursor only shows over the text
+          // line; the banner around it keeps the frame's pointer cursor.
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          margin: 0,
+          padding: 0,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          color: focused ? INK : "transparent",
+          caretColor: "var(--accent)",
+          fontFamily: "inherit",
+          fontWeight: "bold",
+          textAlign: align,
+          cursor: "text",
+          ...inputStyle,
+        }}
+      />
     </div>
   );
 }
@@ -164,103 +224,6 @@ export function EditableHit({
   );
 }
 
-// ── ClassPicker ───────────────────────────────────────────────────────
-// Overlays the class art with a hit target that opens a small inline popover
-// of class names. Inline (never portaled) so it stays inside the preview's
-// scale transform; sized to fit within the card so overflow:hidden doesn't
-// clip it.
-
-interface ClassPickerProps {
-  value: string;
-  options: string[];
-  onPick: (cls: string) => void;
-}
-
-export function ClassPicker({ value, options, onPick }: ClassPickerProps) {
-  const { editable } = useCardEdit();
-  const [open, setOpen] = useState(false);
-  if (!editable) return null;
-
-  return (
-    <>
-      <EditableHit
-        label="Change class"
-        onActivate={() => setOpen((o) => !o)}
-        style={{ inset: 0 }}
-      />
-      {open && (
-        <>
-          {/* click-away backdrop */}
-          <button
-            type="button"
-            aria-label="Close class picker"
-            onClick={() => setOpen(false)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "transparent",
-              border: "none",
-              cursor: "default",
-            }}
-          />
-          <div
-            role="listbox"
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 128,
-              maxHeight: 168,
-              overflowY: "auto",
-              background: "var(--surface-raised)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
-              fontFamily: "var(--font-ui)",
-              padding: 4,
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-              zIndex: 10,
-            }}
-          >
-            {options.map((opt) => {
-              const selected = opt === value;
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  className="edit-menu-item"
-                  onClick={() => {
-                    onPick(opt);
-                    setOpen(false);
-                  }}
-                  style={{
-                    textAlign: "left",
-                    fontSize: 11,
-                    padding: "4px 8px",
-                    borderRadius: 4,
-                    border: "none",
-                    cursor: "pointer",
-                    background: selected ? "var(--accent)" : "transparent",
-                    color: selected ? "#fff" : "var(--text-primary)",
-                  }}
-                >
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </>
-  );
-}
-
 // ── Right-click display-mode menu ─────────────────────────────────────
 // A section's segmented-toggle options, surfaced as a context menu. Left
 // click still edits values / cycles dots (see above); right click on a
@@ -268,9 +231,19 @@ export function ClassPicker({ value, options, onPick }: ClassPickerProps) {
 // the body at the cursor so it escapes the card's overflow:hidden and the
 // preview's scale transform (a UI menu wants to render at 1×, not 2×).
 
+export interface EditSubOption {
+  label: string;
+  selected?: boolean;
+  onSelect: () => void;
+}
+
 export interface EditMenuOption<T extends string> {
   value: T;
   label: string;
+  /** When present, hovering this row opens a second-level menu of these
+   *  choices (e.g. the specific class under "Class Art"). Clicking the row
+   *  itself still fires the top-level onSelect. */
+  submenu?: EditSubOption[];
 }
 
 /** Wire a section for a right-click display-mode menu. Call unconditionally
@@ -325,6 +298,7 @@ function EditContextMenu<T extends string>({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState(pos);
+  const [openSub, setOpenSub] = useState<number | null>(null);
 
   // Nudge the menu back inside the viewport once its size is known.
   useLayoutEffect(() => {
@@ -342,7 +316,14 @@ function EditContextMenu<T extends string>({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    const onScroll = () => onClose();
+    // Close when the page scrolls out from under the (fixed) menu — but not
+    // when the scroll happens inside the menu itself (e.g. a long class
+    // submenu).
+    const onScroll = (e: Event) => {
+      const el = ref.current;
+      if (el && e.target instanceof Node && el.contains(e.target)) return;
+      onClose();
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, true);
     return () => {
@@ -385,29 +366,94 @@ function EditContextMenu<T extends string>({
           zIndex: 1001,
         }}
       >
-        {options.map((opt) => {
+        {options.map((opt, i) => {
           const selected = opt.value === value;
+          const hasSub = !!opt.submenu?.length;
           return (
-            <button
+            <div
               key={opt.value}
-              type="button"
-              role="menuitemradio"
-              aria-checked={selected}
-              className="edit-menu-item"
-              onClick={() => onSelect(opt.value)}
-              style={{
-                textAlign: "left",
-                fontSize: 12,
-                padding: "5px 10px",
-                borderRadius: 4,
-                border: "none",
-                cursor: "pointer",
-                background: selected ? "var(--accent)" : "transparent",
-                color: selected ? "#fff" : "var(--text-primary)",
-              }}
+              style={{ position: "relative" }}
+              onMouseEnter={() => setOpenSub(hasSub ? i : null)}
             >
-              {opt.label}
-            </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={selected}
+                aria-haspopup={hasSub || undefined}
+                aria-expanded={hasSub ? openSub === i : undefined}
+                className="edit-menu-item"
+                onClick={() => onSelect(opt.value)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  textAlign: "left",
+                  fontSize: 12,
+                  padding: "5px 10px",
+                  borderRadius: 4,
+                  border: "none",
+                  cursor: "pointer",
+                  background: selected ? "var(--accent)" : "transparent",
+                  color: selected ? "#fff" : "var(--text-primary)",
+                }}
+              >
+                <span>{opt.label}</span>
+                {hasSub && <span aria-hidden>▸</span>}
+              </button>
+              {hasSub && openSub === i && (
+                <div
+                  role="menu"
+                  style={{
+                    position: "absolute",
+                    left: "100%",
+                    top: -5,
+                    maxHeight: 220,
+                    overflowY: "auto",
+                    minWidth: 132,
+                    background: "var(--surface-raised)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 6,
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+                    padding: 4,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    zIndex: 1002,
+                  }}
+                >
+                  {opt.submenu!.map((sub) => (
+                    <button
+                      key={sub.label}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={!!sub.selected}
+                      className="edit-menu-item"
+                      onClick={() => {
+                        sub.onSelect();
+                        onClose();
+                      }}
+                      style={{
+                        textAlign: "left",
+                        fontSize: 12,
+                        padding: "5px 10px",
+                        borderRadius: 4,
+                        border: "none",
+                        cursor: "pointer",
+                        background: sub.selected
+                          ? "var(--accent)"
+                          : "transparent",
+                        color: sub.selected ? "#fff" : "var(--text-primary)",
+                      }}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
