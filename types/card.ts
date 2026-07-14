@@ -99,6 +99,76 @@ export const DEFAULT_RESISTANCES: Resistances = Object.fromEntries(
   DAMAGE_TYPE_KEYS.map((key) => [key, "neither"]),
 ) as Resistances;
 
+// ── Display-mode option lists ─────────────────────────────────────────
+// The choices behind each section's segmented toggle in the form. Shared so
+// the inline preview's right-click menus offer exactly the same options.
+
+export const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
+  scroll: "Basic",
+  dragon: "Dragon",
+  party: "Party",
+  spell: "Spell",
+  none: "None",
+};
+export const SCROLL_STYLE_MODES: ScrollStyle[] = [
+  "scroll",
+  "dragon",
+  "party",
+  "spell",
+  "none",
+];
+
+export const VITALS_MODE_LABELS: Record<VitalsDisplayMode, string> = {
+  full: "Full",
+  compact: "No Labels",
+  none: "None",
+};
+export const VITALS_MODES: VitalsDisplayMode[] = ["full", "compact", "none"];
+
+export const ABILITY_SCORE_MODE_LABELS: Record<AbilityScoreDisplayMode, string> =
+  {
+    full: "Full",
+    compact: "Compact",
+    none: "None",
+  };
+export const ABILITY_SCORE_MODES: AbilityScoreDisplayMode[] = [
+  "full",
+  "compact",
+  "none",
+];
+
+export const DAMAGE_DISPLAY_LABELS: Record<DamageDisplayMode, string> = {
+  all: "All",
+  icon: "Icons",
+  initials: "Initials",
+  none: "None",
+};
+export const DAMAGE_DISPLAY_MODES: DamageDisplayMode[] = [
+  "all",
+  "icon",
+  "initials",
+  "none",
+];
+
+export const NOTES_DISPLAY_LABELS: Record<NotesDisplayMode, string> = {
+  labeled: "Labeled",
+  unlabeled: "Unlabeled",
+  none: "None",
+};
+export const NOTES_DISPLAY_MODES: NotesDisplayMode[] = [
+  "labeled",
+  "unlabeled",
+  "none",
+];
+
+export const ART_MODE_LABELS: Record<ArtMode, string> = {
+  class: "Class Art",
+  upload: "Upload Image",
+  link: "Image URL",
+  none: "No Art",
+};
+export const ART_MODES: ArtMode[] = ["class", "upload", "link", "none"];
+
 export interface CardData {
   id: string;
 

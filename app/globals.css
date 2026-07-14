@@ -55,6 +55,36 @@ body {
   font-family: var(--font-ui);
 }
 
+/* ── Inline edit overlays ───────────────────────────────────────────────
+   Transparent hit targets/inputs laid over the center preview's values and
+   dots (see components/InlineEdit.tsx). Only ever mounted inside
+   CardEditProvider, so this chrome can never reach an export node. The base
+   is fully transparent (the real frame value shows through); a faint tint +
+   inset ring appears on hover/focus purely as a discoverability hint. */
+.edit-hit {
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  padding: 0;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.edit-hit:hover {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.edit-hit:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Rows in the right-click display-mode menu (components/InlineEdit.tsx). The
+   selected row keeps its accent fill; the rest tint on hover. */
+.edit-menu-item:hover:not([aria-checked="true"]):not([aria-selected="true"]) {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+}
+
 /* ── Card shell ─────────────────────────────────────────────────────── */
 .card-face {
   width: var(--card-width);

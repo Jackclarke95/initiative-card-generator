@@ -16,6 +16,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import NamePartyModal from "@/components/NamePartyModal";
 import ExportArea from "@/components/ExportArea";
 import CardSpread from "@/components/CardSpread";
+import { CardEditProvider } from "@/components/CardEditContext";
 import FoldedCardPreview from "@/components/FoldedCardPreview";
 import InfoTooltip from "@/components/InfoTooltip";
 import SegmentedToggle from "@/components/SegmentedToggle";
@@ -353,7 +354,12 @@ export default function InitiativeCardApp() {
           className="w-full h-full flex items-center justify-center"
         >
           <div style={{ transform: `scale(${previewLayout.scale})` }}>
-            <CardSpread card={activeCard} direction={previewLayout.direction} />
+            <CardEditProvider card={activeCard} onChange={handleChange}>
+              <CardSpread
+                card={activeCard}
+                direction={previewLayout.direction}
+              />
+            </CardEditProvider>
           </div>
         </div>
 

@@ -4,22 +4,26 @@ import { useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
 import SegmentedToggle from "@/components/SegmentedToggle";
+import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
+  ABILITY_SCORE_MODE_LABELS,
+  ABILITY_SCORE_MODES,
+  ART_MODE_LABELS,
+  ART_MODES,
+  DAMAGE_DISPLAY_LABELS,
+  DAMAGE_DISPLAY_MODES,
   DAMAGE_TYPE_KEYS,
   DAMAGE_TYPE_LABELS,
-  type AbilityKey,
-  type AbilityScoreDisplayMode,
-  type AbilityStat,
-  type ArtMode,
+  NOTES_DISPLAY_LABELS,
+  NOTES_DISPLAY_MODES,
+  SCROLL_STYLE_LABELS,
+  SCROLL_STYLE_MODES,
+  VITALS_MODE_LABELS,
+  VITALS_MODES,
   type CardData,
-  type DamageDisplayMode,
-  type DamageTypeKey,
-  type NotesDisplayMode,
   type ResistanceState,
-  type ScrollStyle,
-  type VitalsDisplayMode,
 } from "@/types/card";
 
 const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
@@ -77,90 +81,11 @@ function SectionHeading({
   );
 }
 
-const RESISTANCE_CYCLE: ResistanceState[] = ["neither", "resistant", "immune"];
-
-function nextResistanceState(state: ResistanceState): ResistanceState {
-  return RESISTANCE_CYCLE[
-    (RESISTANCE_CYCLE.indexOf(state) + 1) % RESISTANCE_CYCLE.length
-  ];
-}
-
 const RESISTANCE_LABELS: Record<ResistanceState, string> = {
   neither: "None",
   resistant: "Resistant",
   immune: "Immune",
 };
-
-const DAMAGE_DISPLAY_LABELS: Record<DamageDisplayMode, string> = {
-  all: "All",
-  icon: "Icons",
-  initials: "Initials",
-  none: "None",
-};
-
-const DAMAGE_DISPLAY_MODES: DamageDisplayMode[] = [
-  "all",
-  "icon",
-  "initials",
-  "none",
-];
-
-const ART_MODE_LABELS: Record<ArtMode, string> = {
-  class: "Class Art",
-  upload: "Upload Image",
-  link: "Image URL",
-  none: "No Art",
-};
-
-const ART_MODES: ArtMode[] = ["class", "upload", "link", "none"];
-
-const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
-  scroll: "Basic",
-  dragon: "Dragon",
-  party: "Party",
-  spell: "Spell",
-  none: "None",
-};
-
-const SCROLL_STYLE_MODES: ScrollStyle[] = [
-  "scroll",
-  "dragon",
-  "party",
-  "spell",
-  "none",
-];
-
-const ABILITY_SCORE_MODE_LABELS: Record<AbilityScoreDisplayMode, string> = {
-  full: "Full",
-  compact: "Compact",
-  none: "None",
-};
-
-const ABILITY_SCORE_MODES: AbilityScoreDisplayMode[] = [
-  "full",
-  "compact",
-  "none",
-];
-
-const VITALS_MODE_LABELS: Record<VitalsDisplayMode, string> = {
-  full: "Full",
-  compact: "No Labels",
-  none: "None",
-};
-
-const VITALS_MODES: VitalsDisplayMode[] = ["full", "compact", "none"];
-
-const NOTES_DISPLAY_LABELS: Record<NotesDisplayMode, string> = {
-  labeled: "Labeled",
-  unlabeled: "Unlabeled",
-  none: "None",
-};
-
-const NOTES_DISPLAY_MODES: NotesDisplayMode[] = [
-  "labeled",
-  "unlabeled",
-  "none",
-];
 
 function TriStateResistanceBox({ state }: { state: ResistanceState }) {
   return (
@@ -179,39 +104,10 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 export default function CardEditor({ card, onChange }: CardEditorProps) {
   const [draggingArt, setDraggingArt] = useState(false);
 
-  function set<K extends keyof CardData>(key: K, value: CardData[K]) {
-    onChange({ ...card, [key]: value });
-  }
-
-  function setNum<K extends keyof CardData>(key: K, raw: string) {
-    if (raw === "") {
-      set(key, undefined as CardData[K]);
-      return;
-    }
-    const parsed = parseInt(raw, 10);
-    set(key, (Number.isNaN(parsed) ? undefined : parsed) as CardData[K]);
-  }
-
-  function setStat(key: AbilityKey, patch: Partial<AbilityStat>) {
-    onChange({
-      ...card,
-      stats: { ...card.stats, [key]: { ...card.stats[key], ...patch } },
-    });
-  }
-
-  function setResistance(key: DamageTypeKey, state: ResistanceState) {
-    onChange({
-      ...card,
-      resistances: { ...card.resistances, [key]: state },
-    });
-  }
-
-  function setToggle<K extends keyof CardData["toggles"]>(
-    key: K,
-    value: CardData["toggles"][K],
-  ) {
-    onChange({ ...card, toggles: { ...card.toggles, [key]: value } });
-  }
+  const { set, setNum, setStat, setResistance, setToggle } = createCardUpdater(
+    card,
+    onChange,
+  );
 
   function handleArtUpload(file: File | undefined) {
     if (!file) return;
