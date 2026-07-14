@@ -16,8 +16,8 @@ import {
   type CardData,
   type DamageDisplayMode,
   type DamageTypeKey,
-  type NameVisibility,
   type ResistanceState,
+  type ScrollStyle,
 } from "@/types/card";
 
 const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
@@ -110,19 +110,14 @@ const ART_MODE_LABELS: Record<ArtMode, string> = {
 
 const ART_MODES: ArtMode[] = ["class", "upload", "link", "none"];
 
-const NAME_VISIBILITY_LABELS: Record<NameVisibility, string> = {
-  player: "Player",
-  dm: "DM",
-  both: "Both",
+const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
+  scroll: "Scroll",
+  dragon: "Dragon",
+  party: "Party",
   none: "None",
 };
 
-const NAME_VISIBILITY_MODES: NameVisibility[] = [
-  "both",
-  "player",
-  "dm",
-  "none",
-];
+const SCROLL_STYLE_MODES: ScrollStyle[] = ["scroll", "dragon", "party", "none"];
 
 function TriStateResistanceBox({ state }: { state: ResistanceState }) {
   return (
@@ -186,26 +181,37 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
-      <Field
-        label="Name"
-        labelExtra={
-          <SegmentedToggle
-            options={NAME_VISIBILITY_MODES.map((mode) => ({
-              value: mode,
-              label: NAME_VISIBILITY_LABELS[mode],
-            }))}
-            value={card.toggles.showName}
-            onChange={(mode) => setToggle("showName", mode)}
-            size="xs"
-          />
-        }
-      >
+      <Field label="Name">
         <input
           className={inputClass}
           value={card.characterName}
           onChange={(e) => set("characterName", e.target.value)}
         />
       </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Player Scroll">
+          <SegmentedToggle
+            options={SCROLL_STYLE_MODES.map((mode) => ({
+              value: mode,
+              label: SCROLL_STYLE_LABELS[mode],
+            }))}
+            value={card.toggles.nameScrollPlayer}
+            onChange={(mode) => setToggle("nameScrollPlayer", mode)}
+            size="xs"
+          />
+        </Field>
+        <Field label="DM Scroll">
+          <SegmentedToggle
+            options={SCROLL_STYLE_MODES.map((mode) => ({
+              value: mode,
+              label: SCROLL_STYLE_LABELS[mode],
+            }))}
+            value={card.toggles.nameScrollDm}
+            onChange={(mode) => setToggle("nameScrollDm", mode)}
+            size="xs"
+          />
+        </Field>
+      </div>
 
       {/* Not a Field (<label>): a <label> wrapping a button group makes
        *  clicking the heading text activate the first button, silently

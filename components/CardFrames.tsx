@@ -12,10 +12,12 @@ import type { IconType } from "react-icons";
 import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
+import { PARTY_SCROLL, PARTY_SCROLL_INK } from "@/components/PartyScrollArt";
 import type {
   DamageDisplayMode,
   DamageTypeKey,
   ResistanceState,
+  ScrollStyle,
 } from "@/types/card";
 import {
   GiAcid,
@@ -225,7 +227,9 @@ export function DamageTypeBadge({
         <ReactIcon size={12} style={{ color: INK, flexShrink: 0 }} />
       )}
       {displayMode !== "icon" && (
-        <span style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}>
+        <span
+          style={{ fontSize: 7, fontWeight: 600, lineHeight: 1, color: INK }}
+        >
           {label.slice(0, 2)}
         </span>
       )}
@@ -727,19 +731,65 @@ const SCROLL = {
     "M91.16,20.82a7.63,7.63,0,0,1,4.29,4.66c-2.85-.08-3.69-2.28-4.29-4.66",
 };
 
-/** Scroll aspect helper: source box within the original artwork. */
-export const SCROLL_DRAGON_BOX = { x: 21, y: -15, w: 233, h: 99 };
-/** Tight crop around scroll body + flap only — no dragon head space above.
- *  y=30 captures the wavy top bezier of the body, which dips to ~y=34. */
-export const SCROLL_NODRAGON_BOX = { x: 21, y: 30, w: 233, h: 55 };
+/** Scroll aspect helper: each variant crops its own source box — the
+ *  plain ribbon is tightly cropped to just the body (no dragon head
+ *  space above), while the dragon and party variants need the extra
+ *  headroom above the ribbon for their own artwork. Callers must size
+ *  the rendered banner to whichever box matches the variant in play
+ *  (see scrollBox below) — mismatching them stretches the art, since
+ *  the SVG's preserveAspectRatio="none" fills whatever box it's given. */
+export const SCROLL_BOX = { x: 21, y: 30, w: 235, h: 55 };
+export const DRAGON_SCROLL_BOX = { x: 21, y: -3, w: 235, h: 90 };
+export const PARTY_SCROLL_BOX = { x: 21, y: -4, w: 235, h: 90 };
+
+/** The crop box every scroll variant renders its viewBox from — callers
+ *  (e.g. CardFaces, sizing the banner from its own aspect ratio) key off
+ *  this rather than duplicating the box lookup. */
+export function scrollBox(variant: ScrollStyle) {
+  switch (variant) {
+    case "dragon":
+      return DRAGON_SCROLL_BOX;
+    case "party":
+      return PARTY_SCROLL_BOX;
+    default:
+      return SCROLL_BOX;
+  }
+}
 
 export function ScrollFrame({
   width,
   height,
-  dragon = true,
-}: FrameProps & { dragon?: boolean }) {
-  const box = dragon ? SCROLL_DRAGON_BOX : SCROLL_NODRAGON_BOX;
+  variant = "dragon",
+}: FrameProps & { variant?: Exclude<ScrollStyle, "none"> }) {
+  const box = scrollBox(variant);
   const line = { stroke: INK, vectorEffect: "non-scaling-stroke" as const };
+
+  if (variant === "party") {
+    return (
+      <svg
+        width={width}
+        height={height}
+        viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+        preserveAspectRatio="none"
+        fill="none"
+        style={{ position: "absolute", inset: 0 }}
+      >
+        {PARTY_SCROLL_INK.map((d, i) => (
+          <path key={i} d={d} fill={INK} />
+        ))}
+        <path d={PARTY_SCROLL.rollWhite} fill="#fff" />
+        <path d={PARTY_SCROLL.rollWhite} {...line} strokeWidth={1.38} />
+        <path d={PARTY_SCROLL.rollThin} {...line} strokeWidth={0.75} />
+        <path d={PARTY_SCROLL.rollGrey} fill="#bfc0c3" />
+        <path d={PARTY_SCROLL.rollGrey} {...line} strokeWidth={1.38} />
+        <path d={PARTY_SCROLL.body} fill="#fff" />
+        <path d={PARTY_SCROLL.bodyThin} {...line} strokeWidth={0.75} />
+        <path d={PARTY_SCROLL.body} {...line} strokeWidth={1.38} />
+      </svg>
+    );
+  }
+
+  const dragon = variant === "dragon";
   return (
     <svg
       width={width}
@@ -778,26 +828,24 @@ export function ScrollFrame({
 const NAME_CURVE_LENGTH = 219;
 const NAME_TEXT_MAX_SIZE = 16;
 
-/** The scroll banner (DM's plain ribbon, or the player's with the dragon
- *  head at its left) with a value that rides the ribbon's own wave, e.g. a
- *  character's name. With `dragon`, the text follows nameCurveDragon (the
- *  same wave, re-subdivided to start just clear of the dragon's head)
- *  instead of nameCurve — text styling and centering use the same rule on
- *  both, just scaled to whichever curve is in play. The white halo behind
- *  the glyphs (rather than trimming the curve tighter still) is what keeps
- *  the player-side name legible where it crosses the dragon's smoke wisp. */
+/** The scroll banner (plain ribbon, dragon-headed, or the more elaborate
+ *  party ribbon) with a value that rides the ribbon's own wave, e.g. a
+ *  character's name — text styling and centering use the same rule for
+ *  every variant, just scaled to that variant's own crop box. The white
+ *  halo behind the glyphs (rather than trimming the curve tighter still)
+ *  is what keeps the name legible where it crosses the dragon artwork. */
 export function NameScroll({
   width,
   height,
   value,
   label,
-  dragon = false,
+  variant = "dragon",
 }: FrameProps & {
   value?: React.ReactNode;
   label?: string;
-  dragon?: boolean;
+  variant?: Exclude<ScrollStyle, "none">;
 }) {
-  const box = dragon ? SCROLL_DRAGON_BOX : SCROLL_NODRAGON_BOX;
+  const box = scrollBox(variant);
   const curve = SCROLL.nameCurve;
   const curveLength = NAME_CURVE_LENGTH;
   const pathId = useId();
@@ -819,7 +867,7 @@ export function NameScroll({
         height: height,
       }}
     >
-      <ScrollFrame width={width} height={height} dragon={dragon} />
+      <ScrollFrame width={width} height={height} variant={variant} />
       {text && (
         <svg
           width="100%"
@@ -830,20 +878,29 @@ export function NameScroll({
           <defs>
             <path id={pathId} d={curve} />
           </defs>
-          <text
-            fontWeight="bold"
-            fontSize={fontSize}
-            fill={INK}
-            stroke="#fff"
-            strokeWidth={fontSize * 0.12}
-            strokeLinejoin="round"
-            paintOrder="stroke"
-            dominantBaseline="central"
-          >
-            <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
-              {text}
-            </textPath>
-          </text>
+          {/* The curve is shared across variants, but the party ribbon
+              sits ~1 unit higher than the dragon/plain ribbon at the same
+              coordinates — nudge the text up to match its own ribbon. */}
+          <g transform={variant === "party" ? "translate(0, -1)" : undefined}>
+            <text
+              fontWeight="bold"
+              fontSize={fontSize}
+              fill={INK}
+              stroke="#fff"
+              strokeWidth={fontSize * 0.12}
+              strokeLinejoin="round"
+              paintOrder="stroke"
+              dominantBaseline="central"
+            >
+              <textPath
+                href={`#${pathId}`}
+                startOffset="50%"
+                textAnchor="middle"
+              >
+                {text}
+              </textPath>
+            </text>
+          </g>
         </svg>
       )}
       {label && (

@@ -2,12 +2,14 @@ export type LayoutPreset = "tactician" | "minimalist";
 
 export type ArtMode = "class" | "upload" | "link" | "none";
 
-// Which face(s) print the character name — the player face's art scroll,
-// the DM face's name banner, both, or neither.
-export type NameVisibility = "player" | "dm" | "both" | "none";
+// The name banner's artwork style — the plain ribbon, the ribbon with a
+// dragon's head, the more elaborate party ribbon, or hidden entirely.
+// Player and DM faces each pick their own independently.
+export type ScrollStyle = "scroll" | "dragon" | "party" | "none";
 
 export interface CardToggles {
-  showName: NameVisibility;
+  nameScrollPlayer: ScrollStyle;
+  nameScrollDm: ScrollStyle;
   showVitals: boolean;
   showAbilityScores: boolean;
   showDefences: boolean;
@@ -136,7 +138,8 @@ export function emptyCard(id: string): CardData {
     portraitUrl: "",
     preset: "tactician",
     toggles: {
-      showName: "both",
+      nameScrollPlayer: "dragon",
+      nameScrollDm: "scroll",
       showVitals: true,
       showAbilityScores: true,
       showDefences: true,

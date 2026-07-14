@@ -12,8 +12,7 @@ import {
   Star,
   Orb,
   NameScroll,
-  SCROLL_DRAGON_BOX,
-  SCROLL_NODRAGON_BOX,
+  scrollBox,
   StatBox,
   DamageTypeBadge,
   NotesBox,
@@ -24,6 +23,7 @@ import {
   DAMAGE_TYPE_KEYS,
   DAMAGE_TYPE_LABELS,
   type CardData,
+  type ScrollStyle,
 } from "@/types/card";
 
 // Card face: 2.5in × 3.5in = 240 × 336 px. Minus 1px borders and 8px padding.
@@ -31,15 +31,16 @@ export const FACE_W = 240;
 export const FACE_H = 336;
 const CONTENT_W = FACE_W - 2 - 16;
 
-// The dragon scroll always keeps the artwork's natural aspect ratio.
-const scrollHeight = (w: number) =>
-  Math.round((SCROLL_DRAGON_BOX.h / SCROLL_DRAGON_BOX.w) * w);
-const SCROLL_W = 200; // player face
-const SCROLL_H = scrollHeight(SCROLL_W);
+// Each scroll variant crops its own source box at its own aspect ratio
+// (see CardFrames' scrollBox) — a banner rendered at width `w` needs its
+// own height to match, or the SVG (preserveAspectRatio="none") stretches
+// to whatever box it's given instead of scaling uniformly.
+function scrollHeightFor(variant: Exclude<ScrollStyle, "none">, w: number) {
+  const box = scrollBox(variant);
+  return Math.round((box.h / box.w) * w);
+}
+const SCROLL_W = 200; // player face banner width
 const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
-const DM_SCROLL_H = Math.round(
-  (SCROLL_NODRAGON_BOX.h / SCROLL_NODRAGON_BOX.w) * DM_SCROLL_W,
-);
 // Inset of the player-side border from the card edge — even on all sides.
 const PLAYER_BORDER_MARGIN_WIDTH = 4;
 const PLAYER_BORDER_MARGIN_HEIGHT = 6;
@@ -97,17 +98,27 @@ export function DmFace({ card }: { card: CardData }) {
   const toggles = card.toggles;
   const showNotes = toggles.showNotes;
 
-  const showNameOnDm =
-    toggles.showName === "dm" || toggles.showName === "both";
+  const dmScrollVariant = toggles.nameScrollDm;
+  const showNameOnDm = dmScrollVariant !== "none";
+  // The dragon and party ribbons are noticeably taller than the plain one
+  // at the same width — rather than let that squeeze the fixed-size
+  // sections below (vitals, abilities, etc.), each of those gets
+  // flexShrink: 0 so Notes (flex: 1) is the only thing that gives up
+  // space, and the gap between sections tightens up to help it along.
+  const dmScrollTall =
+    dmScrollVariant === "dragon" || dmScrollVariant === "party";
+  const sectionGap = dmScrollTall ? Math.max(1, S.gap - 1) : S.gap;
 
   const sections = [
     showNameOnDm && (
-      <NameScroll
-        key="name"
-        value={card.characterName}
-        width={DM_SCROLL_W}
-        height={DM_SCROLL_H}
-      />
+      <div key="name" style={{ flexShrink: 0 }}>
+        <NameScroll
+          value={card.characterName}
+          variant={dmScrollVariant}
+          width={DM_SCROLL_W}
+          height={scrollHeightFor(dmScrollVariant, DM_SCROLL_W)}
+        />
+      </div>
     ),
     toggles.showVitals && (
       <div
@@ -116,6 +127,7 @@ export function DmFace({ card }: { card: CardData }) {
           display: "flex",
           flexDirection: "column",
           gap: 1,
+          flexShrink: 0,
         }}
       >
         <div
@@ -187,6 +199,7 @@ export function DmFace({ card }: { card: CardData }) {
           display: "flex",
           justifyContent: "space-between",
           gap: statGap,
+          flexShrink: 0,
         }}
       >
         {ABILITY_KEYS.map((key) => (
@@ -209,6 +222,7 @@ export function DmFace({ card }: { card: CardData }) {
           alignItems: "center",
           justifyContent: "space-around",
           marginTop: showNotes ? 4 : 0,
+          flexShrink: 0,
         }}
       >
         {DAMAGE_TYPE_KEYS.map((key, i) => (
@@ -250,7 +264,7 @@ export function DmFace({ card }: { card: CardData }) {
           display: "flex",
           flexDirection: "column",
           ...(showNotes
-            ? { gap: S.gap * (1 + hiddenSectionCount) }
+            ? { gap: sectionGap * (1 + hiddenSectionCount) }
             : {
                 // No elastic Notes filler left, so the remaining sections
                 // spread across the full height instead: justify-content
@@ -263,7 +277,7 @@ export function DmFace({ card }: { card: CardData }) {
                 // adds automatically.
                 justifyContent:
                   sections.length > 1 ? "space-between" : "center",
-                gap: S.gap,
+                gap: sectionGap,
               }),
         }}
       >
@@ -304,8 +318,16 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
   const useCustomArt =
     (card.artMode === "upload" || card.artMode === "link") &&
     !!card.portraitUrl;
-  const showNameOnPlayer =
-    card.toggles.showName === "player" || card.toggles.showName === "both";
+  const playerScrollVariant = card.toggles.nameScrollPlayer;
+  const showNameOnPlayer = playerScrollVariant !== "none";
+
+  const contentW = FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2;
+  const contentH = FACE_H - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2;
+  const scrollH =
+    playerScrollVariant !== "none"
+      ? scrollHeightFor(playerScrollVariant, SCROLL_W)
+      : 0;
+  const ART_BOTTOM_MARGIN = 8;
 
   return (
     <div
@@ -317,29 +339,49 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
         alignItems: "center",
       }}
     >
-      <>
-        <div
-          style={{
-            position: "absolute",
-            top: PLAYER_BORDER_MARGIN_HEIGHT,
-            left: PLAYER_BORDER_MARGIN_WIDTH,
-            width: FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2,
-            height: FACE_H - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2,
-          }}
-        >
-          <PlayerFrame
-            width={FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2}
-            height={FACE_H - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2}
-          />
-        </div>
+      <div
+        style={{
+          position: "absolute",
+          top: PLAYER_BORDER_MARGIN_HEIGHT,
+          left: PLAYER_BORDER_MARGIN_WIDTH,
+          width: contentW,
+          height: contentH,
+        }}
+      >
+        <PlayerFrame width={contentW} height={contentH} />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          top: PLAYER_BORDER_MARGIN_HEIGHT,
+          left: PLAYER_BORDER_MARGIN_WIDTH,
+          width: contentW,
+          height: contentH,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {showNameOnPlayer && (
+          <div style={{ flexShrink: 0, marginTop: 4 }}>
+            <NameScroll
+              variant={playerScrollVariant}
+              width={SCROLL_W}
+              height={scrollH}
+              value={card.characterName}
+            />
+          </div>
+        )}
         <div
           style={{
             flex: 1,
+            minHeight: 0,
+            width: "100%",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-end",
             justifyContent: "center",
+            paddingBottom: ART_BOTTOM_MARGIN,
             color: "#111",
-            paddingTop: SCROLL_H - 14,
           }}
         >
           {useCustomArt ? (
@@ -348,31 +390,22 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
               src={card.portraitUrl}
               alt=""
               crossOrigin="anonymous"
-              style={{ maxWidth: 220, maxHeight: 220, objectFit: "contain" }}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+              }}
             />
           ) : (
-            Logo && <Logo size={220} />
+            // Same fit as the uploaded/linked image above: a size big
+            // enough to never be the limiting factor, then CSS max-width/
+            // max-height shrink it to whatever room is actually left,
+            // uniformly (the logo's own square viewBox keeps it from
+            // distorting even when that leftover space isn't square).
+            Logo && <Logo size={contentH} className="max-w-full max-h-full" />
           )}
         </div>
-      </>
-      {showNameOnPlayer && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: (FACE_W - 2 - SCROLL_W) / 2,
-            width: SCROLL_W,
-            height: SCROLL_H,
-          }}
-        >
-          <NameScroll
-            dragon
-            width={SCROLL_W}
-            height={SCROLL_H}
-            value={card.characterName}
-          />
-        </div>
-      )}
+      </div>
     </div>
   );
 }
