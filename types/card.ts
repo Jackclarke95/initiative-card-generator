@@ -7,17 +7,22 @@ export type ArtMode = "class" | "upload" | "link" | "none";
 // Player and DM faces each pick their own independently.
 export type ScrollStyle = "scroll" | "dragon" | "party" | "none";
 
-// How the ability score row prints: each box with its full label above it,
-// the same boxes shrunk down with the labels dropped, or the whole row
-// hidden entirely.
-export type AbilityScoreDisplayMode = "labeled" | "compact" | "none";
+// How the DM notes box prints: with its "Notes" caption, with the caption
+// dropped, or hidden entirely.
+export type NotesDisplayMode = "labeled" | "unlabeled" | "none";
+
+// How the ability score row prints: each box with its label above the
+// value, the same box with the label dropped (the shrunk "compact" box),
+// or the whole row hidden entirely. The proficiency dot always prints
+// whenever the row is visible.
+export type AbilityScoreDisplayMode = "full" | "compact" | "none";
 
 export interface CardToggles {
   nameScrollPlayer: ScrollStyle;
   nameScrollDm: ScrollStyle;
   showVitals: boolean;
   abilityScores: AbilityScoreDisplayMode;
-  showNotes: boolean;
+  notesDisplayMode: NotesDisplayMode;
 }
 
 export interface AbilityStat {
@@ -147,8 +152,8 @@ export function emptyCard(id: string): CardData {
       nameScrollPlayer: "dragon",
       nameScrollDm: "scroll",
       showVitals: true,
-      abilityScores: "labeled",
-      showNotes: true,
+      abilityScores: "full",
+      notesDisplayMode: "labeled",
     },
   };
 }

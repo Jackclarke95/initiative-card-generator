@@ -9,7 +9,7 @@ import {
   Chevron,
   Shield,
   Heart,
-  Star,
+  Hexagon,
   Orb,
   NameScroll,
   scrollBox,
@@ -46,7 +46,7 @@ const PLAYER_BORDER_MARGIN_WIDTH = 4;
 const PLAYER_BORDER_MARGIN_HEIGHT = 6;
 
 /** Fixed-width centering slot: lets two badges with different natural
- *  widths (e.g. Heart vs. Star) share one alignment axis between rows,
+ *  widths (e.g. Heart vs. Hexagon) share one alignment axis between rows,
  *  by centering each inside the same-width box rather than relying on
  *  their raw widths to match. */
 function Slot({
@@ -74,16 +74,16 @@ export function DmFace({ card }: { card: CardData }) {
   // The hearts (HP, Save) are drawn 1.2× wider than the shield.
   const heartW = Math.round(badgeW * 1.2);
   const saveW = heartW;
-  // Chevron/Star/Orb widths each follow that shape's own viewBox aspect
+  // Chevron/Hexagon/Orb widths each follow that shape's own viewBox aspect
   // ratio at the shared height, so nothing gets stretched or letterboxed.
   const chevronW = Math.round(iconH * (55 / 48));
-  const starW = Math.round(iconH * (56.8 / 49.83));
+  const hexW = Math.round(iconH * (56.8 / 49.83));
   const orbW = iconH; // Orb's viewBox is a 1:1 square.
   // HP/Perception share a slot, and DC/Insight share a slot — each
   // shape centers inside its slot, so the two rows' differing natural
   // widths still align on the same vertical axis. Using one slot width
   // for both sides also keeps AC/Speed centered exactly between them.
-  const slotW = Math.max(heartW, starW, saveW, orbW);
+  const slotW = Math.max(heartW, hexW, saveW, orbW);
 
   const statGap = 4;
 
@@ -96,7 +96,8 @@ export function DmFace({ card }: { card: CardData }) {
   // to the bottom — with only one section left, there's nothing to
   // spread it against, so it's centered instead.
   const toggles = card.toggles;
-  const showNotes = toggles.showNotes;
+  const notesMode = toggles.notesDisplayMode;
+  const showNotes = notesMode !== "none";
 
   const dmScrollVariant = toggles.nameScrollDm;
   const showNameOnDm = dmScrollVariant !== "none";
@@ -108,6 +109,8 @@ export function DmFace({ card }: { card: CardData }) {
   const dmScrollTall =
     dmScrollVariant === "dragon" || dmScrollVariant === "party";
   const sectionGap = dmScrollTall ? Math.max(1, S.gap - 1) : S.gap;
+
+  const abilityMode = toggles.abilityScores;
 
   const sections = [
     showNameOnDm && (
@@ -168,10 +171,10 @@ export function DmFace({ card }: { card: CardData }) {
           }}
         >
           <Slot width={slotW}>
-            <Star
+            <Hexagon
               value={card.passivePerception}
               label="PP"
-              width={starW}
+              width={hexW}
               height={iconH}
             />
           </Slot>
@@ -192,7 +195,7 @@ export function DmFace({ card }: { card: CardData }) {
         </div>
       </div>
     ),
-    toggles.abilityScores !== "none" && (
+    abilityMode !== "none" && (
       <div
         key="abilities"
         style={{
@@ -208,7 +211,7 @@ export function DmFace({ card }: { card: CardData }) {
             label={ABILITY_LABELS[key]}
             value={card.stats[key].modifier}
             proficiency={card.stats[key].proficiency}
-            compact={toggles.abilityScores === "compact"}
+            showLabel={abilityMode === "full"}
           />
         ))}
       </div>
@@ -293,7 +296,10 @@ export function DmFace({ card }: { card: CardData }) {
               marginTop: sections.length > 0 ? 4 : 0,
             }}
           >
-            <NotesBox value={card.notes} />
+            <NotesBox
+              value={card.notes}
+              showLabel={notesMode !== "unlabeled"}
+            />
           </div>
         )}
       </div>

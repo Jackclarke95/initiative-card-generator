@@ -125,9 +125,12 @@ export function VitalBox({
     proficiency !== undefined ? dotR * 2 + dotTopGap + dotBottomGap : 0;
   const dotCy = dotTopGap + dotR;
   const textAreaH = height - dotZoneH;
-  // The compact variant (no label) wants its value nudged down slightly;
-  // the labeled variant wants it nudged up about twice as far the other way.
-  const valueMarginTop = label ? -4 : 2;
+  // The compact variant (no label, but a proficiency dot reserving space
+  // below) wants its value nudged down slightly to visually center in what's
+  // left above the dot; the labeled variant wants it nudged up about twice
+  // as far the other way. With neither label nor dot, the value already has
+  // the full box to itself, so no nudge is needed.
+  const valueMarginTop = label ? -2 : proficiency !== undefined ? 2 : 0;
   return (
     <div style={{ position: "relative", width, height }}>
       <VitalBoxFrame width={width} height={height} />
@@ -182,20 +185,20 @@ export const StatBox = ({
   label,
   value,
   proficiency,
-  compact,
+  showLabel = true,
 }: {
   label: string;
   value?: React.ReactNode;
   proficiency: boolean;
-  /** Drops the label and shrinks the box to just the value + proficiency
-   *  dot — used by the ability scores row's "Compact" display mode. */
-  compact?: boolean;
+  /** Drops the label and shrinks the box down to just the value + proficiency
+   *  dot — the ability scores row's "Compact" display mode. */
+  showLabel?: boolean;
 }) => (
   <VitalBox
-    label={compact ? undefined : label}
+    label={showLabel ? label : undefined}
     value={value}
     width={30}
-    height={compact ? 26 : 36}
+    height={showLabel ? 36 : 26}
     proficiency={proficiency}
     labelPosition="top"
   />
@@ -651,20 +654,19 @@ export function Chevron({
   );
 }
 
-// ── Star (Passive Perception) — a six-pointed compass rose ────────────
-// Six points (outer radius 26, inner radius 18.5 — a 0.71 ratio) with
-// every notch opening at ~146°, comfortably past the 100° floor where a
-// point starts reading as a thin spike. Oriented so it stands on two of
-// its points — like feet — with a concave notch between them (mirrored
-// at the top too, a consequence of the 6-fold symmetry), rather than
-// balancing on a single point.
-const STAR_SHAPE =
-  "M28.4,6.42L41.4,2.4L44.42,15.67L54.4,24.92L44.42,34.17L41.4,47.43L28.4,43.42L15.4,47.43L12.38,34.17L2.4,24.92L12.38,15.67L15.4,2.4Z";
+// ── Hexagon (Passive Perception) ───────────────────────────────────────
+// A regular hexagon at radius 26, standing on two of its points — like
+// feet — with a flat edge between them (mirrored at the top too, a
+// consequence of the 6-fold symmetry), rather than balancing on a single
+// point. Vertices sit at the same six positions the icon's previous
+// six-pointed star used for its outer points.
+const HEXAGON_SHAPE =
+  "M41.4,2.4L54.4,24.92L41.4,47.43L15.4,47.43L2.4,24.92L15.4,2.4Z";
 
-// Centre-relative positions of the six outer points, pulled in from the
-// tip (radius 26) to radius 22.66 — the same 3.34-unit inset the Shield
-// uses to land its studs on the inner border ring rather than the edge.
-const STAR_RIVETS = [
+// Centre-relative positions of the six vertices, pulled in from the tip
+// (radius 26) to radius 22.66 — the same 3.34-unit inset the Shield uses
+// to land its studs on the inner border ring rather than the edge.
+const HEXAGON_RIVETS = [
   { x: 11, y: -19 },
   { x: 22, y: 0 },
   { x: 11, y: 19 },
@@ -673,11 +675,11 @@ const STAR_RIVETS = [
   { x: -11, y: -19 },
 ];
 
-/** Compass-star stat frame with value + label, e.g. "15" over "Perception".
+/** Hexagon stat frame with value + label, e.g. "15" over "Perception".
  *  Cropped tight to the shape's own bounds (plus the usual 2.4-unit
  *  margin) rather than the shared canvas, so the container's aspect
  *  ratio matches what's actually drawn (see the Orb's note on this). */
-export function Star({
+export function Hexagon({
   width,
   height,
   value,
@@ -687,9 +689,8 @@ export function Star({
     <IconFrame
       width={width}
       height={height}
-      path={STAR_SHAPE}
+      path={HEXAGON_SHAPE}
       viewBox="0 0 56.8 49.83"
-      rivets={STAR_RIVETS}
       value={value}
       label={label}
     />
@@ -973,9 +974,11 @@ export function NameScroll({
 export function NotesBox({
   value,
   label = "Notes",
+  showLabel = true,
 }: {
   value?: string;
   label?: string;
+  showLabel?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -1022,21 +1025,27 @@ export function NotesBox({
             </div>
           )}
         </div>
-        <div
-          style={{ display: "flex", justifyContent: "center", flexShrink: 0 }}
-        >
-          <span
+        {showLabel && (
+          <div
             style={{
-              fontSize: 6.5,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              fontWeight: 600,
-              color: LABEL_GREY,
+              display: "flex",
+              justifyContent: "center",
+              flexShrink: 0,
             }}
           >
-            {label}
-          </span>
-        </div>
+            <span
+              style={{
+                fontSize: 6.5,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                fontWeight: 600,
+                color: LABEL_GREY,
+              }}
+            >
+              {label}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

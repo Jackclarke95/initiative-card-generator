@@ -17,6 +17,7 @@ import {
   type CardData,
   type DamageDisplayMode,
   type DamageTypeKey,
+  type NotesDisplayMode,
   type ResistanceState,
   type ScrollStyle,
 } from "@/types/card";
@@ -132,14 +133,26 @@ const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
 const SCROLL_STYLE_MODES: ScrollStyle[] = ["scroll", "dragon", "party", "none"];
 
 const ABILITY_SCORE_MODE_LABELS: Record<AbilityScoreDisplayMode, string> = {
-  labeled: "Labeled",
+  full: "Full",
   compact: "Compact",
   none: "None",
 };
 
 const ABILITY_SCORE_MODES: AbilityScoreDisplayMode[] = [
-  "labeled",
+  "full",
   "compact",
+  "none",
+];
+
+const NOTES_DISPLAY_LABELS: Record<NotesDisplayMode, string> = {
+  labeled: "Labeled",
+  unlabeled: "Unlabeled",
+  none: "None",
+};
+
+const NOTES_DISPLAY_MODES: NotesDisplayMode[] = [
+  "labeled",
+  "unlabeled",
   "none",
 ];
 
@@ -377,6 +390,7 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
             }))}
             value={card.toggles.abilityScores}
             onChange={(mode) => setToggle("abilityScores", mode)}
+            size="sm"
           />
         }
       >
@@ -463,8 +477,16 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
       {/* Notes */}
       <SectionHeading
-        checked={card.toggles.showNotes}
-        onToggle={(v) => setToggle("showNotes", v)}
+        right={
+          <SegmentedToggle
+            options={NOTES_DISPLAY_MODES.map((mode) => ({
+              value: mode,
+              label: NOTES_DISPLAY_LABELS[mode],
+            }))}
+            value={card.toggles.notesDisplayMode}
+            onChange={(mode) => setToggle("notesDisplayMode", mode)}
+          />
+        }
       >
         Notes
       </SectionHeading>
