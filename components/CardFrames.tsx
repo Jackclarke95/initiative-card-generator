@@ -114,9 +114,20 @@ export function VitalBox({
   labelPosition?: "top" | "bottom";
   proficiency?: boolean;
 }) {
-  const dotR = height * 0.1;
-  const dotZoneH = proficiency !== undefined ? dotR * 2 + 4 : 0;
+  // Fixed rather than proportional to height, so the dot reads as the same
+  // size in the compact (shorter) and labeled (taller) StatBox variants.
+  const dotR = 2.6;
+  // Asymmetric padding around the dot within its reserved strip — a wider
+  // gap below than above lifts it off the box's bottom edge a little.
+  const dotTopGap = 2;
+  const dotBottomGap = 4;
+  const dotZoneH =
+    proficiency !== undefined ? dotR * 2 + dotTopGap + dotBottomGap : 0;
+  const dotCy = dotTopGap + dotR;
   const textAreaH = height - dotZoneH;
+  // The compact variant (no label) wants its value nudged down slightly;
+  // the labeled variant wants it nudged up about twice as far the other way.
+  const valueMarginTop = label ? -4 : 2;
   return (
     <div style={{ position: "relative", width, height }}>
       <VitalBoxFrame width={width} height={height} />
@@ -136,7 +147,7 @@ export function VitalBox({
           label={label}
           labelPosition={labelPosition}
           maxValueSize={26}
-          valueMarginTop={0}
+          valueMarginTop={valueMarginTop}
         />
       </div>
       {proficiency !== undefined && (
@@ -152,19 +163,14 @@ export function VitalBox({
         >
           <circle
             cx={width / 2}
-            cy={dotZoneH / 2}
+            cy={dotCy}
             r={dotR}
             fill="none"
             stroke={INK}
             strokeWidth={1}
           />
           {proficiency && (
-            <circle
-              cx={width / 2}
-              cy={dotZoneH / 2}
-              r={dotR * 0.5}
-              fill={INK}
-            />
+            <circle cx={width / 2} cy={dotCy} r={dotR * 0.5} fill={INK} />
           )}
         </svg>
       )}
@@ -189,7 +195,7 @@ export const StatBox = ({
     label={compact ? undefined : label}
     value={value}
     width={30}
-    height={compact ? 26 : 40}
+    height={compact ? 26 : 36}
     proficiency={proficiency}
     labelPosition="top"
   />
