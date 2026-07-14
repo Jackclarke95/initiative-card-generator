@@ -8,6 +8,7 @@ interface CardListProps {
   onSelect: (id: string) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
+  onReset: () => void;
 }
 
 export default function CardList({
@@ -16,6 +17,7 @@ export default function CardList({
   onSelect,
   onAdd,
   onRemove,
+  onReset,
 }: CardListProps) {
   return (
     <div
@@ -29,13 +31,21 @@ export default function CardList({
         >
           Cards ({cards.length})
         </h2>
-        <button
-          onClick={onAdd}
-          className="px-2 py-1 rounded text-xs font-semibold"
-          style={{ background: "var(--surface-raised)", color: "var(--text-primary)" }}
-        >
-          + Add
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onReset}
+            className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+          >
+            Reset Card
+          </button>
+          <button
+            onClick={onAdd}
+            className="px-2 py-1 rounded text-xs font-semibold"
+            style={{ background: "var(--surface-raised)", color: "var(--text-primary)" }}
+          >
+            + Add
+          </button>
+        </div>
       </div>
       <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
         {cards.map((card) => (

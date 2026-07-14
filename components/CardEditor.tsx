@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
-import ConfirmModal from "@/components/ConfirmModal";
 import SegmentedToggle from "@/components/SegmentedToggle";
 import VisibilityToggle from "@/components/VisibilityToggle";
 import {
@@ -11,7 +10,6 @@ import {
   ABILITY_LABELS,
   DAMAGE_TYPE_KEYS,
   DAMAGE_TYPE_LABELS,
-  emptyCard,
   type AbilityKey,
   type AbilityStat,
   type ArtMode,
@@ -141,7 +139,6 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 // ── Main component ────────────────────────────────────────────────────
 
 export default function CardEditor({ card, onChange }: CardEditorProps) {
-  const [confirmingClear, setConfirmingClear] = useState(false);
   const [draggingArt, setDraggingArt] = useState(false);
 
   function set<K extends keyof CardData>(key: K, value: CardData[K]) {
@@ -187,16 +184,6 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setConfirmingClear(true)}
-          className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
-        >
-          Clear card
-        </button>
-      </div>
-
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
       <Field
@@ -450,19 +437,6 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           onChange={(e) => set("notes", e.target.value)}
         />
       </Field>
-
-      {confirmingClear && (
-        <ConfirmModal
-          title="Clear card"
-          message="Reset this card to a blank state? This cannot be undone."
-          confirmLabel="Clear"
-          onConfirm={() => {
-            onChange(emptyCard(card.id));
-            setConfirmingClear(false);
-          }}
-          onCancel={() => setConfirmingClear(false)}
-        />
-      )}
     </div>
   );
 }

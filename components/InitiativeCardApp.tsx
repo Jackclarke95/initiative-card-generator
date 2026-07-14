@@ -156,6 +156,7 @@ export default function InitiativeCardApp() {
     null,
   );
   const [namingPartyId, setNamingPartyId] = useState<string | null>(null);
+  const [confirmingResetCard, setConfirmingResetCard] = useState(false);
 
   useEffect(() => {
     savePersistedState({ parties, activePartyId });
@@ -208,6 +209,22 @@ export default function InitiativeCardApp() {
     },
     [activeParty.id],
   );
+
+  const handleConfirmResetCard = useCallback(() => {
+    setParties((prev) =>
+      prev.map((p) =>
+        p.id !== activeParty.id
+          ? p
+          : {
+              ...p,
+              cards: p.cards.map((c) =>
+                c.id === activeCard.id ? emptyCard(c.id) : c,
+              ),
+            },
+      ),
+    );
+    setConfirmingResetCard(false);
+  }, [activeParty.id, activeCard.id]);
 
   const handleSelectCard = useCallback(
     (id: string) => {
@@ -329,6 +346,7 @@ export default function InitiativeCardApp() {
           onSelect={handleSelectCard}
           onAdd={handleAddCard}
           onRemove={handleRemoveCard}
+          onReset={() => setConfirmingResetCard(true)}
         />
 
         <div className="flex-1 overflow-y-auto">
@@ -494,7 +512,7 @@ export default function InitiativeCardApp() {
                 options={[
                   {
                     value: "current",
-                    label: "Current Cards",
+                    label: "Current Card",
                     disabled: exportChoice === "pdf",
                   },
                   { value: "all", label: "All Cards" },
@@ -582,6 +600,16 @@ export default function InitiativeCardApp() {
           confirmLabel="Delete"
           onConfirm={handleConfirmDeleteParty}
           onCancel={() => setPartyPendingDelete(null)}
+        />
+      )}
+
+      {confirmingResetCard && (
+        <ConfirmModal
+          title="Reset card"
+          message="Reset this card to a blank state? This cannot be undone."
+          confirmLabel="Reset"
+          onConfirm={handleConfirmResetCard}
+          onCancel={() => setConfirmingResetCard(false)}
         />
       )}
 
