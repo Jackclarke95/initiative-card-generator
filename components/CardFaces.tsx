@@ -192,7 +192,7 @@ export function DmFace({ card }: { card: CardData }) {
         </div>
       </div>
     ),
-    toggles.showAbilityScores && (
+    toggles.abilityScores !== "none" && (
       <div
         key="abilities"
         style={{
@@ -208,6 +208,7 @@ export function DmFace({ card }: { card: CardData }) {
             label={ABILITY_LABELS[key]}
             value={card.stats[key].modifier}
             proficiency={card.stats[key].proficiency}
+            compact={toggles.abilityScores === "compact"}
           />
         ))}
       </div>

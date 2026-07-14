@@ -95,56 +95,76 @@ export function VitalBoxFrame({ width, height }: FrameProps) {
   );
 }
 
-/** VitalBoxFrame with a value that fills the box and a label pinned to the
- *  top or bottom edge inside it — e.g. "10" over "Max HP". `proficiency` adds a
- *  small dot near the bottom edge: omitted entirely when the prop is
- *  absent, a hollow ring when false, a filled dot inside the ring when true. */
+/** VitalBoxFrame with a value + label — e.g. "10" over "Max HP", or the
+ *  reverse when `labelPosition` is "top". `proficiency`, when supplied,
+ *  reserves a strip pinned to the box's bottom edge for a dot — hollow
+ *  when false, filled when true — regardless of labelPosition; the
+ *  label/value pair then lays out in whatever height is left above it,
+ *  so the value centers in that remaining space when there's no label. */
 export function VitalBox({
   width,
   height,
   value,
   label,
   labelPosition = "bottom",
-  valuePosition = "default",
   proficiency,
 }: FrameProps & {
   value?: React.ReactNode;
   label?: string;
   labelPosition?: "top" | "bottom";
-  valuePosition?: "default" | "middle";
   proficiency?: boolean;
 }) {
-  const dotR = height * 0.075;
-  const dotCx = width / 2;
-  const dotCy = height * 0.83;
+  const dotR = height * 0.1;
+  const dotZoneH = proficiency !== undefined ? dotR * 2 + 4 : 0;
+  const textAreaH = height - dotZoneH;
   return (
     <div style={{ position: "relative", width, height }}>
       <VitalBoxFrame width={width} height={height} />
-      <FrameText
-        width={width}
-        height={height}
-        value={value}
-        label={label}
-        labelPosition={labelPosition}
-        valuePosition={valuePosition}
-        maxValueSize={26}
-      />
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width,
+          height: textAreaH,
+        }}
+      >
+        <FrameText
+          width={width}
+          height={textAreaH}
+          value={value}
+          label={label}
+          labelPosition={labelPosition}
+          maxValueSize={26}
+          valueMarginTop={0}
+        />
+      </div>
       {proficiency !== undefined && (
         <svg
           width={width}
-          height={height}
-          style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          height={dotZoneH}
+          style={{
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            pointerEvents: "none",
+          }}
         >
           <circle
-            cx={dotCx}
-            cy={dotCy}
+            cx={width / 2}
+            cy={dotZoneH / 2}
             r={dotR}
             fill="none"
             stroke={INK}
             strokeWidth={1}
           />
           {proficiency && (
-            <circle cx={dotCx} cy={dotCy} r={dotR * 0.5} fill={INK} />
+            <circle
+              cx={width / 2}
+              cy={dotZoneH / 2}
+              r={dotR * 0.5}
+              fill={INK}
+            />
           )}
         </svg>
       )}
@@ -156,19 +176,22 @@ export const StatBox = ({
   label,
   value,
   proficiency,
+  compact,
 }: {
   label: string;
   value?: React.ReactNode;
   proficiency: boolean;
+  /** Drops the label and shrinks the box to just the value + proficiency
+   *  dot — used by the ability scores row's "Compact" display mode. */
+  compact?: boolean;
 }) => (
   <VitalBox
-    label={label}
+    label={compact ? undefined : label}
     value={value}
     width={30}
-    height={40}
+    height={compact ? 26 : 40}
     proficiency={proficiency}
     labelPosition="top"
-    valuePosition="middle"
   />
 ); // alias for InitiativeCard.tsx usage
 

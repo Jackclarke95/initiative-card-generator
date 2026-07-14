@@ -23,10 +23,11 @@ interface FrameTextProps {
   maxValueSize?: number;
   /** Which edge the label sits against; the value fills the remaining space. */
   labelPosition?: "top" | "bottom";
-  /** "default" shares the box with the label, centered in whatever
-   *  vertical space is left over. "middle" pins the value to the box's
-   *  true vertical center regardless of where the label sits. */
-  valuePosition?: "default" | "middle";
+  /** Nudges the value down from dead-center of its available space — most
+   *  frames read better with a slight downward push (their labels sit
+   *  right at a tapered or curved edge), but boxier frames want the value
+   *  perfectly centered, so this can be zeroed out. */
+  valueMarginTop?: number;
 }
 
 /** Picks a value font size that fills the available box without overflowing. */
@@ -52,7 +53,7 @@ export function FrameText({
   sidePadding = 6,
   maxValueSize = 24,
   labelPosition = "bottom",
-  valuePosition = "default",
+  valueMarginTop = 10,
 }: FrameTextProps) {
   const labelLines = label ? label.split("\n").length : 0;
   const labelLineH = 6.5 * 1.3;
@@ -74,10 +75,7 @@ export function FrameText({
         lineHeight: 1,
         color: INK,
         whiteSpace: "nowrap",
-        // This nudge only makes sense when the value shares the flex stack
-        // with the label below it (see the "default" case further down) —
-        // "middle" wants the glyph box itself dead-centered, untouched.
-        marginTop: valuePosition === "middle" ? 0 : 10,
+        marginTop: valueMarginTop,
       }}
     >
       {value}
@@ -94,44 +92,6 @@ export function FrameText({
     textAlign: "center" as const,
     lineHeight: 1.3,
   };
-
-  if (valuePosition === "middle") {
-    // Value sits dead-center of the box, unaffected by the label — the
-    // label is an absolute overlay pinned to its edge instead of sharing
-    // the flex stack that would otherwise push the value off-center.
-    return (
-      <div style={{ position: "absolute", inset: 0 }}>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-          }}
-        >
-          {valueSpan}
-        </div>
-        {label && (
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              [labelPosition]: 0,
-              display: "flex",
-              justifyContent: "center",
-              [labelPosition === "top" ? "paddingTop" : "paddingBottom"]:
-                bottomInset,
-            }}
-          >
-            <span style={{ ...labelStyle, marginBottom: 3 }}>{label}</span>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   const valueEl = (
     <div

@@ -11,6 +11,7 @@ import {
   DAMAGE_TYPE_KEYS,
   DAMAGE_TYPE_LABELS,
   type AbilityKey,
+  type AbilityScoreDisplayMode,
   type AbilityStat,
   type ArtMode,
   type CardData,
@@ -129,6 +130,18 @@ const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
 };
 
 const SCROLL_STYLE_MODES: ScrollStyle[] = ["scroll", "dragon", "party", "none"];
+
+const ABILITY_SCORE_MODE_LABELS: Record<AbilityScoreDisplayMode, string> = {
+  labeled: "Labeled",
+  compact: "Compact",
+  none: "None",
+};
+
+const ABILITY_SCORE_MODES: AbilityScoreDisplayMode[] = [
+  "labeled",
+  "compact",
+  "none",
+];
 
 function TriStateResistanceBox({ state }: { state: ResistanceState }) {
   return (
@@ -356,8 +369,16 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
 
       {/* Ability scores */}
       <SectionHeading
-        checked={card.toggles.showAbilityScores}
-        onToggle={(v) => setToggle("showAbilityScores", v)}
+        right={
+          <SegmentedToggle
+            options={ABILITY_SCORE_MODES.map((mode) => ({
+              value: mode,
+              label: ABILITY_SCORE_MODE_LABELS[mode],
+            }))}
+            value={card.toggles.abilityScores}
+            onChange={(mode) => setToggle("abilityScores", mode)}
+          />
+        }
       >
         Ability Scores
       </SectionHeading>
