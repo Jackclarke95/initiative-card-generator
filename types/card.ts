@@ -3,9 +3,10 @@ export type LayoutPreset = "tactician" | "minimalist";
 export type ArtMode = "class" | "upload" | "link" | "none";
 
 // The name banner's artwork style — the plain ribbon, the ribbon with a
-// dragon's head, the more elaborate party ribbon, or hidden entirely.
-// Player and DM faces each pick their own independently.
-export type ScrollStyle = "scroll" | "dragon" | "party" | "none";
+// dragon's head, the more elaborate party ribbon, the spellbook-and-quill
+// ribbon, or hidden entirely. Player and DM faces each pick their own
+// independently.
+export type ScrollStyle = "scroll" | "dragon" | "party" | "spell" | "none";
 
 // How the DM notes box prints: with its "Notes" caption, with the caption
 // dropped, or hidden entirely.

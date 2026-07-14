@@ -106,8 +106,7 @@ export function DmFace({ card }: { card: CardData }) {
   // sections below (vitals, abilities, etc.), each of those gets
   // flexShrink: 0 so Notes (flex: 1) is the only thing that gives up
   // space, and the gap between sections tightens up to help it along.
-  const dmScrollTall =
-    dmScrollVariant === "dragon" || dmScrollVariant === "party";
+  const dmScrollTall = dmScrollVariant !== "scroll" && dmScrollVariant !== "none";
   const sectionGap = dmScrollTall ? Math.max(1, S.gap - 1) : S.gap;
 
   const abilityMode = toggles.abilityScores;

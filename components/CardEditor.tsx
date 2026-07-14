@@ -127,10 +127,17 @@ const SCROLL_STYLE_LABELS: Record<ScrollStyle, string> = {
   scroll: "Basic",
   dragon: "Dragon",
   party: "Party",
+  spell: "Spell",
   none: "None",
 };
 
-const SCROLL_STYLE_MODES: ScrollStyle[] = ["scroll", "dragon", "party", "none"];
+const SCROLL_STYLE_MODES: ScrollStyle[] = [
+  "scroll",
+  "dragon",
+  "party",
+  "spell",
+  "none",
+];
 
 const ABILITY_SCORE_MODE_LABELS: Record<AbilityScoreDisplayMode, string> = {
   full: "Full",

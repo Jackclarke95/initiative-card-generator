@@ -13,6 +13,7 @@ import { stretchPath } from "@/components/svgNineSlice";
 import { FrameText, INK, LABEL_GREY, PALE_GREY } from "@/components/FrameText";
 import { IconFrame } from "@/components/IconFrame";
 import { PARTY_SCROLL, PARTY_SCROLL_INK } from "@/components/PartyScrollArt";
+import { SPELL_SCROLL_OPS } from "@/components/SpellScrollArt";
 import type {
   DamageDisplayMode,
   DamageTypeKey,
@@ -771,6 +772,7 @@ const SCROLL = {
 export const SCROLL_BOX = { x: 21, y: 30, w: 235, h: 55 };
 export const DRAGON_SCROLL_BOX = { x: 21, y: -3, w: 235, h: 90 };
 export const PARTY_SCROLL_BOX = { x: 21, y: -4, w: 235, h: 90 };
+export const SPELL_SCROLL_BOX = { x: 21, y: -2.5, w: 235, h: 90 };
 
 /** The crop box every scroll variant renders its viewBox from — callers
  *  (e.g. CardFaces, sizing the banner from its own aspect ratio) key off
@@ -781,6 +783,8 @@ export function scrollBox(variant: ScrollStyle) {
       return DRAGON_SCROLL_BOX;
     case "party":
       return PARTY_SCROLL_BOX;
+    case "spell":
+      return SPELL_SCROLL_BOX;
     default:
       return SCROLL_BOX;
   }
@@ -793,6 +797,27 @@ export function ScrollFrame({
 }: FrameProps & { variant?: Exclude<ScrollStyle, "none"> }) {
   const box = scrollBox(variant);
   const line = { stroke: INK, vectorEffect: "non-scaling-stroke" as const };
+
+  if (variant === "spell") {
+    return (
+      <svg
+        width={width}
+        height={height}
+        viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+        preserveAspectRatio="none"
+        fill="none"
+        style={{ position: "absolute", inset: 0 }}
+      >
+        {SPELL_SCROLL_OPS.map((op, i) =>
+          op.stroke ? (
+            <path key={i} d={op.d} {...line} strokeWidth={op.stroke} />
+          ) : (
+            <path key={i} d={op.d} fill={op.fill} />
+          ),
+        )}
+      </svg>
+    );
+  }
 
   if (variant === "party") {
     return (
@@ -911,7 +936,15 @@ export function NameScroll({
           {/* The curve is shared across variants, but the party ribbon
               sits ~1 unit higher than the dragon/plain ribbon at the same
               coordinates — nudge the text up to match its own ribbon. */}
-          <g transform={variant === "party" ? "translate(0, -1)" : undefined}>
+          <g
+            transform={
+              variant === "party"
+                ? "translate(0, -1)"
+                : variant === "spell"
+                  ? "translate(0, 0.5)"
+                  : undefined
+            }
+          >
             <text
               fontWeight="bold"
               fontSize={fontSize}
