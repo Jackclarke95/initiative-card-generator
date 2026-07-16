@@ -41,6 +41,13 @@ interface VitalProps {
   labelInset?: number;
   sidePadding?: number;
   maxValueSize?: number;
+  /** Border stroke widths and rivet size — all constant rendered pixels
+   *  regardless of how big or small this instance's silhouette ends up.
+   *  Override per instance same as any other layout knob here. */
+  outerW?: number;
+  bandW?: number;
+  gapW?: number;
+  rivetR?: number;
 }
 
 /** AC — e.g. "18" over "AC". */

@@ -105,20 +105,6 @@ const PLAYER_BORDER_MARGIN_HEIGHT = 6;
  *  widths (e.g. Heart vs. Hexagon) share one alignment axis between rows,
  *  by centering each inside the same-width box rather than relying on
  *  their raw widths to match. */
-function Slot({
-  width,
-  children,
-}: {
-  width: number;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div style={{ width, display: "flex", justifyContent: "center" }}>
-      {children}
-    </div>
-  );
-}
-
 type VitalField =
   | "maxHp"
   | "ac"
@@ -126,6 +112,35 @@ type VitalField =
   | "passivePerception"
   | "speed"
   | "passiveInsight";
+
+interface VitalConfig {
+  field: VitalField;
+  /** The short caption printed on the badge itself, e.g. "HP". */
+  label: string;
+  /** The accessible/editable-field name, e.g. "Max HP". */
+  fieldLabel: string;
+  Component: (props: {
+    width: number;
+    height: number;
+    value?: React.ReactNode;
+    label?: string;
+  }) => React.JSX.Element;
+}
+
+// One shared box (see `iconH`/`vitalW` in DmFace) and one render path for
+// all six — every badge is treated identically, the art is the only thing
+// that differs between them. Rendered in this order via a 3-column grid,
+// which auto-flows into as many rows as needed — adding a 7th, 8th, 9th
+// entry here just grows the grid, it isn't a hardcoded 2-row/3-column
+// layout.
+const VITALS: VitalConfig[] = [
+  { field: "maxHp", label: "HP", fieldLabel: "Max HP", Component: Heart },
+  { field: "ac", label: "AC", fieldLabel: "AC", Component: Shield },
+  { field: "spellSaveDC", label: "DC", fieldLabel: "Spell save DC", Component: SaveBox },
+  { field: "passivePerception", label: "PP", fieldLabel: "Passive Perception", Component: Hexagon },
+  { field: "speed", label: "Speed", fieldLabel: "Speed", Component: Chevron },
+  { field: "passiveInsight", label: "Insight", fieldLabel: "Passive Insight", Component: Orb },
+];
 
 export function DmFace({ card }: { card: CardData }) {
   const { editable, update } = useCardEdit();
@@ -135,23 +150,31 @@ export function DmFace({ card }: { card: CardData }) {
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
   const iconH = S.shH;
-  // Each shape keeps its own height (Shield/Chevron are nudged so all six
-  // read as the same visual size), but every badge shares one *width* —
-  // wide enough for the widest of the six at its own height, so a shape
-  // whose viewBox is naturally narrower than that isn't stretched to fill
-  // it (it just centers within the shared box, same as the value/label
-  // overlay does), and nothing wider gets clipped or squeezed down.
-  const shieldH = iconH * 1.1;
-  const chevronH = iconH * 0.9;
-  const vitalW = Math.ceil(
+  // Every vitals badge shares one identical box — same height (iconH) and
+  // same width, so a shape whose art is naturally narrower isn't stretched
+  // to fill it (it just centers within the shared box, same as the
+  // value/label overlay does, keeping every column's frames aligned on
+  // one shared centerline) — the art is the only thing that varies.
+  //
+  // The minimum width that box could be is whichever of the six shapes
+  // needs the most room at the shared height:
+  const vitalMinW = Math.ceil(
     Math.max(
-      shieldH * (50 / 57.08), // Shield
+      iconH * (50 / 57.08), // Shield
       iconH * (57.6 / 55.08), // Heart / SaveBox
-      iconH * (56.8 / 49.83), // Hexagon — currently the widest
-      chevronH * (55 / 48), // Chevron
+      iconH * (56.8 / 49.83), // Hexagon
+      iconH * (55 / 48), // Chevron — currently the widest
       iconH, // Orb — 1:1 viewBox
     ),
   );
+  // But rather than spread 3 minimum-width boxes across the row with
+  // whatever gap that leaves (the previous approach), the gap is halved
+  // from that first and the boxes themselves grow to reclaim the freed-up
+  // space — tighter gutters, wider (still centered) frames, same total
+  // row width. Row gap matches column gap exactly, so it reads as one
+  // even grid rather than "columns, then separately, rows".
+  const vitalGap = (CONTENT_W - vitalMinW * 3) / 2 / 2;
+  const vitalW = (CONTENT_W - vitalGap * 2) / 3;
 
   const statGap = 4;
 
@@ -243,97 +266,27 @@ export function DmFace({ card }: { card: CardData }) {
         key="vitals"
         className={editable ? "edit-section" : undefined}
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 1,
+          display: "grid",
+          gridTemplateColumns: `repeat(3, ${vitalW}px)`,
+          gap: vitalGap,
           flexShrink: 0,
         }}
         onContextMenu={vitalsMenu.onContextMenu}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Slot width={vitalW}>
+        {VITALS.map(({ field, label, fieldLabel, Component }) => (
+          <Fragment key={field}>
             {editVital(
-              "maxHp",
-              "Max HP",
-              <Heart
-                value={card.maxHp}
-                label={showVitalsLabels ? "HP" : undefined}
+              field,
+              fieldLabel,
+              <Component
+                value={card[field]}
+                label={showVitalsLabels ? label : undefined}
                 width={vitalW}
                 height={iconH}
               />,
             )}
-          </Slot>
-          {editVital(
-            "ac",
-            "AC",
-            <Shield
-              value={card.ac}
-              label={showVitalsLabels ? "AC" : undefined}
-              width={vitalW}
-              height={shieldH}
-            />,
-          )}
-          <Slot width={vitalW}>
-            {editVital(
-              "spellSaveDC",
-              "Spell save DC",
-              <SaveBox
-                value={card.spellSaveDC}
-                label={showVitalsLabels ? "DC" : undefined}
-                width={vitalW}
-                height={iconH}
-              />,
-            )}
-          </Slot>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Slot width={vitalW}>
-            {editVital(
-              "passivePerception",
-              "Passive Perception",
-              <Hexagon
-                value={card.passivePerception}
-                label={showVitalsLabels ? "PP" : undefined}
-                width={vitalW}
-                height={iconH}
-              />,
-            )}
-          </Slot>
-          {editVital(
-            "speed",
-            "Speed",
-            <Chevron
-              value={card.speed}
-              label={showVitalsLabels ? "Speed" : undefined}
-              width={vitalW}
-              height={chevronH}
-            />,
-          )}
-          <Slot width={vitalW}>
-            {editVital(
-              "passiveInsight",
-              "Passive Insight",
-              <Orb
-                value={card.passiveInsight}
-                label={showVitalsLabels ? "Insight" : undefined}
-                width={vitalW}
-                height={iconH * 1}
-              />,
-            )}
-          </Slot>
-        </div>
+          </Fragment>
+        ))}
         {vitalsMenu.menu}
       </div>
     ),

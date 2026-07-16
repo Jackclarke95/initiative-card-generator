@@ -11,6 +11,16 @@
 // on top — and is omitted entirely (not just hidden) when `label` isn't
 // passed.
 //
+// The silhouette itself is size-less: it's defined in its own viewBox and
+// simply grows or shrinks (uniformly, preserving its aspect ratio) to fill
+// whatever `width`/`height` box it's given, via the browser's default SVG
+// scaling. The stroke widths and rivet size are a separate concern — they
+// stay a constant rendered size regardless of how big or small the
+// silhouette itself ends up: the two banding strokes use
+// `vector-effect="non-scaling-stroke"` (unaffected by the viewBox scale by
+// definition), and the rivet radius is pre-divided by that same scale
+// factor so it comes back out at its intended size once the SVG scales it.
+//
 // The only thing that differs between AC/HP/DC/Speed/PP/Insight is which
 // shape data file its wrapper (see index.tsx) imports.
 
@@ -24,12 +34,16 @@ interface VitalsFrameProps {
   path: string;
   /** Coordinate space the path is drawn in, e.g. "0 0 57.6 55.08". */
   viewBox: string;
-  /** Outer border stroke width. */
+  /** Outer border stroke width, in constant rendered pixels regardless of
+   *  how much the silhouette itself scales. */
   outerW?: number;
-  /** Fat black stroke — its half-width is the inner border's outer edge. */
+  /** Fat black stroke — its half-width is the inner border's outer edge.
+   *  Constant rendered pixels, same as `outerW`. */
   bandW?: number;
-  /** White stroke carving the band — half-width is the border's inner edge. */
+  /** White stroke carving the band — half-width is the border's inner
+   *  edge. Constant rendered pixels, same as `outerW`. */
   gapW?: number;
+  /** Rivet dot radius, in constant rendered pixels. */
   rivetR?: number;
   /** Rivet centres, relative to the centre of the frame. */
   rivets?: ReadonlyArray<{ x: number; y: number }>;
@@ -61,6 +75,12 @@ export function VitalsFrame({
   const [minX, minY, vbW, vbH] = viewBox.split(/[\s,]+/).map(Number);
   const centreX = minX + vbW / 2;
   const centreY = minY + vbH / 2;
+  // The same uniform "meet" scale factor the browser applies when fitting
+  // this viewBox into width×height — used to counteract the rivets'
+  // scaling so their rendered size stays constant (see the vectorEffect
+  // note above for how the two banding strokes achieve the same thing).
+  const scale = Math.min(width / vbW, height / vbH);
+  const rivetViewBoxR = rivetR / scale;
 
   const art = (
     <svg
@@ -83,6 +103,7 @@ export function VitalsFrame({
           strokeWidth={bandW}
           strokeLinejoin="miter"
           strokeMiterlimit={8}
+          vectorEffect="non-scaling-stroke"
         />
         <path
           d={path}
@@ -90,6 +111,7 @@ export function VitalsFrame({
           strokeWidth={gapW}
           strokeLinejoin="miter"
           strokeMiterlimit={8}
+          vectorEffect="non-scaling-stroke"
         />
       </g>
       <path
@@ -98,13 +120,14 @@ export function VitalsFrame({
         strokeWidth={outerW}
         strokeLinejoin="miter"
         strokeMiterlimit={8}
+        vectorEffect="non-scaling-stroke"
       />
       {rivets.map(({ x, y }) => (
         <circle
           key={`${x}-${y}`}
           cx={centreX + x}
           cy={centreY + y}
-          r={rivetR}
+          r={rivetViewBoxR}
           fill={INK}
         />
       ))}
