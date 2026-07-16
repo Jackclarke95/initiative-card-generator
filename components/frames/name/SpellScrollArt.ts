@@ -1,7 +1,7 @@
 // Spell Scroll artwork -- derived from the project's SpellScroll.svg
 // source (root of the repo). Excludes the grey background chevrons and the
 // Dungeons & Dragons ampersand mark, matching the same exclusions already
-// applied to the Dragon and Party scrolls.
+// applied to the Dragon and Battle scrolls.
 //
 // Unlike the other two variants, this artwork mixes white (the open
 // spellbook) and ink (its line detail, plus small highlight accents) in a

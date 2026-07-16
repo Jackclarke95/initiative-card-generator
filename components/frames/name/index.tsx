@@ -1,4 +1,4 @@
-// BasicScroll/DragonScroll/PartyScroll/SpellScroll — the four name-banner
+// BasicScroll/DragonScroll/BattleScroll/SpellScroll — the four name-banner
 // styles, each supplying its own artwork + curve/box/text-offset to
 // NameFrame. SCROLL_STYLES is a Record<ScrollStyle, ...> lookup (mirroring
 // DamageTypeBadge's DAMAGE_TYPE_REACT_ICONS pattern) rather than a switch —
@@ -21,10 +21,10 @@ import {
   DRAGON_SCROLL_BOX,
 } from "@/components/frames/name/DragonScrollArt";
 import {
-  PARTY_SCROLL,
-  PARTY_SCROLL_BOX,
-  PARTY_SCROLL_INK,
-} from "@/components/frames/name/PartyScrollArt";
+  BATTLE_SCROLL,
+  BATTLE_SCROLL_BOX,
+  BATTLE_SCROLL_INK,
+} from "@/components/frames/name/BattleScrollArt";
 import {
   SPELL_SCROLL_BOX,
   SPELL_SCROLL_OPS,
@@ -119,9 +119,9 @@ export function DragonScroll({ width, height, value, hideValue }: ScrollProps) {
   );
 }
 
-/** The more elaborate party ribbon. */
-export function PartyScroll({ width, height, value, hideValue }: ScrollProps) {
-  const box = PARTY_SCROLL_BOX;
+/** The more elaborate battle ribbon. */
+export function BattleScroll({ width, height, value, hideValue }: ScrollProps) {
+  const box = BATTLE_SCROLL_BOX;
   const art = (
     <svg
       width={width}
@@ -131,20 +131,20 @@ export function PartyScroll({ width, height, value, hideValue }: ScrollProps) {
       fill="none"
       style={{ position: "absolute", inset: 0 }}
     >
-      {PARTY_SCROLL_INK.map((d, i) => (
+      {BATTLE_SCROLL_INK.map((d, i) => (
         <path key={i} d={d} fill={INK} />
       ))}
-      <path d={PARTY_SCROLL.rollWhite} fill="#fff" />
-      <path d={PARTY_SCROLL.rollWhite} {...line} strokeWidth={1.38} />
-      <path d={PARTY_SCROLL.rollThin} {...line} strokeWidth={0.75} />
-      <path d={PARTY_SCROLL.rollGrey} fill="#bfc0c3" />
-      <path d={PARTY_SCROLL.rollGrey} {...line} strokeWidth={1.38} />
-      <path d={PARTY_SCROLL.body} fill="#fff" />
-      <path d={PARTY_SCROLL.bodyThin} {...line} strokeWidth={0.75} />
-      <path d={PARTY_SCROLL.body} {...line} strokeWidth={1.38} />
+      <path d={BATTLE_SCROLL.rollWhite} fill="#fff" />
+      <path d={BATTLE_SCROLL.rollWhite} {...line} strokeWidth={1.38} />
+      <path d={BATTLE_SCROLL.rollThin} {...line} strokeWidth={0.75} />
+      <path d={BATTLE_SCROLL.rollGrey} fill="#bfc0c3" />
+      <path d={BATTLE_SCROLL.rollGrey} {...line} strokeWidth={1.38} />
+      <path d={BATTLE_SCROLL.body} fill="#fff" />
+      <path d={BATTLE_SCROLL.bodyThin} {...line} strokeWidth={0.75} />
+      <path d={BATTLE_SCROLL.body} {...line} strokeWidth={1.38} />
     </svg>
   );
-  // The party ribbon sits ~1 unit higher than the basic/dragon ribbon at
+  // The battle ribbon sits ~1 unit higher than the basic/dragon ribbon at
   // the same curve coordinates.
   return (
     <NameFrame
@@ -204,6 +204,6 @@ export const SCROLL_STYLES: Record<
 > = {
   scroll: { Component: BasicScroll, box: SCROLL_BOX },
   dragon: { Component: DragonScroll, box: DRAGON_SCROLL_BOX },
-  party: { Component: PartyScroll, box: PARTY_SCROLL_BOX },
+  battle: { Component: BattleScroll, box: BATTLE_SCROLL_BOX },
   spell: { Component: SpellScroll, box: SPELL_SCROLL_BOX },
 };

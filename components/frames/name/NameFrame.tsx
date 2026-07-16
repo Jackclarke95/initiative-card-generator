@@ -1,4 +1,4 @@
-// Name — the character-name banner ribbon (basic/dragon/party/spell),
+// Name — the character-name banner ribbon (basic/dragon/battle/spell),
 // with a value that rides the ribbon's own curved path rather than sitting
 // in a plain rectangular box, so it doesn't reuse Frame's value/label
 // layout at all. There is no `label` prop here — name scrolls never show

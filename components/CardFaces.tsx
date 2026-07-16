@@ -76,7 +76,7 @@ function resistanceAriaChecked(state: ResistanceState): boolean | "mixed" {
 }
 
 // Vertical position of the straight editable name line within the banner box.
-// The styled scrolls (dragon/party/spell) carry artwork above the ribbon, so
+// The styled scrolls (dragon/battle/spell) carry artwork above the ribbon, so
 // their ribbon sits lower; the plain scroll is centered.
 function nameInputTop(variant: ScrollStyle): string {
   return variant === "scroll" || variant === "none" ? "50%" : "63%";
@@ -194,7 +194,7 @@ export function DmFace({ card }: { card: CardData }) {
   const showNameOnDm = dmScrollVariant !== "none";
   const DmNameScroll =
     dmScrollVariant === "none" ? undefined : SCROLL_STYLES[dmScrollVariant].Component;
-  // The dragon and party ribbons are noticeably taller than the plain one
+  // The dragon and battle ribbons are noticeably taller than the plain one
   // at the same width — rather than let that squeeze the fixed-size
   // sections below (vitals, abilities, etc.), each of those gets
   // flexShrink: 0 so Notes (flex: 1) is the only thing that gives up
