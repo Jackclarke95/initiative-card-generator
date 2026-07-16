@@ -1,6 +1,12 @@
-// Value + label overlay shared by the stat-carrying frames: the label
-// sits at the bottom, inside the frame, in medium grey; the value fills
-// whatever space is left above it.
+// Generic stat-frame base: positions a category's own `art` (its SVG
+// silhouette/border/whatever) and, on top of it, a value + an optional
+// label — both laid out against a plain rectangular content box, with no
+// awareness of the art's actual silhouette. Every shape is treated
+// identically; `labelInset`/`sidePadding`/`maxValueSize` are plain
+// pass-through knobs a caller can set on any instance if a particular
+// value/label overflows its shape (e.g. a long label near a narrow point) —
+// nothing in this component, or in any shape's own file, ever branches on
+// which shape it is to compensate.
 
 import { useEditableText } from "@/components/fieldEdit";
 
@@ -11,29 +17,66 @@ export const LABEL_GREY = "#6b6b6b";
 // state visually recedes into the row's own dividers.
 export const PALE_GREY = "#ccc";
 
-interface FrameTextProps {
+export interface LabelConfig {
+  text: string;
+  /** Which edge the label sits against; the value fills the remaining
+   *  space. Fixed per frame category (e.g. always "bottom" for Vitals,
+   *  always "top" for Ability Scores) — never chosen per instance. */
+  position: "top" | "bottom";
+}
+
+interface FrameProps {
   width: number;
   height: number;
+  /** The frame's own artwork, already sized to `width`/`height`. */
+  art: React.ReactNode;
   value?: React.ReactNode;
-  label?: string;
-  /** Set false to keep the space `label` reserves (so the value sits
-   *  exactly where it would with the label showing) without actually
-   *  printing the label text — e.g. the vitals block's "Compact" mode. */
-  showLabel?: boolean;
-  /** Gap between the label's baseline and the frame's bottom edge — bump
-   *  this up for frames that taper or curve near the bottom (e.g. the shield). */
-  bottomInset?: number;
+  /** Omit entirely to hide the label — there is no separate visibility flag. */
+  label?: LabelConfig;
+  /** Gap between the label's baseline and the frame's edge it sits against —
+   *  bump this up for frames that taper or curve near that edge. */
+  labelInset?: number;
   /** Horizontal margin reserved on each side when sizing the value text. */
   sidePadding?: number;
   /** Largest the value text is allowed to grow. */
   maxValueSize?: number;
-  /** Which edge the label sits against; the value fills the remaining space. */
-  labelPosition?: "top" | "bottom";
   /** Nudges the value down from dead-center of its available space — most
-   *  frames read better with a slight downward push (their labels sit
-   *  right at a tapered or curved edge), but boxier frames want the value
-   *  perfectly centered, so this can be zeroed out. */
+   *  frames read better with a slight downward push, but boxier frames want
+   *  the value perfectly centered, so this can be zeroed out. */
   valueMarginTop?: number;
+}
+
+/** The small uppercase caption every frame category uses — shared as its
+ *  own piece so a category whose value doesn't fit `Frame`'s centered,
+ *  auto-fit layout (e.g. Generic Notes' free-flowing text) can still reuse
+ *  the actual label rendering rather than restyling its own copy. */
+export function Label({
+  text,
+  position,
+  inset = 3,
+}: {
+  text: string;
+  position: "top" | "bottom";
+  inset?: number;
+}) {
+  return (
+    <span
+      style={{
+        fontSize: 6.5,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        fontWeight: 600,
+        color: LABEL_GREY,
+        whiteSpace: "pre-line",
+        textAlign: "center",
+        lineHeight: 1.3,
+        [position === "top" ? "paddingTop" : "paddingBottom"]: inset,
+        marginBottom: 3,
+      }}
+    >
+      {text}
+    </span>
+  );
 }
 
 /** Picks a value font size that fills the available box without overflowing. */
@@ -50,25 +93,20 @@ function fitValueFontSize(
   return Math.max(8, Math.min(cap, maxH, widthFit));
 }
 
-export function FrameText({
+export function Frame({
   width,
   height,
+  art,
   value,
   label,
-  showLabel = true,
-  bottomInset = 3,
+  labelInset = 3,
   sidePadding = 5,
   maxValueSize = 24,
-  labelPosition = "bottom",
   valueMarginTop = 10,
-}: FrameTextProps) {
-  // Only reserve label space when the label is actually shown. When it's
-  // hidden (e.g. the "compact" vitals/abilities modes) the value grows into
-  // that space instead of leaving it blank.
-  const labelShown = !!label && showLabel;
-  const labelLines = labelShown ? label.split("\n").length : 0;
+}: FrameProps) {
+  const labelLines = label ? label.text.split("\n").length : 0;
   const labelLineH = 6.5 * 1.3;
-  const labelZoneH = labelShown ? labelLineH * labelLines + bottomInset : 0;
+  const labelZoneH = label ? labelLineH * labelLines + labelInset : 0;
   // Leave a modest margin between the value and the frame.
   const valueAreaH = Math.max(0, height - labelZoneH) * 0.9;
   const hasValue = value !== undefined && value !== null && value !== "";
@@ -112,17 +150,6 @@ export function FrameText({
     hasValue && <span style={valueStyle}>{value}</span>
   );
 
-  const labelStyle = {
-    fontSize: 6.5,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase" as const,
-    fontWeight: 600,
-    color: LABEL_GREY,
-    whiteSpace: "pre-line" as const,
-    textAlign: "center" as const,
-    lineHeight: 1.3,
-  };
-
   const valueEl = (
     <div
       style={{
@@ -152,41 +179,34 @@ export function FrameText({
     </div>
   );
 
-  // Only rendered when shown — when hidden, its space is reclaimed by the
-  // value (see labelZoneH above) rather than left blank.
-  const labelEl = labelShown && (
-    <span
-      style={{
-        ...labelStyle,
-        [labelPosition === "top" ? "paddingTop" : "paddingBottom"]: bottomInset,
-        marginBottom: 3,
-      }}
-    >
-      {label}
-    </span>
+  const labelEl = label && (
+    <Label text={label.text} position={label.position} inset={labelInset} />
   );
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      {labelPosition === "top" ? (
-        <>
-          {labelEl}
-          {valueEl}
-        </>
-      ) : (
-        <>
-          {valueEl}
-          {labelEl}
-        </>
-      )}
+    <div style={{ position: "relative", width, height }}>
+      {art}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {label?.position === "top" ? (
+          <>
+            {labelEl}
+            {valueEl}
+          </>
+        ) : (
+          <>
+            {valueEl}
+            {labelEl}
+          </>
+        )}
+      </div>
     </div>
   );
 }

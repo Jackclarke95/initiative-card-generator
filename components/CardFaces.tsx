@@ -2,21 +2,13 @@
 
 import { Fragment } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
-import { PALE_GREY } from "@/components/FrameText";
-import {
-  PlayerFrame,
-  SaveBox,
-  Chevron,
-  Shield,
-  Heart,
-  Hexagon,
-  Orb,
-  NameScroll,
-  scrollBox,
-  StatBox,
-  DamageTypeBadge,
-  NotesBox,
-} from "@/components/CardFrames";
+import { PALE_GREY } from "@/components/frames/Frame";
+import { Border5e } from "@/components/frames/shared/Border5e";
+import { Chevron, Heart, Hexagon, Orb, SaveBox, Shield } from "@/components/frames/vitals";
+import { AbilityScore } from "@/components/frames/ability-scores/AbilityScoreFrame";
+import { SCROLL_STYLES } from "@/components/frames/name";
+import { NotesFrame } from "@/components/frames/notes/NotesFrame";
+import { DamageTypeBadge } from "@/components/DamageTypeBadge";
 import { useCardEdit } from "@/components/CardEditContext";
 import {
   EditableValue,
@@ -73,8 +65,8 @@ const NOTES_MENU = NOTES_DISPLAY_MODES.map((m) => ({
   label: NOTES_DISPLAY_LABELS[m],
 }));
 
-// Height of the transparent hit strip laid over a StatBox's proficiency dot,
-// matching VitalBox's reserved dot zone (dotR*2 + dotTopGap + dotBottomGap =
+// Height of the transparent hit strip laid over an AbilityScore's proficiency
+// dot, matching its reserved dot zone (dotR*2 + dotTopGap + dotBottomGap =
 // 2.6*2 + 2 + 4 ≈ 11.2), rounded up.
 const DOT_HIT_H = 12;
 
@@ -96,11 +88,11 @@ export const FACE_H = 336;
 const CONTENT_W = FACE_W - 2 - 16;
 
 // Each scroll variant crops its own source box at its own aspect ratio
-// (see CardFrames' scrollBox) — a banner rendered at width `w` needs its
-// own height to match, or the SVG (preserveAspectRatio="none") stretches
-// to whatever box it's given instead of scaling uniformly.
+// (see SCROLL_STYLES) — a banner rendered at width `w` needs its own
+// height to match, or the SVG (preserveAspectRatio="none") stretches to
+// whatever box it's given instead of scaling uniformly.
 function scrollHeightFor(variant: Exclude<ScrollStyle, "none">, w: number) {
-  const box = scrollBox(variant);
+  const box = SCROLL_STYLES[variant].box;
   return Math.round((box.h / box.w) * w);
 }
 const SCROLL_W = 200; // player face banner width
@@ -143,20 +135,23 @@ export function DmFace({ card }: { card: CardData }) {
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
   const iconH = S.shH;
-  const badgeW = Math.round(S.shW * 1.2);
-  // The hearts (HP, Save) are drawn 1.2× wider than the shield.
-  const heartW = Math.round(badgeW * 1.2);
-  const saveW = heartW;
-  // Chevron/Hexagon/Orb widths each follow that shape's own viewBox aspect
-  // ratio at the shared height, so nothing gets stretched or letterboxed.
-  const chevronW = Math.round(iconH * (55 / 48));
-  const hexW = Math.round(iconH * (56.8 / 49.83));
-  const orbW = iconH; // Orb's viewBox is a 1:1 square.
-  // HP/Perception share a slot, and DC/Insight share a slot — each
-  // shape centers inside its slot, so the two rows' differing natural
-  // widths still align on the same vertical axis. Using one slot width
-  // for both sides also keeps AC/Speed centered exactly between them.
-  const slotW = Math.max(heartW, hexW, saveW, orbW);
+  // Each shape keeps its own height (Shield/Chevron are nudged so all six
+  // read as the same visual size), but every badge shares one *width* —
+  // wide enough for the widest of the six at its own height, so a shape
+  // whose viewBox is naturally narrower than that isn't stretched to fill
+  // it (it just centers within the shared box, same as the value/label
+  // overlay does), and nothing wider gets clipped or squeezed down.
+  const shieldH = iconH * 1.1;
+  const chevronH = iconH * 0.9;
+  const vitalW = Math.ceil(
+    Math.max(
+      shieldH * (50 / 57.08), // Shield
+      iconH * (57.6 / 55.08), // Heart / SaveBox
+      iconH * (56.8 / 49.83), // Hexagon — currently the widest
+      chevronH * (55 / 48), // Chevron
+      iconH, // Orb — 1:1 viewBox
+    ),
+  );
 
   const statGap = 4;
 
@@ -174,6 +169,8 @@ export function DmFace({ card }: { card: CardData }) {
 
   const dmScrollVariant = toggles.nameScrollDm;
   const showNameOnDm = dmScrollVariant !== "none";
+  const DmNameScroll =
+    dmScrollVariant === "none" ? undefined : SCROLL_STYLES[dmScrollVariant].Component;
   // The dragon and party ribbons are noticeably taller than the plain one
   // at the same width — rather than let that squeeze the fixed-size
   // sections below (vitals, abilities, etc.), each of those gets
@@ -230,12 +227,13 @@ export function DmFace({ card }: { card: CardData }) {
           label="Character name"
           inputStyle={{ fontSize: 15, top: nameInputTop(dmScrollVariant) }}
         >
-          <NameScroll
-            value={card.characterName}
-            variant={dmScrollVariant}
-            width={DM_SCROLL_W}
-            height={scrollHeightFor(dmScrollVariant, DM_SCROLL_W)}
-          />
+          {DmNameScroll && (
+            <DmNameScroll
+              value={card.characterName}
+              width={DM_SCROLL_W}
+              height={scrollHeightFor(dmScrollVariant, DM_SCROLL_W)}
+            />
+          )}
         </EditableOverlay>
         {nameMenu.menu}
       </div>
@@ -259,16 +257,15 @@ export function DmFace({ card }: { card: CardData }) {
             alignItems: "center",
           }}
         >
-          <Slot width={slotW}>
+          <Slot width={vitalW}>
             {editVital(
               "maxHp",
               "Max HP",
               <Heart
                 value={card.maxHp}
-                label={"HP"}
-                width={heartW}
+                label={showVitalsLabels ? "HP" : undefined}
+                width={vitalW}
                 height={iconH}
-                showLabel={showVitalsLabels}
               />,
             )}
           </Slot>
@@ -277,22 +274,20 @@ export function DmFace({ card }: { card: CardData }) {
             "AC",
             <Shield
               value={card.ac}
-              label={"AC"}
-              width={badgeW}
-              height={iconH * 1.1}
-              showLabel={showVitalsLabels}
+              label={showVitalsLabels ? "AC" : undefined}
+              width={vitalW}
+              height={shieldH}
             />,
           )}
-          <Slot width={slotW}>
+          <Slot width={vitalW}>
             {editVital(
               "spellSaveDC",
               "Spell save DC",
               <SaveBox
                 value={card.spellSaveDC}
-                label="DC"
-                width={saveW}
+                label={showVitalsLabels ? "DC" : undefined}
+                width={vitalW}
                 height={iconH}
-                showLabel={showVitalsLabels}
               />,
             )}
           </Slot>
@@ -304,16 +299,15 @@ export function DmFace({ card }: { card: CardData }) {
             alignItems: "center",
           }}
         >
-          <Slot width={slotW}>
+          <Slot width={vitalW}>
             {editVital(
               "passivePerception",
               "Passive Perception",
               <Hexagon
                 value={card.passivePerception}
-                label="PP"
-                width={hexW}
+                label={showVitalsLabels ? "PP" : undefined}
+                width={vitalW}
                 height={iconH}
-                showLabel={showVitalsLabels}
               />,
             )}
           </Slot>
@@ -322,22 +316,20 @@ export function DmFace({ card }: { card: CardData }) {
             "Speed",
             <Chevron
               value={card.speed}
-              label="Speed"
-              width={chevronW}
-              height={iconH * 0.9}
-              showLabel={showVitalsLabels}
+              label={showVitalsLabels ? "Speed" : undefined}
+              width={vitalW}
+              height={chevronH}
             />,
           )}
-          <Slot width={slotW}>
+          <Slot width={vitalW}>
             {editVital(
               "passiveInsight",
               "Passive Insight",
               <Orb
                 value={card.passiveInsight}
-                label="Insight"
-                width={orbW}
+                label={showVitalsLabels ? "Insight" : undefined}
+                width={vitalW}
                 height={iconH * 1}
-                showLabel={showVitalsLabels}
               />,
             )}
           </Slot>
@@ -382,11 +374,10 @@ export function DmFace({ card }: { card: CardData }) {
               />
             }
           >
-            <StatBox
-              label={ABILITY_LABELS[key]}
+            <AbilityScore
+              label={abilityMode === "full" ? ABILITY_LABELS[key] : undefined}
               value={card.stats[key].modifier}
               proficiency={card.stats[key].proficiency}
-              showLabel={abilityMode === "full"}
             />
           </EditableValue>
         ))}
@@ -507,9 +498,9 @@ export function DmFace({ card }: { card: CardData }) {
               multiline
               wrapperStyle={{ height: "100%" }}
             >
-              <NotesBox
+              <NotesFrame
                 value={card.notes}
-                showLabel={notesMode !== "unlabeled"}
+                label={notesMode !== "unlabeled" ? "Notes" : undefined}
               />
             </EditableValue>
             {notesMenu.menu}
@@ -541,6 +532,8 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
     !!card.portraitUrl;
   const playerScrollVariant = card.toggles.nameScrollPlayer;
   const showNameOnPlayer = playerScrollVariant !== "none";
+  const PlayerNameScroll =
+    playerScrollVariant === "none" ? undefined : SCROLL_STYLES[playerScrollVariant].Component;
 
   // Right-click the player-side scroll to switch its style (mirrors the
   // sidebar's "Player Scroll" toggle).
@@ -596,7 +589,7 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
           height: contentH,
         }}
       >
-        <PlayerFrame width={contentW} height={contentH} />
+        <Border5e width={contentW} height={contentH} />
       </div>
       <div
         style={{
@@ -622,12 +615,13 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
               label="Character name"
               inputStyle={{ fontSize: 15, top: nameInputTop(playerScrollVariant) }}
             >
-              <NameScroll
-                variant={playerScrollVariant}
-                width={SCROLL_W}
-                height={scrollH}
-                value={card.characterName}
-              />
+              {PlayerNameScroll && (
+                <PlayerNameScroll
+                  width={SCROLL_W}
+                  height={scrollH}
+                  value={card.characterName}
+                />
+              )}
             </EditableOverlay>
             {nameMenu.menu}
           </div>

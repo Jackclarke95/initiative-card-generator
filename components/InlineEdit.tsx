@@ -24,11 +24,11 @@ import {
 import { createPortal } from "react-dom";
 import { useCardEdit } from "@/components/CardEditContext";
 import { FieldEditProvider } from "@/components/fieldEdit";
-import { INK } from "@/components/FrameText";
+import { INK } from "@/components/frames/Frame";
 
 // ── EditableValue ─────────────────────────────────────────────────────
 // Marks a frame's value as editable in place: it provides a FieldBinding via
-// context, and the text-rendering frame (FrameText / NotesBox) picks that up
+// context, and the text-rendering frame (Frame / NotesFrame) picks that up
 // to turn its own real value element into a contentEditable field. There's no
 // overlay input — you type directly into the displayed glyphs. Inert (renders
 // just the frame) when not in the editable preview.

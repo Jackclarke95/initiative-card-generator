@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
-import { DAMAGE_TYPE_REACT_ICONS } from "@/components/CardFrames";
+import { DAMAGE_TYPE_REACT_ICONS } from "@/components/DamageTypeBadge";
 import SegmentedToggle from "@/components/SegmentedToggle";
 import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
 import {

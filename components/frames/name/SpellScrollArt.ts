@@ -34,3 +34,7 @@ export const SPELL_SCROLL_OPS: SpellScrollOp[] = [
   { d: "M252.17,41s-19.87,8-114-.29C71.62,34.8,38.41,40,33.28,40.86M253.05,71.94s-20.5,8.66-114.67.33c-66.51-5.89-99.72-.73-104.85.17", stroke: 0.75 },
   { d: "M252.17,75.56c-61.75,11.25-157.29-11.25-219,0V38.06c61.75-11.25,157.29,11.25,219,0Z", stroke: 1.38 },
 ];
+
+// Crop box: extra headroom above the ribbon for the spellbook-and-quill
+// artwork.
+export const SPELL_SCROLL_BOX = { x: 21, y: -2.5, w: 235, h: 90 };

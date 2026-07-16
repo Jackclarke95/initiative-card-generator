@@ -2,7 +2,7 @@
 
 // Lets a frame's real value text become directly editable in place, without
 // an overlay input. A parent (EditableValue in InlineEdit.tsx) provides a
-// FieldBinding via context; the text-rendering frame (FrameText, NotesBox)
+// FieldBinding via context; the text-rendering frame (Frame, NotesFrame)
 // calls useEditableText and spreads the returned props onto its value
 // element, turning that exact element into a contentEditable field. No
 // binding (i.e. not inside the editable preview) → renders as plain text, so
