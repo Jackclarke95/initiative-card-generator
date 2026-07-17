@@ -1,3 +1,5 @@
+import type { LayoutOverride } from "@/lib/cardLayout";
+
 export type LayoutPreset = "tactician" | "minimalist";
 
 export type ArtMode = "class" | "upload" | "link" | "none";
@@ -74,6 +76,52 @@ export interface VitalBoxConfig {
   label: string;
   value?: number;
   frame: VitalFrameShape;
+}
+
+// How a short row's badges are positioned within its own column-count-wide
+// "slot grid" — moot (and ignored at render time) once the row is full,
+// since every option converges on the same, evenly-gapped result once
+// there's no spare room left to arrange around. Left/Right pack the badges
+// against one edge of the grid (leaving the empty slots at the other end);
+// Center packs them and centers that tight group in the grid; Justify
+// spaces them edge-to-edge, first badge flush left and last flush right
+// (the classic "space-between" look). Justify is dropped from the choices
+// offered for a lone badge — there's no second edge to justify against.
+export type VitalRowAlign = "left" | "right" | "center" | "justify";
+
+export const VITAL_ROW_ALIGN_LABELS: Record<VitalRowAlign, string> = {
+  left: "Left",
+  right: "Right",
+  center: "Center",
+  justify: "Justified",
+};
+
+export const VITAL_ROW_ALIGNS: VitalRowAlign[] = [
+  "left",
+  "right",
+  "center",
+  "justify",
+];
+
+// One row of the vitals section — `vitalBoxes` stays one flat, ordered
+// list; these just describe how it's chopped into rows. `count` is how many
+// boxes (in list order) actually sit in this row right now — an explicit,
+// independently adjustable number, not derived from `columns` — so one row
+// can sit short of its own column count while a later row is completely
+// full (e.g. row 1 holds just 1 badge, row 2 holds a full 3, row 3 holds
+// 2). `columns` is the ceiling `count` can't exceed before the excess
+// spills onto the next row; it's the user's intent independent of the
+// card's current width — lib/vitalsLayout.ts clamps it against however many
+// actually fit at render time, so widening the card later can hand a row
+// back boxes that overflowed off it purely for width reasons. It does NOT
+// set this row's own alignment grid width — every row aligns against the
+// card's full width (its overall max column count), so a "2 per row" row
+// still spans (and grows with) the whole card rather than a fixed, narrow
+// slice of it.
+export interface VitalRowConfig {
+  count: number;
+  columns: number;
+  align: VitalRowAlign;
 }
 
 export interface AbilityStat {
@@ -222,8 +270,10 @@ export interface CardData {
   characterClass: string;
 
   // Vitals — an ordered, user-configurable list of badges (AC/HP/etc. by
-  // default, but any label/frame/value combination the user sets up).
+  // default, but any label/frame/value combination the user sets up), plus
+  // how that flat list is chopped into rows (see VitalRowConfig).
   vitalBoxes: VitalBoxConfig[];
+  vitalRows: VitalRowConfig[];
 
   // Ability scores
   stats: AbilityStats;
@@ -243,6 +293,9 @@ export interface CardData {
   // Layout
   preset: LayoutPreset;
   toggles: CardToggles;
+  /** Per-side deviations from the party's shared size/height/visibility
+   *  defaults — undefined (or a missing side) means "inherit". */
+  layoutOverride?: LayoutOverride;
 }
 
 // The default vitals row — Max HP / AC / Spell Save DC / Passive Perception /
@@ -273,6 +326,10 @@ export function emptyCard(id: string): CardData {
       cha: { modifier: "+0", proficiency: false },
     },
     vitalBoxes: defaultVitalBoxes(),
+    vitalRows: [
+      { count: 3, columns: 3, align: "justify" },
+      { count: 3, columns: 3, align: "justify" },
+    ],
     resistances: DEFAULT_RESISTANCES,
     damageDisplayMode: "all",
     artMode: "class",

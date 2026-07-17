@@ -17,6 +17,12 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
   const containerRef = useRef<T | null>(null);
   const prevOffsets = useRef<Map<string, { left: number; top: number }>>(new Map());
+  // The DOM order of tracked ids as of the last render — used to tell an
+  // actual reorder (this sequence changes) apart from an incidental shift
+  // (an unrelated sibling section resizing or toggling, which moves every
+  // box's offset without changing their relative order at all). Only the
+  // former should slide; the latter should just snap to its new spot.
+  const prevOrder = useRef<string[]>([]);
   // The persisted-state load (InitiativeCardApp) can swap a placeholder
   // default card for a saved one right after the initial mount, replacing
   // every id in the list at once — a real reorder never does that (ids stay
@@ -38,6 +44,15 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
     if (!container) return;
     const nodes = container.querySelectorAll<HTMLElement>("[data-flip-id]");
     const nextOffsets = new Map<string, { left: number; top: number }>();
+    const nextOrder: string[] = [];
+    nodes.forEach((node) => {
+      if (node.dataset.flipId) nextOrder.push(node.dataset.flipId);
+    });
+    // Same ids, same sequence → nothing was actually reordered, whatever
+    // moved was pushed around by something else entirely.
+    const reordered =
+      nextOrder.length !== prevOrder.current.length ||
+      nextOrder.some((id, i) => id !== prevOrder.current[i]);
 
     nodes.forEach((node) => {
       const id = node.dataset.flipId;
@@ -57,7 +72,7 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
       const top = node.offsetTop;
       nextOffsets.set(id, { left, top });
 
-      if (!armed.current) return;
+      if (!armed.current || !reordered) return;
       const prev = prevOffsets.current.get(id);
       if (!prev) return;
       const dx = prev.left - left;
@@ -77,6 +92,7 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
     });
 
     prevOffsets.current = nextOffsets;
+    prevOrder.current = nextOrder;
   });
 
   return containerRef;

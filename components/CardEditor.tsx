@@ -5,6 +5,13 @@ import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/DamageTypeBadge";
 import SegmentedToggle from "@/components/SegmentedToggle";
 import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
+import { inToPx, type LayoutConfig } from "@/lib/cardLayout";
+import {
+  availableVitalRowAligns,
+  maxVitalColumns,
+  VITAL_ICON_H,
+  vitalRowSpans,
+} from "@/lib/vitalsLayout";
 import { useFlipAnimation } from "@/components/useFlipAnimation";
 import {
   ABILITY_KEYS,
@@ -23,6 +30,7 @@ import {
   SCROLL_STYLE_MODES,
   VITAL_FRAME_LABELS,
   VITAL_FRAME_SHAPES,
+  VITAL_ROW_ALIGN_LABELS,
   VITALS_MODE_LABELS,
   VITALS_MODES,
   type CardData,
@@ -34,11 +42,14 @@ const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
 interface CardEditorProps {
   card: CardData;
   onChange: (card: CardData) => void;
+  /** This card's resolved Player/DM layout — party default merged with
+   *  whatever this card overrides. */
+  effectiveLayout: LayoutConfig;
 }
 
 // ── Small form helpers ────────────────────────────────────────────────
 
-function Field({
+export function Field({
   label,
   labelExtra,
   children,
@@ -60,14 +71,14 @@ function Field({
   );
 }
 
-const inputClass =
+export const inputClass =
   "bg-[var(--surface-raised)] border border-[var(--border)] rounded px-2 py-1 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] w-full";
 
-const numClass =
+export const numClass =
   inputClass +
   " [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none";
 
-function SectionHeading({
+export function SectionHeading({
   children,
   right,
 }: {
@@ -104,14 +115,22 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 
 // ── Main component ────────────────────────────────────────────────────
 
-export default function CardEditor({ card, onChange }: CardEditorProps) {
+export default function CardEditor({
+  card,
+  onChange,
+  effectiveLayout,
+}: CardEditorProps) {
   const [draggingArt, setDraggingArt] = useState(false);
   const [draggedVitalId, setDraggedVitalId] = useState<string | null>(null);
-  // Index (0..vitalBoxes.length) the dragged box would land at if dropped
-  // right now — i.e. "insert before this position" — drawn as a line
-  // between the two rows it'd sit between. Recomputed from the pointer's Y
-  // position within whichever row it's currently over.
-  const [vitalInsertAt, setVitalInsertAt] = useState<number | null>(null);
+  // Where the dragged box would land if dropped right now — a row index
+  // plus a local position within it ("insert before this position in this
+  // row"), drawn as a line between the two boxes it'd sit between.
+  // Recomputed from the pointer's Y position within whichever row it's
+  // currently over.
+  const [vitalInsertAt, setVitalInsertAt] = useState<{
+    rowIndex: number;
+    localIndex: number;
+  } | null>(null);
   const vitalListRef = useFlipAnimation<HTMLDivElement>();
   // dragenter/dragleave bubble from every nested row (and the insertion-line
   // divs), so a plain "did we leave?" boolean would clear the line while the
@@ -125,27 +144,43 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
   // Shared by a row's own onDragOver and its drag handle's (see below) —
   // `rowEl` is always the row div itself, whichever element the pointer is
   // actually over within it.
-  function updateVitalInsertAt(rowEl: HTMLElement | null, clientY: number, i: number) {
+  function updateVitalInsertAt(
+    rowEl: HTMLElement | null,
+    clientY: number,
+    rowIndex: number,
+    i: number,
+  ) {
     if (!rowEl) return;
     const rect = rowEl.getBoundingClientRect();
     const before = clientY - rect.top < rect.height / 2;
-    setVitalInsertAt(before ? i : i + 1);
+    setVitalInsertAt({ rowIndex, localIndex: before ? i : i + 1 });
   }
 
   function commitVitalMove() {
-    if (draggedVitalId && vitalInsertAt !== null) {
-      const fromIndex = card.vitalBoxes.findIndex(
+    if (draggedVitalId && vitalInsertAt) {
+      const fromFlat = card.vitalBoxes.findIndex(
         (box) => box.id === draggedVitalId,
       );
-      // moveVitalBox's `toIndex` applies after the dragged box is already
-      // removed from the list — dropping it after its own original spot
-      // shifts every following index down by one, so account for that here
-      // rather than pushing that adjustment into moveVitalBox itself.
-      const toIndex =
-        fromIndex !== -1 && fromIndex < vitalInsertAt
-          ? vitalInsertAt - 1
-          : vitalInsertAt;
-      moveVitalBox(draggedVitalId, toIndex);
+      const spans = vitalRowSpans(card.vitalRows);
+      const fromSpanIndex = spans.findIndex(
+        (span) => fromFlat >= span.start && fromFlat < span.start + span.count,
+      );
+      const { rowIndex } = vitalInsertAt;
+      let { localIndex } = vitalInsertAt;
+      // moveVitalBox's local index applies after the dragged box is already
+      // removed from its row — dropping it after its own original spot
+      // (within the SAME row) shifts every following local position down by
+      // one, so account for that here rather than pushing that adjustment
+      // into moveVitalBox itself. A different target row isn't affected —
+      // removing from row A doesn't shift row B's own local numbering.
+      if (
+        fromSpanIndex !== -1 &&
+        fromSpanIndex === rowIndex &&
+        fromFlat - spans[fromSpanIndex].start < localIndex
+      ) {
+        localIndex -= 1;
+      }
+      moveVitalBox(draggedVitalId, rowIndex, localIndex);
     }
     vitalDragDepth.current = 0;
     setDraggedVitalId(null);
@@ -162,7 +197,15 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
+    setVitalRowColumns,
+    setVitalRowAlign,
+    addVitalRow,
+    removeVitalRow,
   } = createCardUpdater(card, onChange);
+
+  const dmWidthPx = inToPx(effectiveLayout.dm.widthIn);
+  const maxVitalCols = maxVitalColumns(dmWidthPx - 2 - 16, VITAL_ICON_H);
+  const vitalSpans = vitalRowSpans(card.vitalRows);
 
   function handleArtUpload(file: File | undefined) {
     if (!file) return;
@@ -294,17 +337,17 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       </SectionHeading>
       <div
         ref={vitalListRef}
-        className="flex flex-col gap-1"
-        // Catch-all: the gap between rows (and the insertion-line divs
-        // living in it) belongs to no row's own onDragOver, so without this
-        // the browser shows its default "not-allowed" cursor there even
-        // though dropping in that gap is exactly what places the line. A
-        // real (continuous, not step-wise) drag crosses these gaps
+        className="flex flex-col gap-2"
+        // Catch-all: the gap between row cards (and the insertion-line divs
+        // living in a row's own list) belongs to no row's own onDragOver, so
+        // without this the browser shows its default "not-allowed" cursor
+        // there even though dropping in that gap is exactly what places the
+        // line. A real (continuous, not step-wise) drag crosses these gaps
         // constantly, so onDrop needs the same catch-all: without it, a
         // drop landing in a gap looked identical to a valid one (line
-        // showing, cursor allowed) but silently committed nothing — no row
-        // was under the pointer to fire its own onDrop. This one just acts
-        // on whatever `vitalInsertAt` the nearest row already computed.
+        // showing, cursor allowed) but silently committed nothing. This one
+        // just acts on whatever `vitalInsertAt` the nearest row already
+        // computed.
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -321,118 +364,232 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           }
         }}
       >
-        {card.vitalBoxes.map((box, i) => (
-          <div key={box.id} data-flip-id={box.id}>
+        {card.vitalRows.map((row, rowIndex) => {
+          const span = vitalSpans[rowIndex];
+          const capacity = Math.max(1, Math.min(row.columns, maxVitalCols));
+          // "Full" is judged against the card's overall max columns, not
+          // this row's own (possibly smaller) column count — every row's
+          // alignment grid spans the same full card width (see CardFaces),
+          // so a "2 per row" row on a wider card is never actually full and
+          // always keeps its alignment choice.
+          const full = span.count >= maxVitalCols;
+          const alignOptions = availableVitalRowAligns(span.count);
+          const alignValue = alignOptions.includes(row.align)
+            ? row.align
+            : alignOptions[0];
+          const boxes = card.vitalBoxes.slice(span.start, span.start + span.count);
+          return (
             <div
-              className="rounded-full bg-[var(--accent)]"
-              style={{
-                height: 2,
-                margin: "3px 0",
-                visibility: vitalInsertAt === i ? "visible" : "hidden",
-              }}
-            />
-            <div
-              className="flex items-center gap-1.5"
-              style={{ opacity: draggedVitalId === box.id ? 0.4 : 1 }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                updateVitalInsertAt(e.currentTarget, e.clientY, i);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                commitVitalMove();
-              }}
+              key={rowIndex}
+              className="flex flex-col gap-1 rounded border border-[var(--border)] p-1.5"
             >
-              <span
-                className="cursor-grab select-none text-[var(--text-muted)] px-0.5"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = "move";
-                  setDraggedVitalId(box.id);
-                }}
-                onDragEnd={() => {
-                  // Fires after onDrop's commit in a real drop (a no-op by
-                  // then) as well as after a drop outside any row, where it's
-                  // the only thing that clears the leftover drag state.
-                  vitalDragDepth.current = 0;
-                  setDraggedVitalId(null);
-                  setVitalInsertAt(null);
-                }}
-                // Being draggable itself, this span doesn't reliably pass
-                // dragover/drop through to the row underneath — hovering (or
-                // dropping) on another row's handle silently did nothing,
-                // which read as "can't reorder past this index" depending on
-                // exactly where the pointer landed. Handling both directly
-                // here, rather than relying on them bubbling up, fixes that.
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  updateVitalInsertAt(e.currentTarget.parentElement, e.clientY, i);
-                }}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                    Row {rowIndex + 1}
+                  </span>
+                  <select
+                    className={inputClass + " !w-auto py-0.5 text-xs normal-case"}
+                    value={capacity}
+                    onChange={(e) =>
+                      setVitalRowColumns(rowIndex, Number(e.target.value))
+                    }
+                  >
+                    {Array.from({ length: maxVitalCols }, (_, n) => n + 1).map(
+                      (n) => (
+                        <option key={n} value={n}>
+                          {n} per row
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {!full && (
+                    <SegmentedToggle
+                      options={alignOptions.map((a) => ({
+                        value: a,
+                        label: VITAL_ROW_ALIGN_LABELS[a],
+                      }))}
+                      value={alignValue}
+                      onChange={(a) => setVitalRowAlign(rowIndex, a)}
+                      size="xs"
+                    />
+                  )}
+                  {card.vitalRows.length > 1 && (
+                    <button
+                      type="button"
+                      aria-label="Remove row"
+                      className="text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1"
+                      onClick={() => removeVitalRow(rowIndex)}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div
+                className="flex flex-col gap-1"
+                onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
                   commitVitalMove();
                 }}
-                aria-hidden
               >
-                ⠿
-              </span>
-              <input
-                className={inputClass + " flex-[2]"}
-                placeholder="Label"
-                value={box.label}
-                onChange={(e) =>
-                  setVitalBox(box.id, { label: e.target.value })
-                }
-              />
-              <input
-                className={numClass + " flex-1"}
-                type="number"
-                placeholder="Value"
-                value={box.value ?? ""}
-                onChange={(e) => setVitalBoxNum(box.id, e.target.value)}
-              />
-              <select
-                className={inputClass + " flex-1"}
-                value={box.frame}
-                onChange={(e) =>
-                  setVitalBox(box.id, {
-                    frame: e.target.value as (typeof VITAL_FRAME_SHAPES)[number],
-                  })
-                }
-              >
-                {VITAL_FRAME_SHAPES.map((shape) => (
-                  <option key={shape} value={shape}>
-                    {VITAL_FRAME_LABELS[shape]}
-                  </option>
+                {boxes.length === 0 && (
+                  <div
+                    className="rounded border border-dashed border-[var(--border)] px-2 py-3 text-center text-xs normal-case text-[var(--text-muted)]"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      updateVitalInsertAt(e.currentTarget, e.clientY, rowIndex, 0);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      commitVitalMove();
+                    }}
+                  >
+                    Drop a vital here
+                  </div>
+                )}
+                {boxes.map((box, i) => (
+                  <div key={box.id} data-flip-id={box.id}>
+                    <div
+                      className="rounded-full bg-[var(--accent)]"
+                      style={{
+                        height: 2,
+                        margin: "3px 0",
+                        visibility:
+                          vitalInsertAt?.rowIndex === rowIndex &&
+                          vitalInsertAt.localIndex === i
+                            ? "visible"
+                            : "hidden",
+                      }}
+                    />
+                    <div
+                      className="flex items-center gap-1.5"
+                      style={{ opacity: draggedVitalId === box.id ? 0.4 : 1 }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        updateVitalInsertAt(e.currentTarget, e.clientY, rowIndex, i);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        commitVitalMove();
+                      }}
+                    >
+                      <span
+                        className="cursor-grab select-none text-[var(--text-muted)] px-0.5"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = "move";
+                          setDraggedVitalId(box.id);
+                        }}
+                        onDragEnd={() => {
+                          // Fires after onDrop's commit in a real drop (a no-op by
+                          // then) as well as after a drop outside any row, where it's
+                          // the only thing that clears the leftover drag state.
+                          vitalDragDepth.current = 0;
+                          setDraggedVitalId(null);
+                          setVitalInsertAt(null);
+                        }}
+                        // Being draggable itself, this span doesn't reliably pass
+                        // dragover/drop through to the row underneath — hovering (or
+                        // dropping) on another row's handle silently did nothing,
+                        // which read as "can't reorder past this index" depending on
+                        // exactly where the pointer landed. Handling both directly
+                        // here, rather than relying on them bubbling up, fixes that.
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          updateVitalInsertAt(
+                            e.currentTarget.parentElement,
+                            e.clientY,
+                            rowIndex,
+                            i,
+                          );
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          commitVitalMove();
+                        }}
+                        aria-hidden
+                      >
+                        ⠿
+                      </span>
+                      <input
+                        className={inputClass + " flex-[2]"}
+                        placeholder="Label"
+                        value={box.label}
+                        onChange={(e) =>
+                          setVitalBox(box.id, { label: e.target.value })
+                        }
+                      />
+                      <input
+                        className={numClass + " flex-1"}
+                        type="number"
+                        placeholder="Value"
+                        value={box.value ?? ""}
+                        onChange={(e) => setVitalBoxNum(box.id, e.target.value)}
+                      />
+                      <select
+                        className={inputClass + " flex-1"}
+                        value={box.frame}
+                        onChange={(e) =>
+                          setVitalBox(box.id, {
+                            frame: e.target.value as (typeof VITAL_FRAME_SHAPES)[number],
+                          })
+                        }
+                      >
+                        {VITAL_FRAME_SHAPES.map((shape) => (
+                          <option key={shape} value={shape}>
+                            {VITAL_FRAME_LABELS[shape]}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        aria-label="Remove vital box"
+                        className="text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1"
+                        onClick={() => removeVitalBox(box.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </select>
-              <button
-                type="button"
-                aria-label="Remove vital box"
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1"
-                onClick={() => removeVitalBox(box.id)}
-              >
-                ×
-              </button>
+                {boxes.length > 0 && (
+                  <div
+                    className="rounded-full bg-[var(--accent)]"
+                    style={{
+                      height: 2,
+                      margin: "3px 0",
+                      visibility:
+                        vitalInsertAt?.rowIndex === rowIndex &&
+                        vitalInsertAt.localIndex === span.count
+                          ? "visible"
+                          : "hidden",
+                    }}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-        <div
-          className="rounded-full bg-[var(--accent)]"
-          style={{
-            height: 2,
-            margin: "3px 0",
-            visibility:
-              vitalInsertAt === card.vitalBoxes.length ? "visible" : "hidden",
-          }}
-        />
-        <button
-          type="button"
-          className={inputClass + " mt-1 text-center normal-case"}
-          onClick={addVitalBox}
-        >
-          + Add Vital Box
-        </button>
+          );
+        })}
+        <div className="flex gap-1">
+          <button
+            type="button"
+            className={inputClass + " text-center normal-case"}
+            onClick={addVitalBox}
+          >
+            + Add Vital Box
+          </button>
+          <button
+            type="button"
+            className={inputClass + " text-center normal-case"}
+            onClick={addVitalRow}
+          >
+            + Add Row
+          </button>
+        </div>
       </div>
 
       {/* Ability scores */}

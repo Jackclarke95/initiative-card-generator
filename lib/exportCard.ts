@@ -2,16 +2,13 @@ import JSZip from "jszip";
 import jsPDF from "jspdf";
 import { toPng, toJpeg } from "html-to-image";
 import type { CardData } from "@/types/card";
+import { CM_PER_IN } from "@/lib/cardLayout";
 import { PAPER_SIZES, type Margins, type PaperPreset } from "@/lib/paperSizes";
 
 // Card faces are laid out at 96 CSS px/in; this ratio pushes raster
 // exports up to ~300 DPI so they stay crisp if printed or zoomed.
 const RASTER_PIXEL_RATIO = 3;
-
-// Matches InitiativeCard's FACE_W/FACE_H (240x336px at 96 css px/in).
-const FACE_WIDTH_IN = 2.5;
-const FACE_HEIGHT_IN = 3.5;
-const CM_PER_IN = 2.54;
+const PX_PER_IN = 96;
 
 function slugify(name: string): string {
   const trimmed = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -135,36 +132,23 @@ async function rotateImage90(dataUrl: string): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
-// Generates the multi-page PDF ourselves rather than relying on
-// window.print() + @page: Chromium's print pagination doesn't reliably
-// fragment flex/grid/inline-block content across pages (overflowing
-// rows get crammed onto the same page instead of breaking), so a
-// browser print job can't be trusted to tile many cards across pages.
-// jsPDF gives us exact, predictable page breaks instead.
-//
-// The paper is always used portrait; whether the CARD units are drawn
-// upright or rotated 90° is decided automatically, whichever orientation
-// fits more full units into the page's content box.
-export async function exportAllCardsAsPdf(
-  cards: CardData[],
-  paper: PaperPreset,
-  margins: Margins,
-  gutterCm: number,
-) {
-  const { w: widthCm, h: heightCm } = PAPER_SIZES[paper];
-  const pageWidthIn = widthCm / CM_PER_IN;
-  const pageHeightIn = heightCm / CM_PER_IN;
-  const marginTopIn = margins.top / CM_PER_IN;
-  const marginBottomIn = margins.bottom / CM_PER_IN;
-  const marginLeftIn = margins.left / CM_PER_IN;
-  const marginRightIn = margins.right / CM_PER_IN;
+interface PageGrid {
+  cols: number;
+  rows: number;
+  perPage: number;
+  placedWidthIn: number;
+  placedHeightIn: number;
+  useRotated: boolean;
+}
 
-  const contentWidthIn = pageWidthIn - marginLeftIn - marginRightIn;
-  const contentHeightIn = pageHeightIn - marginTopIn - marginBottomIn;
-
-  const unitWidthIn = FACE_WIDTH_IN;
-  const unitHeightIn = FACE_HEIGHT_IN * 2 + gutterCm / CM_PER_IN;
-
+// Whichever orientation (units drawn upright, or rotated 90°) fits more
+// full units into the page's content box.
+function computeGrid(
+  unitWidthIn: number,
+  unitHeightIn: number,
+  contentWidthIn: number,
+  contentHeightIn: number,
+): PageGrid {
   const uprightCols = Math.floor(contentWidthIn / unitWidthIn);
   const uprightRows = Math.floor(contentHeightIn / unitHeightIn);
   const uprightCount = Math.max(0, uprightCols) * Math.max(0, uprightRows);
@@ -176,32 +160,129 @@ export async function exportAllCardsAsPdf(
   const useRotated = rotatedCount > uprightCount;
   const cols = Math.max(1, useRotated ? rotatedCols : uprightCols);
   const rows = Math.max(1, useRotated ? rotatedRows : uprightRows);
-  const perPage = cols * rows;
+  return {
+    cols,
+    rows,
+    perPage: cols * rows,
+    placedWidthIn: useRotated ? unitHeightIn : unitWidthIn,
+    placedHeightIn: useRotated ? unitWidthIn : unitHeightIn,
+    useRotated,
+  };
+}
 
-  const placedWidthIn = useRotated ? unitHeightIn : unitWidthIn;
-  const placedHeightIn = useRotated ? unitWidthIn : unitHeightIn;
+export interface ContentBox {
+  pageWidthIn: number;
+  pageHeightIn: number;
+  contentWidthIn: number;
+  contentHeightIn: number;
+}
 
-  const doc = new jsPDF({ unit: "in", format: [pageWidthIn, pageHeightIn] });
+// The page's printable area (paper size minus margins) — shared by the
+// actual PDF export below and the oversize-card warning in the export UI,
+// so both agree on exactly what "fits" means.
+export function contentBoxIn(paper: PaperPreset, margins: Margins): ContentBox {
+  const { w: widthCm, h: heightCm } = PAPER_SIZES[paper];
+  const pageWidthIn = widthCm / CM_PER_IN;
+  const pageHeightIn = heightCm / CM_PER_IN;
+  const contentWidthIn =
+    pageWidthIn - (margins.left + margins.right) / CM_PER_IN;
+  const contentHeightIn =
+    pageHeightIn - (margins.top + margins.bottom) / CM_PER_IN;
+  return { pageWidthIn, pageHeightIn, contentWidthIn, contentHeightIn };
+}
 
-  let placed = 0;
+// Whether a unit of this size fits within the content box in either
+// orientation — matches computeGrid's own upright-vs-rotated choice below,
+// so a "fits" here is a genuine guarantee it'll place, not just a guess.
+export function fitsPage(
+  unitWidthIn: number,
+  unitHeightIn: number,
+  contentWidthIn: number,
+  contentHeightIn: number,
+): boolean {
+  const fitsUpright = unitWidthIn <= contentWidthIn && unitHeightIn <= contentHeightIn;
+  const fitsRotated = unitHeightIn <= contentWidthIn && unitWidthIn <= contentHeightIn;
+  return fitsUpright || fitsRotated;
+}
+
+// Generates the multi-page PDF ourselves rather than relying on
+// window.print() + @page: Chromium's print pagination doesn't reliably
+// fragment flex/grid/inline-block content across pages (overflowing
+// rows get crammed onto the same page instead of breaking), so a
+// browser print job can't be trusted to tile many cards across pages.
+// jsPDF gives us exact, predictable page breaks instead.
+//
+// The paper is always used portrait.
+export async function exportAllCardsAsPdf(
+  cards: CardData[],
+  paper: PaperPreset,
+  margins: Margins,
+) {
+  const { pageWidthIn, pageHeightIn, contentWidthIn, contentHeightIn } =
+    contentBoxIn(paper, margins);
+  const marginTopIn = margins.top / CM_PER_IN;
+  const marginLeftIn = margins.left / CM_PER_IN;
+
+  // Every card's actual footprint (both faces, the gutter if shown, and
+  // any per-card size override) is already sitting in the DOM via
+  // ExportArea — measuring it directly, rather than assuming one uniform
+  // size, is what lets auto-height sides and per-card overrides "just
+  // work" here with no extra plumbing. Cards that measure the same (the
+  // common case) are grouped and packed onto shared pages together; a
+  // differently-sized card starts packing on its own fresh page instead
+  // of corrupting the grid for the rest.
+  const entries: { node: HTMLElement; widthIn: number; heightIn: number }[] = [];
   for (const card of cards) {
     const node = document.querySelector<HTMLElement>(
       `[data-card-id="${card.id}"]`,
     );
     if (!node) continue;
+    const rect = node.getBoundingClientRect();
+    entries.push({
+      node,
+      widthIn: rect.width / PX_PER_IN,
+      heightIn: rect.height / PX_PER_IN,
+    });
+  }
 
-    const posOnPage = placed % perPage;
-    if (placed > 0 && posOnPage === 0) doc.addPage([pageWidthIn, pageHeightIn]);
+  const groups = new Map<string, typeof entries>();
+  for (const entry of entries) {
+    const key = `${entry.widthIn.toFixed(2)}x${entry.heightIn.toFixed(2)}`;
+    const group = groups.get(key);
+    if (group) group.push(entry);
+    else groups.set(key, [entry]);
+  }
 
-    const col = posOnPage % cols;
-    const row = Math.floor(posOnPage / cols);
-    const x = marginLeftIn + col * placedWidthIn;
-    const y = marginTopIn + row * placedHeightIn;
+  const doc = new jsPDF({ unit: "in", format: [pageWidthIn, pageHeightIn] });
 
-    let dataUrl = await renderCardDataUrl(node, "png");
-    if (useRotated) dataUrl = await rotateImage90(dataUrl);
-    doc.addImage(dataUrl, "PNG", x, y, placedWidthIn, placedHeightIn);
-    placed++;
+  let isFirstImage = true;
+  for (const groupEntries of groups.values()) {
+    const { widthIn: unitWidthIn, heightIn: unitHeightIn } = groupEntries[0];
+    const grid = computeGrid(
+      unitWidthIn,
+      unitHeightIn,
+      contentWidthIn,
+      contentHeightIn,
+    );
+
+    let placed = 0;
+    for (const { node } of groupEntries) {
+      const posOnPage = placed % grid.perPage;
+      if (!isFirstImage && posOnPage === 0) {
+        doc.addPage([pageWidthIn, pageHeightIn]);
+      }
+      isFirstImage = false;
+
+      const col = posOnPage % grid.cols;
+      const row = Math.floor(posOnPage / grid.cols);
+      const x = marginLeftIn + col * grid.placedWidthIn;
+      const y = marginTopIn + row * grid.placedHeightIn;
+
+      let dataUrl = await renderCardDataUrl(node, "png");
+      if (grid.useRotated) dataUrl = await rotateImage90(dataUrl);
+      doc.addImage(dataUrl, "PNG", x, y, grid.placedWidthIn, grid.placedHeightIn);
+      placed++;
+    }
   }
 
   doc.save("initiative-cards.pdf");
