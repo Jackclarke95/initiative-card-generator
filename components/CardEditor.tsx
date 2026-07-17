@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/DamageTypeBadge";
 import SegmentedToggle from "@/components/SegmentedToggle";
+import SideLayoutFields, { WidthMismatchWarning } from "@/components/SideLayoutFields";
 import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
+import type { LayoutConfig, SideLayoutConfig } from "@/lib/cardLayout";
 import { useFlipAnimation } from "@/components/useFlipAnimation";
 import {
   ABILITY_KEYS,
@@ -34,11 +36,14 @@ const CLASS_OPTIONS = Object.keys(CLASS_LOGO_MAP);
 interface CardEditorProps {
   card: CardData;
   onChange: (card: CardData) => void;
+  /** This card's resolved Player/DM layout — party default merged with
+   *  whatever this card overrides. */
+  effectiveLayout: LayoutConfig;
 }
 
 // ── Small form helpers ────────────────────────────────────────────────
 
-function Field({
+export function Field({
   label,
   labelExtra,
   children,
@@ -60,14 +65,14 @@ function Field({
   );
 }
 
-const inputClass =
+export const inputClass =
   "bg-[var(--surface-raised)] border border-[var(--border)] rounded px-2 py-1 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] w-full";
 
-const numClass =
+export const numClass =
   inputClass +
   " [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none";
 
-function SectionHeading({
+export function SectionHeading({
   children,
   right,
 }: {
@@ -104,7 +109,11 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 
 // ── Main component ────────────────────────────────────────────────────
 
-export default function CardEditor({ card, onChange }: CardEditorProps) {
+export default function CardEditor({
+  card,
+  onChange,
+  effectiveLayout,
+}: CardEditorProps) {
   const [draggingArt, setDraggingArt] = useState(false);
   const [draggedVitalId, setDraggedVitalId] = useState<string | null>(null);
   // Index (0..vitalBoxes.length) the dragged box would land at if dropped
@@ -162,7 +171,19 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
+    setLayoutOverrideSide,
+    applyNameOnlyPreset,
   } = createCardUpdater(card, onChange);
+
+  // "At least one side visible" — checked against the *other* side's
+  // currently effective (party default or override) visibility, since
+  // that's what would actually be left once this change applies.
+  function updateLayoutSide(side: "player" | "dm", next: SideLayoutConfig) {
+    const otherVisible =
+      side === "player" ? effectiveLayout.dm.visible : effectiveLayout.player.visible;
+    if (!next.visible && !otherVisible) return;
+    setLayoutOverrideSide(side, next);
+  }
 
   function handleArtUpload(file: File | undefined) {
     if (!file) return;
@@ -553,6 +574,37 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
           onChange={(e) => set("notes", e.target.value)}
         />
       </Field>
+
+      {/* Layout override — this card's own size/height/visibility per
+          side, deviating from the party's shared default set in the
+          Print & Export panel. Editing any field here always writes a
+          full override for that side; "Reset to party default" clears it. */}
+      <SectionHeading>Layout Override</SectionHeading>
+      <SideLayoutFields
+        label="Player side"
+        value={effectiveLayout.player}
+        onChange={(next) => updateLayoutSide("player", next)}
+        onApplyNameOnly={() =>
+          applyNameOnlyPreset("player", effectiveLayout.player)
+        }
+        onResetToDefault={
+          card.layoutOverride?.player
+            ? () => setLayoutOverrideSide("player", undefined)
+            : undefined
+        }
+      />
+      <SideLayoutFields
+        label="DM side"
+        value={effectiveLayout.dm}
+        onChange={(next) => updateLayoutSide("dm", next)}
+        onApplyNameOnly={() => applyNameOnlyPreset("dm", effectiveLayout.dm)}
+        onResetToDefault={
+          card.layoutOverride?.dm
+            ? () => setLayoutOverrideSide("dm", undefined)
+            : undefined
+        }
+      />
+      <WidthMismatchWarning layout={effectiveLayout} />
     </div>
   );
 }

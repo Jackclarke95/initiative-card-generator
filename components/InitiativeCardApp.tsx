@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -21,13 +22,23 @@ import { CardEditProvider } from "@/components/CardEditContext";
 import FoldedCardPreview from "@/components/FoldedCardPreview";
 import InfoTooltip from "@/components/InfoTooltip";
 import SegmentedToggle from "@/components/SegmentedToggle";
+import SideLayoutFields, { WidthMismatchWarning } from "@/components/SideLayoutFields";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
+  contentBoxIn,
   exportCard,
   exportAllCards,
   exportAllCardsAsPdf,
+  fitsPage,
   type ExportFormat,
 } from "@/lib/exportCard";
+import {
+  defaultLayoutConfig,
+  resolveLayout,
+  unitFootprintIn,
+  type SideLayoutConfig,
+} from "@/lib/cardLayout";
+import { stepValueOnWheel } from "@/lib/sliderWheel";
 import { PAPER_LABELS, type Margins, type PaperPreset } from "@/lib/paperSizes";
 import { loadPersistedState, savePersistedState } from "@/lib/partyStorage";
 
@@ -67,7 +78,10 @@ const PREVIEW_MIN_SCALE = 1;
 // lag on those interactions was actually coming from — not the animation
 // itself. The visible, on-screen CardSpread a few lines down is left
 // unmemoized; it has to reflect every edit immediately.
-const MeasureSpread = memo(CardSpread, (prev, next) => prev.direction === next.direction);
+const MeasureSpread = memo(
+  CardSpread,
+  (prev, next) => prev.direction === next.direction && prev.layout === next.layout,
+);
 
 function newCard(): CardData {
   return emptyCard(crypto.randomUUID());
@@ -80,6 +94,7 @@ function newParty(name: string): Party {
     name,
     cards: [card],
     activeCardId: card.id,
+    layout: defaultLayoutConfig(),
   };
 }
 
@@ -91,14 +106,21 @@ function defaultParties(): Party[] {
       name: "Untitled Party",
       cards: [card],
       activeCardId: card.id,
+      layout: defaultLayoutConfig(),
     },
   ];
+}
+
+// Sessions persisted before per-side layout config existed won't have a
+// `layout` field — fill in the default rather than discarding the party.
+function normalizeParty(party: Party): Party {
+  return party.layout ? party : { ...party, layout: defaultLayoutConfig() };
 }
 
 export default function InitiativeCardApp() {
   const [parties, setParties] = useState<Party[]>(() => {
     const persisted = loadPersistedState();
-    return persisted?.parties ?? defaultParties();
+    return (persisted?.parties ?? defaultParties()).map(normalizeParty);
   });
   const [activePartyId, setActivePartyId] = useState<string>(() => {
     const persisted = loadPersistedState();
@@ -107,8 +129,6 @@ export default function InitiativeCardApp() {
     }
     return persisted?.parties[0]?.id ?? parties[0].id;
   });
-
-  const [gutterCm, setGutterCm] = useState(1);
 
   // Live preview sizing: measure the available box in the center pane
   // against the spread's natural (unscaled) footprint in both a
@@ -181,6 +201,68 @@ export default function InitiativeCardApp() {
   const activeCard =
     activeParty.cards.find((c) => c.id === activeParty.activeCardId) ??
     activeParty.cards[0];
+
+  // Stable unless the party's shared layout or this card's own override
+  // actually changes — unrelated field edits (name, vitals, …) leave both
+  // references untouched, so this doesn't defeat CardSpread/InitiativeCard's
+  // own memoization on every keystroke. Deps are deliberately narrower than
+  // `activeParty`/`activeCard` themselves — resolveLayout only ever reads
+  // these two nested fields.
+  const effectiveLayout = useMemo(
+    () => resolveLayout(activeParty, activeCard),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeParty.layout, activeCard.layoutOverride],
+  );
+  const bothSidesVisible =
+    effectiveLayout.player.visible && effectiveLayout.dm.visible;
+
+  // How many cards in the party won't fit the current PDF page size and
+  // margins, even rotated — computed from each card's own configured
+  // size (not a DOM measurement, so it updates live as paper/margins
+  // change, before any export actually runs).
+  const oversizedCardCount = useMemo(() => {
+    const { contentWidthIn, contentHeightIn } = contentBoxIn(
+      pdfSettings.paper,
+      pdfSettings.margins,
+    );
+    return activeParty.cards.reduce((count, card) => {
+      const { widthIn, heightIn } = unitFootprintIn(
+        resolveLayout(activeParty, card),
+      );
+      return fitsPage(widthIn, heightIn, contentWidthIn, contentHeightIn)
+        ? count
+        : count + 1;
+    }, 0);
+  }, [activeParty, pdfSettings]);
+
+  const updatePartyLayoutSide = useCallback(
+    (side: "player" | "dm", next: SideLayoutConfig) => {
+      setParties((prev) =>
+        prev.map((p) => {
+          if (p.id !== activeParty.id) return p;
+          // At least one side must stay visible.
+          const otherVisible =
+            side === "player" ? p.layout.dm.visible : p.layout.player.visible;
+          if (!next.visible && !otherVisible) return p;
+          return { ...p, layout: { ...p.layout, [side]: next } };
+        }),
+      );
+    },
+    [activeParty.id],
+  );
+
+  const updatePartyGutterCm = useCallback(
+    (gutterCm: number) => {
+      setParties((prev) =>
+        prev.map((p) =>
+          p.id !== activeParty.id
+            ? p
+            : { ...p, layout: { ...p.layout, gutterCm } },
+        ),
+      );
+    },
+    [activeParty.id],
+  );
 
   const handleChange = useCallback(
     (updated: CardData) => {
@@ -302,7 +384,6 @@ export default function InitiativeCardApp() {
           activeParty.cards,
           pdfSettings.paper,
           pdfSettings.margins,
-          gutterCm,
         );
       } else if (exportScope === "all") {
         await exportAllCards(activeParty.cards, exportChoice);
@@ -327,7 +408,6 @@ export default function InitiativeCardApp() {
     exportScope,
     exportChoice,
     pdfSettings,
-    gutterCm,
   ]);
 
   return (
@@ -356,7 +436,11 @@ export default function InitiativeCardApp() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <CardEditor card={activeCard} onChange={handleChange} />
+          <CardEditor
+            card={activeCard}
+            onChange={handleChange}
+            effectiveLayout={effectiveLayout}
+          />
         </div>
       </aside>
 
@@ -371,6 +455,7 @@ export default function InitiativeCardApp() {
             <CardEditProvider card={activeCard} onChange={handleChange}>
               <CardSpread
                 card={activeCard}
+                layout={effectiveLayout}
                 direction={previewLayout.direction}
               />
             </CardEditProvider>
@@ -397,10 +482,10 @@ export default function InitiativeCardApp() {
           }}
         >
           <div ref={rowMeasureRef} style={{ width: "max-content" }}>
-            <MeasureSpread card={activeCard} direction="row" />
+            <MeasureSpread card={activeCard} layout={effectiveLayout} direction="row" />
           </div>
           <div ref={columnMeasureRef} style={{ width: "max-content" }}>
-            <MeasureSpread card={activeCard} direction="column" />
+            <MeasureSpread card={activeCard} layout={effectiveLayout} direction="column" />
           </div>
         </div>
       </main>
@@ -450,60 +535,7 @@ export default function InitiativeCardApp() {
         />
 
         <div className="px-4 py-4 flex flex-col gap-4 overflow-y-auto">
-          <label className="flex flex-col gap-0.5">
-            <span
-              className="flex items-center gap-1 text-[10px] uppercase tracking-wide"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Fold gutter: {gutterCm.toFixed(1)} cm
-              <InfoTooltip text="Sets the blank strip between the two faces so the printed sheet folds around the thickness of your DM screen. Leave at 0 for a flat, two-sided card with no gap." />
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={GUTTER_MAX_CM}
-              step={0.1}
-              value={gutterCm}
-              onChange={(e) => setGutterCm(parseFloat(e.target.value))}
-              className="w-full accent-[var(--accent)]"
-            />
-          </label>
-          <div className="flex justify-center items-start gap-10">
-            <div className="flex flex-col items-center gap-2">
-              <span
-                className="text-[10px] uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Player side
-              </span>
-              <FoldedCardPreview
-                card={activeCard}
-                gutterHeightCm={gutterCm}
-                maxGutterHeightCm={GUTTER_MAX_CM}
-                face="player"
-              />
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <span
-                className="text-[10px] uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-              >
-                DM side
-              </span>
-              <FoldedCardPreview
-                card={activeCard}
-                gutterHeightCm={gutterCm}
-                maxGutterHeightCm={GUTTER_MAX_CM}
-                face="dm"
-                mirrored
-              />
-            </div>
-          </div>
-
-          <div
-            className="pt-3 border-t flex flex-col gap-2"
-            style={{ borderColor: "var(--border)" }}
-          >
+          <div className="flex flex-col gap-2">
             <span
               className="text-[10px] font-bold uppercase tracking-widest"
               style={{ color: "var(--accent)" }}
@@ -551,67 +583,168 @@ export default function InitiativeCardApp() {
             </div>
 
             {exportChoice === "pdf" && (
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <label className="flex flex-col gap-0.5 col-span-2">
-                  <span
-                    className="text-[10px] uppercase tracking-wide"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    Page size
-                  </span>
-                  <select
-                    value={pdfSettings.paper}
-                    onChange={(e) =>
-                      setPdfSettings((prev) => ({
-                        ...prev,
-                        paper: e.target.value as PaperPreset,
-                      }))
-                    }
-                    className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                    style={{
-                      borderColor: "var(--border)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {(Object.keys(PAPER_LABELS) as PaperPreset[]).map((p) => (
-                      <option key={p} value={p}>
-                        {PAPER_LABELS[p]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {MARGIN_SIDES.map(({ side, label }) => (
-                  <label key={side} className="flex flex-col gap-0.5">
+              <>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <label className="flex flex-col gap-0.5 col-span-2">
                     <span
                       className="text-[10px] uppercase tracking-wide"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      {label} margin (cm)
+                      Page size
                     </span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={5}
-                      step={0.1}
-                      value={pdfSettings.margins[side]}
+                    <select
+                      value={pdfSettings.paper}
                       onChange={(e) =>
-                        setMargin(side, parseFloat(e.target.value) || 0)
+                        setPdfSettings((prev) => ({
+                          ...prev,
+                          paper: e.target.value as PaperPreset,
+                        }))
                       }
                       className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
                       style={{
                         borderColor: "var(--border)",
                         color: "var(--text-primary)",
                       }}
-                    />
+                    >
+                      {(Object.keys(PAPER_LABELS) as PaperPreset[]).map((p) => (
+                        <option key={p} value={p}>
+                          {PAPER_LABELS[p]}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-                ))}
-              </div>
+                  {MARGIN_SIDES.map(({ side, label }) => (
+                    <label key={side} className="flex flex-col gap-0.5">
+                      <span
+                        className="text-[10px] uppercase tracking-wide"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {label} margin (cm)
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        value={pdfSettings.margins[side]}
+                        onChange={(e) =>
+                          setMargin(side, parseFloat(e.target.value) || 0)
+                        }
+                        className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
+                        style={{
+                          borderColor: "var(--border)",
+                          color: "var(--text-primary)",
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+                {oversizedCardCount > 0 && (
+                  <p
+                    className="text-[11px] leading-snug"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    ⚠ {oversizedCardCount} card
+                    {oversizedCardCount > 1 ? "s" : ""} won&apos;t fit within
+                    this page size and margins, even rotated. Increase the
+                    page size, shrink the margins, or reduce the card&apos;s
+                    own size.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div
+            className="pt-3 border-t flex flex-col gap-4"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <SideLayoutFields
+              label="Player side"
+              value={activeParty.layout.player}
+              onChange={(next) => updatePartyLayoutSide("player", next)}
+            />
+            <SideLayoutFields
+              label="DM side"
+              value={activeParty.layout.dm}
+              onChange={(next) => updatePartyLayoutSide("dm", next)}
+            />
+
+            {/* The fold and its gutter only mean anything once both sides
+                are actually present — a single visible side just *is* the
+                card, with nothing to fold against. */}
+            {bothSidesVisible && (
+              <>
+                <label className="flex flex-col gap-0.5">
+                  <span
+                    className="flex items-center gap-1 text-[10px] uppercase tracking-wide"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Fold gutter: {activeParty.layout.gutterCm.toFixed(1)} cm
+                    <InfoTooltip text="Sets the blank strip between the two faces so the printed sheet folds around the thickness of your DM screen. Leave at 0 for a flat, two-sided card with no gap." />
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={GUTTER_MAX_CM}
+                    step={0.1}
+                    value={activeParty.layout.gutterCm}
+                    onChange={(e) => updatePartyGutterCm(parseFloat(e.target.value))}
+                    onWheel={(e) =>
+                      updatePartyGutterCm(
+                        stepValueOnWheel(e, activeParty.layout.gutterCm, 0.1, 0, GUTTER_MAX_CM),
+                      )
+                    }
+                    className="w-full accent-[var(--accent)]"
+                  />
+                </label>
+                <div className="flex justify-center items-start gap-10">
+                  <div className="flex flex-col items-center gap-2">
+                    <span
+                      className="text-[10px] uppercase tracking-wide"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Player side
+                    </span>
+                    <FoldedCardPreview
+                      card={activeCard}
+                      gutterHeightCm={effectiveLayout.gutterCm}
+                      maxGutterHeightCm={GUTTER_MAX_CM}
+                      widthIn={effectiveLayout.player.widthIn}
+                      heightIn={effectiveLayout.player.heightIn}
+                      backWidthIn={effectiveLayout.dm.widthIn}
+                      backHeightIn={effectiveLayout.dm.heightIn}
+                      face="player"
+                    />
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <span
+                      className="text-[10px] uppercase tracking-wide"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      DM side
+                    </span>
+                    <FoldedCardPreview
+                      card={activeCard}
+                      gutterHeightCm={effectiveLayout.gutterCm}
+                      maxGutterHeightCm={GUTTER_MAX_CM}
+                      widthIn={effectiveLayout.dm.widthIn}
+                      heightIn={effectiveLayout.dm.heightIn}
+                      backWidthIn={effectiveLayout.player.widthIn}
+                      backHeightIn={effectiveLayout.player.heightIn}
+                      face="dm"
+                      mirrored
+                    />
+                  </div>
+                </div>
+                <WidthMismatchWarning layout={activeParty.layout} />
+              </>
             )}
           </div>
         </div>
       </aside>
 
-      <ExportArea cards={activeParty.cards} gutterHeightCm={gutterCm} />
+      <ExportArea cards={activeParty.cards} party={activeParty} />
 
       {partyPendingDelete && (
         <ConfirmModal

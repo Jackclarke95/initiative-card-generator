@@ -16,8 +16,6 @@
    chrome — they stay fixed across themes, so they live outside the
    dark/light blocks above. */
 :root {
-  --card-width: 2.5in;
-  --card-height: 3.5in;
   --card-bg: #ffffff;
   --card-ink: #111111;
   --card-accent: #1a1a2e;
@@ -164,9 +162,10 @@ body {
 }
 
 /* ── Card shell ─────────────────────────────────────────────────────── */
+/* Width/height are set inline per face (see components/CardFaces.tsx) —
+   Player and DM sides can now differ in size, so there's no single shared
+   card-width/card-height constant to put here. */
 .card-face {
-  width: var(--card-width);
-  height: var(--card-height);
   background: var(--card-bg);
   color: var(--card-ink);
   font-family: var(--font-card);
@@ -183,7 +182,8 @@ body {
 }
 
 .card-gutter {
-  width: var(--card-width);
+  /* Width set inline by the caller (components/InitiativeCard.tsx) — it
+     bridges whichever of the two faces is wider. */
   flex-shrink: 0;
 }
 

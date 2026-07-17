@@ -10,10 +10,43 @@ import type {
   AbilityStat,
   CardData,
   CardToggles,
+  ScrollStyle,
   DamageTypeKey,
   ResistanceState,
   VitalBoxConfig,
 } from "@/types/card";
+import {
+  inToPx,
+  PLAYER_BORDER_MARGIN_HEIGHT,
+  PX_PER_IN,
+  scrollHeightFor,
+  type SideLayoutConfig,
+} from "@/lib/cardLayout";
+
+type LayoutSide = "player" | "dm";
+
+// Approximates the height a side needs to show just its name banner —
+// mirrors the padding/margins DmFace and PlayerFace themselves use for
+// that section (see components/CardFaces.tsx: DmFace's outer `padding: 8`,
+// PlayerFace's name-section `marginTop: 4` inside its border-inset
+// content box). Not pixel-exact by design — it's a starting point for
+// "Show name only", and the Height field stays freely editable after.
+function nameOnlyHeightIn(
+  side: LayoutSide,
+  widthIn: number,
+  scrollVariant: Exclude<ScrollStyle, "none">,
+): number {
+  const widthPx = inToPx(widthIn);
+  const heightPx =
+    side === "dm"
+      ? scrollHeightFor(scrollVariant, widthPx - 2 - 16) + 16
+      : scrollHeightFor(scrollVariant, widthPx - 40) +
+        4 +
+        8 +
+        2 +
+        PLAYER_BORDER_MARGIN_HEIGHT * 2;
+  return Math.round((heightPx / PX_PER_IN) * 100) / 100;
+}
 
 export interface CardUpdater {
   set<K extends keyof CardData>(key: K, value: CardData[K]): void;
@@ -31,6 +64,16 @@ export interface CardUpdater {
   removeVitalBox(id: string): void;
   /** Moves the box with `id` so it sits at `toIndex` in the list. */
   moveVitalBox(id: string, toIndex: number): void;
+  /** Sets (or, passed undefined, clears) this card's override for one side's
+   *  layout. Clears `layoutOverride` back to undefined entirely once
+   *  neither side is overridden. */
+  setLayoutOverrideSide(side: LayoutSide, value: SideLayoutConfig | undefined): void;
+  /** Hides every other section on `side` and sets its height to fit just
+   *  the name banner — `effectiveSide` is that side's currently-resolved
+   *  config (party default or existing override); this is a shortcut for
+   *  applying the same section-visibility and height settings by hand,
+   *  not a distinct mode — the result stays freely editable afterward. */
+  applyNameOnlyPreset(side: LayoutSide, effectiveSide: SideLayoutConfig): void;
 }
 
 /** Builds a set of update helpers bound to a specific card + onChange. Each
@@ -128,6 +171,61 @@ export function createCardUpdater(
     onChange({ ...card, vitalBoxes: next });
   }
 
+  function setLayoutOverrideSide(
+    side: LayoutSide,
+    value: SideLayoutConfig | undefined,
+  ) {
+    const next = { ...card.layoutOverride, [side]: value };
+    if (value === undefined) delete next[side];
+    const layoutOverride = next.player || next.dm ? next : undefined;
+    onChange({ ...card, layoutOverride });
+  }
+
+  function applyNameOnlyPreset(
+    side: LayoutSide,
+    effectiveSide: SideLayoutConfig,
+  ) {
+    if (side === "dm") {
+      const nameScrollDm =
+        card.toggles.nameScrollDm === "none" ? "scroll" : card.toggles.nameScrollDm;
+      const heightIn = nameOnlyHeightIn("dm", effectiveSide.widthIn, nameScrollDm);
+      onChange({
+        ...card,
+        layoutOverride: {
+          ...card.layoutOverride,
+          dm: { ...effectiveSide, visible: true, preset: "custom", heightIn },
+        },
+        damageDisplayMode: "none",
+        toggles: {
+          ...card.toggles,
+          vitals: "none",
+          abilityScores: "none",
+          notesDisplayMode: "none",
+          nameScrollDm,
+        },
+      });
+    } else {
+      const nameScrollPlayer =
+        card.toggles.nameScrollPlayer === "none"
+          ? "dragon"
+          : card.toggles.nameScrollPlayer;
+      const heightIn = nameOnlyHeightIn(
+        "player",
+        effectiveSide.widthIn,
+        nameScrollPlayer,
+      );
+      onChange({
+        ...card,
+        layoutOverride: {
+          ...card.layoutOverride,
+          player: { ...effectiveSide, visible: true, preset: "custom", heightIn },
+        },
+        artMode: "none",
+        toggles: { ...card.toggles, nameScrollPlayer },
+      });
+    }
+  }
+
   return {
     set,
     patch,
@@ -140,6 +238,8 @@ export function createCardUpdater(
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
+    setLayoutOverrideSide,
+    applyNameOnlyPreset,
   };
 }
 

@@ -1,3 +1,5 @@
+import type { LayoutOverride } from "@/lib/cardLayout";
+
 export type LayoutPreset = "tactician" | "minimalist";
 
 export type ArtMode = "class" | "upload" | "link" | "none";
@@ -243,6 +245,9 @@ export interface CardData {
   // Layout
   preset: LayoutPreset;
   toggles: CardToggles;
+  /** Per-side deviations from the party's shared size/height/visibility
+   *  defaults — undefined (or a missing side) means "inherit". */
+  layoutOverride?: LayoutOverride;
 }
 
 // The default vitals row — Max HP / AC / Spell Save DC / Passive Perception /

@@ -18,6 +18,11 @@ import {
   useGroupedEditMenu,
 } from "@/components/InlineEdit";
 import { nextResistanceState } from "@/lib/cardUpdate";
+import {
+  PLAYER_BORDER_MARGIN_HEIGHT,
+  PLAYER_BORDER_MARGIN_WIDTH,
+  scrollHeightFor,
+} from "@/lib/cardLayout";
 import { useFlipAnimation } from "@/components/useFlipAnimation";
 import {
   ABILITY_KEYS,
@@ -89,24 +94,14 @@ function nameInputTop(variant: ScrollStyle): string {
   return variant === "scroll" || variant === "none" ? "50%" : "63%";
 }
 
-// Card face: 2.5in × 3.5in = 240 × 336 px. Minus 1px borders and 8px padding.
+// Reference card face size — 2.5in × 3.5in = 240 × 336 px — used as the
+// default when a face isn't given an explicit width/height. Every
+// width-derived measurement below (content area, scroll banner width,
+// vitals grid) is expressed as a fixed inset from the actual `width` prop
+// rather than a proportional scale, preserving the margins this size was
+// tuned at as the card grows or shrinks.
 export const FACE_W = 240;
 export const FACE_H = 336;
-const CONTENT_W = FACE_W - 2 - 16;
-
-// Each scroll variant crops its own source box at its own aspect ratio
-// (see SCROLL_STYLES) — a banner rendered at width `w` needs its own
-// height to match, or the SVG (preserveAspectRatio="none") stretches to
-// whatever box it's given instead of scaling uniformly.
-function scrollHeightFor(variant: Exclude<ScrollStyle, "none">, w: number) {
-  const box = SCROLL_STYLES[variant].box;
-  return Math.round((box.h / box.w) * w);
-}
-const SCROLL_W = 200; // player face banner width
-const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
-// Inset of the player-side border from the card edge — even on all sides.
-const PLAYER_BORDER_MARGIN_WIDTH = 4;
-const PLAYER_BORDER_MARGIN_HEIGHT = 6;
 
 // Right-click a vital box to change its frame shape, mirroring the other
 // section-level display-mode menus.
@@ -261,8 +256,17 @@ function VitalBox({
   );
 }
 
-export function DmFace({ card }: { card: CardData }) {
+interface DmFaceProps {
+  card: CardData;
+  /** Card face width/height, px. Default to the reference poker size. */
+  width?: number;
+  height?: number;
+}
+
+export function DmFace({ card, width = FACE_W, height = FACE_H }: DmFaceProps) {
   const { editable, update } = useCardEdit();
+  const CONTENT_W = width - 2 - 16;
+  const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
   const S = { shW: 52, shH: 60, gap: 2 };
@@ -298,8 +302,20 @@ export function DmFace({ card }: { card: CardData }) {
   // rendering), which is exactly the kind of instability that showed up
   // as vitals badges' values shifting on edit while whole-pixel-sized
   // Ability Scores never did.
-  const vitalGap = Math.round((CONTENT_W - vitalMinW * 3) / 2 / 2);
-  const vitalW = Math.round((CONTENT_W - vitalGap * 2) / 3);
+  //
+  // vitalMinW is a fixed target independent of the card's own width, so a
+  // narrower-than-reference side (e.g. the Bridge preset) can ask for more
+  // room than CONTENT_W actually has — the "ideal" gap above goes
+  // negative, and without a floor, deriving vitalW from that negative gap
+  // would inflate it past CONTENT_W instead of shrinking, overflowing the
+  // card's own border. Clamping the gap to a small positive floor first
+  // means vitalW is always solved to actually fit CONTENT_W, gracefully
+  // compressing the boxes below their "ideal" size on narrow cards rather
+  // than breaking out of it.
+  const MIN_VITAL_GAP = 2;
+  const idealVitalGap = Math.round((CONTENT_W - vitalMinW * 3) / 2 / 2);
+  const vitalGap = Math.max(MIN_VITAL_GAP, idealVitalGap);
+  const vitalW = Math.max(1, Math.round((CONTENT_W - vitalGap * 2) / 3));
   // The value's own available width doesn't need to track the box's full
   // (now wider) width — it only needs to be wide enough that a 3-digit
   // value (e.g. a high max HP) still renders at the full cap size;
@@ -308,7 +324,7 @@ export function DmFace({ card }: { card: CardData }) {
   // maxW*1.5/text.length = cap for text.length=3 gives maxW = cap*2;
   // whatever's left of vitalW beyond that becomes side padding instead.
   const vitalMaxValueSize = 26; // matches VitalsFrame's own default cap
-  const vitalSidePadding = Math.round((vitalW - vitalMaxValueSize * 2) / 2);
+  const vitalSidePadding = Math.max(0, Math.round((vitalW - vitalMaxValueSize * 2) / 2));
 
   const statGap = 4;
 
@@ -544,7 +560,13 @@ export function DmFace({ card }: { card: CardData }) {
   return (
     <div
       className="card-face"
-      style={{ display: "flex", flexDirection: "column", padding: 8 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        padding: 8,
+        width,
+        height,
+      }}
     >
       <div
         style={{
@@ -608,30 +630,36 @@ interface PlayerFaceProps {
    *  up back-to-back. Preview contexts that show both faces side by
    *  side want it right-side up instead. */
   rotated?: boolean;
+  /** Card face width/height, px. Default to the reference poker size. */
+  width?: number;
+  height?: number;
 }
 
-export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
+export function PlayerFace({
+  card,
+  rotated = true,
+  width = FACE_W,
+  height = FACE_H,
+}: PlayerFaceProps) {
   const { editable, update } = useCardEdit();
-  const classKey = Object.keys(CLASS_LOGO_MAP).find(
-    (k) => k.toLowerCase() === card.characterClass.trim().toLowerCase(),
-  );
-  const Logo =
-    card.artMode === "class" && classKey ? CLASS_LOGO_MAP[classKey] : undefined;
-  const useCustomArt =
-    (card.artMode === "upload" || card.artMode === "link") &&
-    !!card.portraitUrl;
   const playerScrollVariant = card.toggles.nameScrollPlayer;
   const showNameOnPlayer = playerScrollVariant !== "none";
   const PlayerNameScroll =
     playerScrollVariant === "none"
       ? undefined
       : SCROLL_STYLES[playerScrollVariant].Component;
+  const SCROLL_W = width - 40;
 
   // Right-click the player-side scroll to switch its style (mirrors the
   // sidebar's "Player Scroll" toggle).
   const nameMenu = useEditMenu(SCROLL_MENU, playerScrollVariant, (v) =>
     update?.setToggle("nameScrollPlayer", v),
   );
+  const scrollH =
+    playerScrollVariant !== "none"
+      ? scrollHeightFor(playerScrollVariant, SCROLL_W)
+      : 0;
+
   // Right-click the art to switch art style (mirrors the sidebar's "Card
   // Art" toggle). "Class Art" carries a second-level submenu for picking the
   // specific class, which sets the mode and class together.
@@ -654,12 +682,17 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
     (v) => update?.set("artMode", v),
   );
 
-  const contentW = FACE_W - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2;
-  const contentH = FACE_H - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2;
-  const scrollH =
-    playerScrollVariant !== "none"
-      ? scrollHeightFor(playerScrollVariant, SCROLL_W)
-      : 0;
+  const classKey = Object.keys(CLASS_LOGO_MAP).find(
+    (k) => k.toLowerCase() === card.characterClass.trim().toLowerCase(),
+  );
+  const Logo =
+    card.artMode === "class" && classKey ? CLASS_LOGO_MAP[classKey] : undefined;
+  const useCustomArt =
+    (card.artMode === "upload" || card.artMode === "link") &&
+    !!card.portraitUrl;
+
+  const contentW = width - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2;
+  const contentH = height - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2;
   const ART_BOTTOM_MARGIN = 8;
 
   return (
@@ -670,6 +703,8 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        width,
+        height,
       }}
     >
       <div
