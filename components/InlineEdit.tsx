@@ -45,6 +45,35 @@ interface EditableValueProps {
   overlay?: React.ReactNode;
   /** Extra style for the wrapper (e.g. height:100% so notes fills its box). */
   wrapperStyle?: React.CSSProperties;
+  /** When present, the frame's own label caption becomes directly editable
+   *  too (a second, independent binding — currently just vital boxes). */
+  labelCommit?: (raw: string) => void;
+  /** Accessible name for the label field; defaults to `${label} label`. */
+  labelFieldLabel?: string;
+  /** Keeps the whole-frame highlight on even when the mouse isn't over it —
+   *  for a frame whose own right-click menu is currently open (see
+   *  useEditMenu's `isOpen`), so the highlight doesn't just vanish when the
+   *  cursor moves onto the menu that frame itself opened. */
+  forceHighlight?: boolean;
+  /** When set, scrolling anywhere over the frame nudges the value by this
+   *  much per wheel notch — e.g. 1 for vitals and ability score modifiers.
+   *  Omit for fields where scroll-to-adjust wouldn't make sense (character
+   *  name, notes). A leading +/- in the CURRENT text (not just any field)
+   *  decides the format: "+0"/"-1" step and stay signed (ability scores),
+   *  a plain "10" steps and stays plain (vitals). */
+  wheelStep?: number;
+}
+
+/** +1 on "+0" → "+1"; +1 on "-1" → "+0" (D&D never prints "-0"); +1 on the
+ *  plain, unsigned "10" a vitals badge uses → "11", no sign added. Whether
+ *  to keep a sign is read off the CURRENT text so one wheel handler serves
+ *  both without the caller having to say which kind of field it's touching. */
+function stepNumericText(text: string, delta: number): string {
+  const signed = /^\s*[+-]/.test(text);
+  const parsed = parseInt(text, 10);
+  const next = (Number.isNaN(parsed) ? 0 : parsed) + delta;
+  if (!signed) return String(next);
+  return next >= 0 ? `+${next}` : String(next);
 }
 
 export function EditableValue({
@@ -54,16 +83,58 @@ export function EditableValue({
   children,
   overlay,
   wrapperStyle,
+  labelCommit,
+  labelFieldLabel,
+  wheelStep,
+  forceHighlight,
 }: EditableValueProps) {
   const { editable } = useCardEdit();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // A native (non-passive) listener, not React's onWheel: React attaches
+  // wheel handlers passively by default, so e.preventDefault() there is
+  // silently ignored — the page would scroll along with every nudge.
+  useEffect(() => {
+    if (!wheelStep) return;
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // `[contenteditable]` alone could hit a vital box's (also editable)
+      // caption instead — data-field-slot picks the value specifically.
+      const target = el.querySelector<HTMLElement>(
+        '[data-field-slot="value"]',
+      );
+      if (!target) return;
+      const next = stepNumericText(
+        target.textContent ?? "",
+        e.deltaY < 0 ? wheelStep : -wheelStep,
+      );
+      commit(next);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [wheelStep, commit]);
+
   if (!editable) return <>{children}</>;
 
   // The wrapper carries the whole-frame hover/focus highlight (.edit-frame)
   // and hosts any overlay (the proficiency dot). It shrink-wraps the frame,
   // so layout is unchanged.
   return (
-    <div className="edit-frame" style={{ position: "relative", ...wrapperStyle }}>
-      <FieldEditProvider binding={{ commit, label, multiline }}>
+    <div
+      ref={wrapperRef}
+      className={forceHighlight ? "edit-frame menu-open" : "edit-frame"}
+      style={{ position: "relative", ...wrapperStyle }}
+    >
+      <FieldEditProvider
+        bindings={{
+          value: { commit, label, multiline },
+          label: labelCommit
+            ? { commit: labelCommit, label: labelFieldLabel ?? `${label} label` }
+            : undefined,
+        }}
+      >
         {children}
       </FieldEditProvider>
       {overlay}
@@ -246,6 +317,17 @@ export interface EditMenuOption<T extends string> {
   submenu?: EditSubOption[];
 }
 
+/** One independent radio-choice group within a menu — its own heading (when
+ *  more than one group shares a menu) and its own value/onSelect, separate
+ *  from any other group in the same popup. */
+export interface EditMenuGroup<T extends string = string> {
+  /** Omit for a single-group menu (the common case) — no heading is drawn. */
+  heading?: string;
+  options: readonly EditMenuOption<T>[];
+  value: T;
+  onSelect: (value: T) => void;
+}
+
 /** Wire a section for a right-click display-mode menu. Call unconditionally
  *  (it's a hook); spread the returned `onContextMenu` on the section element
  *  and render `menu` anywhere inside it (it portals out). Inert when not
@@ -254,11 +336,43 @@ export function useEditMenu<T extends string>(
   options: readonly EditMenuOption<T>[],
   value: T,
   onSelect: (value: T) => void,
-): { onContextMenu?: React.MouseEventHandler; menu: React.ReactNode } {
+): {
+  onContextMenu?: React.MouseEventHandler;
+  menu: React.ReactNode;
+  isOpen: boolean;
+  /** "" when not editable/open — append via a template string/join so a
+   *  static className doesn't need its own conditional. */
+  menuOpenClass: string;
+} {
+  // Widened to the shared (string-typed) group shape used by the renderer
+  // below — safe here since this single group's own T is exactly what
+  // `options`/`value`/`onSelect` already agree on.
+  return useGroupedEditMenu([
+    { options, value, onSelect } as unknown as EditMenuGroup<string>,
+  ]);
+}
+
+/** Same as useEditMenu, but for a single right-click popup that covers more
+ *  than one independent setting at once — e.g. a per-box picker that also
+ *  exposes a whole-section setting. Each group gets its own heading (when
+ *  given) and keeps its own radio state; picking an option in one group
+ *  never touches another group's value. Groups may cover unrelated enums
+ *  (a frame shape here, a display mode there), so each group's own value
+ *  type is only checked against its own `options`/`onSelect`, not the others. */
+export function useGroupedEditMenu(
+  groups: readonly EditMenuGroup<string>[],
+): {
+  onContextMenu?: React.MouseEventHandler;
+  menu: React.ReactNode;
+  isOpen: boolean;
+  menuOpenClass: string;
+} {
   const { editable } = useCardEdit();
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
-  if (!editable) return { onContextMenu: undefined, menu: null };
+  if (!editable) {
+    return { onContextMenu: undefined, menu: null, isOpen: false, menuOpenClass: "" };
+  }
 
   const onContextMenu: React.MouseEventHandler = (e) => {
     e.preventDefault();
@@ -266,39 +380,26 @@ export function useEditMenu<T extends string>(
     setPos({ x: e.clientX, y: e.clientY });
   };
 
-  const menu =
-    pos != null ? (
-      <EditContextMenu
-        pos={pos}
-        options={options}
-        value={value}
-        onSelect={(v) => {
-          onSelect(v);
-          setPos(null);
-        }}
-        onClose={() => setPos(null)}
-      />
-    ) : null;
+  const isOpen = pos != null;
+  const menu = isOpen ? (
+    <EditContextMenu pos={pos} groups={groups} onClose={() => setPos(null)} />
+  ) : null;
 
-  return { onContextMenu, menu };
+  return { onContextMenu, menu, isOpen, menuOpenClass: isOpen ? " menu-open" : "" };
 }
 
 function EditContextMenu<T extends string>({
   pos,
-  options,
-  value,
-  onSelect,
+  groups,
   onClose,
 }: {
   pos: { x: number; y: number };
-  options: readonly EditMenuOption<T>[];
-  value: T;
-  onSelect: (value: T) => void;
+  groups: readonly EditMenuGroup<T>[];
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState(pos);
-  const [openSub, setOpenSub] = useState<number | null>(null);
+  const [openSub, setOpenSub] = useState<string | null>(null);
 
   // Nudge the menu back inside the viewport once its size is known.
   useLayoutEffect(() => {
@@ -324,140 +425,195 @@ function EditContextMenu<T extends string>({
       if (el && e.target instanceof Node && el.contains(e.target)) return;
       onClose();
     };
+    const isOutside = (e: Event) => {
+      const el = ref.current;
+      return !(el && e.target instanceof Node && el.contains(e.target));
+    };
+    // A plain left click outside just dismisses. Both listen in the capture
+    // phase, ahead of any target's own bubble-phase handler.
+    const onMouseDown = (e: MouseEvent) => {
+      if (isOutside(e)) onClose();
+    };
+    // A right-click outside is NOT just a dismiss — it's very likely opening
+    // a *different* frame/section's own menu in the same gesture. Closing
+    // here (capture, so it runs before that target's own onContextMenu) and
+    // leaving the event alone — no preventDefault/stopPropagation — lets it
+    // carry on to whatever's actually under the cursor. A full-screen
+    // backdrop would swallow the click before it ever got there, which is
+    // why right-clicking a second frame used to just re-open this same menu
+    // at the new spot instead of that frame's own.
+    const onContextMenu = (e: MouseEvent) => {
+      if (isOutside(e)) onClose();
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("contextmenu", onContextMenu, true);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("contextmenu", onContextMenu, true);
     };
   }, [onClose]);
 
   if (typeof document === "undefined") return null;
 
   return createPortal(
+    // No full-screen backdrop — one would sit on top of and swallow clicks
+    // meant for whatever's underneath, which is exactly what broke
+    // right-click-to-retarget (see the window listeners above).
     <div
-      // Full-screen backdrop: click or right-click anywhere dismisses.
-      onClick={onClose}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onClose();
+      ref={ref}
+      role="menu"
+      style={{
+        position: "fixed",
+        left: place.x,
+        top: place.y,
+        minWidth: 132,
+        background: "var(--surface-raised)",
+        color: "var(--text-primary)",
+        border: "1px solid var(--border)",
+        borderRadius: 6,
+        boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+        fontFamily: "var(--font-ui)",
+        padding: 4,
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        zIndex: 1001,
       }}
-      style={{ position: "fixed", inset: 0, zIndex: 1000 }}
     >
-      <div
-        ref={ref}
-        role="menu"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: "fixed",
-          left: place.x,
-          top: place.y,
-          minWidth: 132,
-          background: "var(--surface-raised)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--border)",
-          borderRadius: 6,
-          boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-          fontFamily: "var(--font-ui)",
-          padding: 4,
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-          zIndex: 1001,
-        }}
-      >
-        {options.map((opt, i) => {
-          const selected = opt.value === value;
-          const hasSub = !!opt.submenu?.length;
-          return (
-            <div
-              key={opt.value}
-              style={{ position: "relative" }}
-              onMouseEnter={() => setOpenSub(hasSub ? i : null)}
-            >
-              <button
-                type="button"
-                role="menuitemradio"
-                aria-checked={selected}
-                aria-haspopup={hasSub || undefined}
-                aria-expanded={hasSub ? openSub === i : undefined}
-                className="edit-menu-item"
-                onClick={() => onSelect(opt.value)}
+      {groups.map((group, gi) => (
+          <div
+            key={gi}
+            style={
+              // A hairline divider between groups (not before the first) —
+              // the heading alone is enough to tell them apart, but with two
+              // radio-style lists back to back a boundary keeps a fast
+              // right-click-and-pick from mistaking one group's rows for
+              // the other's.
+              gi > 0
+                ? {
+                    borderTop: "1px solid var(--border)",
+                    marginTop: 2,
+                    paddingTop: 2,
+                  }
+                : undefined
+            }
+          >
+            {group.heading && (
+              <div
                 style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  textAlign: "left",
-                  fontSize: 12,
-                  padding: "5px 10px",
-                  borderRadius: 4,
-                  border: "none",
-                  cursor: "pointer",
-                  background: selected ? "var(--accent)" : "transparent",
-                  color: selected ? "#fff" : "var(--text-primary)",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: "var(--text-muted)",
+                  padding: "4px 10px 2px",
                 }}
               >
-                <span>{opt.label}</span>
-                {hasSub && <span aria-hidden>▸</span>}
-              </button>
-              {hasSub && openSub === i && (
+                {group.heading}
+              </div>
+            )}
+            {group.options.map((opt, i) => {
+              const selected = opt.value === group.value;
+              const hasSub = !!opt.submenu?.length;
+              const subKey = `${gi}-${i}`;
+              return (
                 <div
-                  role="menu"
-                  style={{
-                    position: "absolute",
-                    left: "100%",
-                    top: -5,
-                    maxHeight: 220,
-                    overflowY: "auto",
-                    minWidth: 132,
-                    background: "var(--surface-raised)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 6,
-                    boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-                    padding: 4,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    zIndex: 1002,
-                  }}
+                  key={opt.value}
+                  style={{ position: "relative" }}
+                  onMouseEnter={() => setOpenSub(hasSub ? subKey : null)}
                 >
-                  {opt.submenu!.map((sub) => (
-                    <button
-                      key={sub.label}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={!!sub.selected}
-                      className="edit-menu-item"
-                      onClick={() => {
-                        sub.onSelect();
-                        onClose();
-                      }}
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={selected}
+                    aria-haspopup={hasSub || undefined}
+                    aria-expanded={hasSub ? openSub === subKey : undefined}
+                    className="edit-menu-item"
+                    onClick={() => {
+                      group.onSelect(opt.value);
+                      onClose();
+                    }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      textAlign: "left",
+                      fontSize: 12,
+                      padding: "5px 10px",
+                      borderRadius: 4,
+                      border: "none",
+                      cursor: "pointer",
+                      background: selected ? "var(--accent)" : "transparent",
+                      color: selected ? "#fff" : "var(--text-primary)",
+                    }}
+                  >
+                    <span>{opt.label}</span>
+                    {hasSub && <span aria-hidden>▸</span>}
+                  </button>
+                  {hasSub && openSub === subKey && (
+                    <div
+                      role="menu"
                       style={{
-                        textAlign: "left",
-                        fontSize: 12,
-                        padding: "5px 10px",
-                        borderRadius: 4,
-                        border: "none",
-                        cursor: "pointer",
-                        background: sub.selected
-                          ? "var(--accent)"
-                          : "transparent",
-                        color: sub.selected ? "#fff" : "var(--text-primary)",
+                        position: "absolute",
+                        left: "100%",
+                        top: -5,
+                        maxHeight: 220,
+                        overflowY: "auto",
+                        minWidth: 132,
+                        background: "var(--surface-raised)",
+                        color: "var(--text-primary)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 6,
+                        boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+                        padding: 4,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                        zIndex: 1002,
                       }}
                     >
-                      {sub.label}
-                    </button>
-                  ))}
+                      {opt.submenu!.map((sub) => (
+                        <button
+                          key={sub.label}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={!!sub.selected}
+                          className="edit-menu-item"
+                          onClick={() => {
+                            sub.onSelect();
+                            onClose();
+                          }}
+                          style={{
+                            textAlign: "left",
+                            fontSize: 12,
+                            padding: "5px 10px",
+                            borderRadius: 4,
+                            border: "none",
+                            cursor: "pointer",
+                            background: sub.selected
+                              ? "var(--accent)"
+                              : "transparent",
+                            color: sub.selected ? "#fff" : "var(--text-primary)",
+                          }}
+                        >
+                          {sub.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>,
+              );
+            })}
+          </div>
+        ))}
+      </div>,
     document.body,
   );
 }
+

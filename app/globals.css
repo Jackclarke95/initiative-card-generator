@@ -93,7 +93,8 @@ body {
     background-color 120ms ease,
     outline-color 120ms ease;
 }
-.edit-section:hover {
+.edit-section:hover,
+.edit-section.menu-open {
   background-color: color-mix(in srgb, var(--accent) 9%, transparent);
   outline-color: color-mix(in srgb, var(--accent) 55%, transparent);
   cursor: pointer;
@@ -114,15 +115,46 @@ body {
     outline-color 120ms ease;
 }
 .edit-frame:hover,
-.edit-frame:focus-within {
+.edit-frame:focus-within,
+.edit-frame.menu-open {
   background-color: color-mix(in srgb, var(--accent) 10%, transparent);
   outline-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 /* On the ability box the proficiency dot takes precedence: while it's
-   hovered, suppress the frame highlight so only the dot lights up. */
-.edit-frame:has(.edit-hit:hover) {
+   hovered, suppress the frame highlight so only the dot lights up. Doesn't
+   apply to .menu-open — the frame's own right-click menu is open, so it
+   should stay highlighted even if the dot also happens to be hovered. */
+.edit-frame:has(.edit-hit:hover):not(.menu-open) {
   background-color: transparent;
   outline-color: transparent;
+}
+
+/* Vital box drag handle (components/CardFaces.tsx) — sits centered above the
+   frame, invisible until the frame itself is hovered, so reordering doesn't
+   require a permanently-visible control cluttering the card art. */
+.vital-drag-handle {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  opacity: 0;
+  cursor: grab;
+  z-index: 3;
+  transition: opacity 120ms ease;
+}
+.edit-frame:hover .vital-drag-handle {
+  opacity: 1;
 }
 
 /* Rows in the right-click display-mode menu (components/InlineEdit.tsx). The

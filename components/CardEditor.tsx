@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/DamageTypeBadge";
 import SegmentedToggle from "@/components/SegmentedToggle";
 import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
+import { useFlipAnimation } from "@/components/useFlipAnimation";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -20,6 +21,8 @@ import {
   NOTES_DISPLAY_MODES,
   SCROLL_STYLE_LABELS,
   SCROLL_STYLE_MODES,
+  VITAL_FRAME_LABELS,
+  VITAL_FRAME_SHAPES,
   VITALS_MODE_LABELS,
   VITALS_MODES,
   type CardData,
@@ -103,11 +106,53 @@ function TriStateResistanceBox({ state }: { state: ResistanceState }) {
 
 export default function CardEditor({ card, onChange }: CardEditorProps) {
   const [draggingArt, setDraggingArt] = useState(false);
+  const [draggedVitalId, setDraggedVitalId] = useState<string | null>(null);
+  // Index (0..vitalBoxes.length) the dragged box would land at if dropped
+  // right now — i.e. "insert before this position" — drawn as a line
+  // between the two rows it'd sit between. Recomputed from the pointer's Y
+  // position within whichever row it's currently over.
+  const [vitalInsertAt, setVitalInsertAt] = useState<number | null>(null);
+  const vitalListRef = useFlipAnimation<HTMLDivElement>();
+  // dragenter/dragleave bubble from every nested row (and the insertion-line
+  // divs), so a plain "did we leave?" boolean would clear the line while the
+  // pointer is still over the list, just crossing from one child to
+  // another — see CardFaces.tsx's VitalBox for the same fix. Only once every
+  // nested enter has been balanced by a leave has the pointer actually left
+  // the list for good (wherever the browser would show "not-allowed"), which
+  // is when the line should disappear instead of sitting on stale.
+  const vitalDragDepth = useRef(0);
 
-  const { set, setNum, setStat, setResistance, setToggle } = createCardUpdater(
-    card,
-    onChange,
-  );
+  function commitVitalMove() {
+    if (draggedVitalId && vitalInsertAt !== null) {
+      const fromIndex = card.vitalBoxes.findIndex(
+        (box) => box.id === draggedVitalId,
+      );
+      // moveVitalBox's `toIndex` applies after the dragged box is already
+      // removed from the list — dropping it after its own original spot
+      // shifts every following index down by one, so account for that here
+      // rather than pushing that adjustment into moveVitalBox itself.
+      const toIndex =
+        fromIndex !== -1 && fromIndex < vitalInsertAt
+          ? vitalInsertAt - 1
+          : vitalInsertAt;
+      moveVitalBox(draggedVitalId, toIndex);
+    }
+    vitalDragDepth.current = 0;
+    setDraggedVitalId(null);
+    setVitalInsertAt(null);
+  }
+
+  const {
+    set,
+    setStat,
+    setResistance,
+    setToggle,
+    setVitalBox,
+    setVitalBoxNum,
+    addVitalBox,
+    removeVitalBox,
+    moveVitalBox,
+  } = createCardUpdater(card, onChange);
 
   function handleArtUpload(file: File | undefined) {
     if (!file) return;
@@ -237,58 +282,125 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
       >
         Vitals
       </SectionHeading>
-      <div className="grid grid-cols-3 gap-2">
-        <Field label="Max HP">
-          <input
-            className={numClass}
-            type="number"
-            value={card.maxHp ?? ""}
-            onChange={(e) => setNum("maxHp", e.target.value)}
-          />
-        </Field>
-        <Field label="AC">
-          <input
-            className={numClass}
-            type="number"
-            value={card.ac ?? ""}
-            onChange={(e) => setNum("ac", e.target.value)}
-          />
-        </Field>
-        <Field label="Save DC">
-          <input
-            className={numClass}
-            type="number"
-            value={card.spellSaveDC ?? ""}
-            onChange={(e) => setNum("spellSaveDC", e.target.value)}
-          />
-        </Field>
-        <Field label="Perception">
-          <input
-            className={numClass}
-            type="number"
-            value={card.passivePerception ?? ""}
-            onChange={(e) => setNum("passivePerception", e.target.value)}
-          />
-        </Field>
-        <Field label="Speed (ft)">
-          <input
-            className={numClass}
-            type="number"
-            min={0}
-            max={120}
-            step={5}
-            value={card.speed ?? ""}
-            onChange={(e) => setNum("speed", e.target.value)}
-          />
-        </Field>
-        <Field label="Insight">
-          <input
-            className={numClass}
-            type="number"
-            value={card.passiveInsight ?? ""}
-            onChange={(e) => setNum("passiveInsight", e.target.value)}
-          />
-        </Field>
+      <div
+        ref={vitalListRef}
+        className="flex flex-col gap-1"
+        // Catch-all: the gap between rows (and the insertion-line divs
+        // living in it) belongs to no row's own onDragOver, so without this
+        // the browser shows its default "not-allowed" cursor there even
+        // though dropping in that gap is exactly what places the line.
+        onDragOver={(e) => e.preventDefault()}
+        onDragEnter={() => {
+          vitalDragDepth.current += 1;
+        }}
+        onDragLeave={() => {
+          vitalDragDepth.current -= 1;
+          if (vitalDragDepth.current <= 0) {
+            vitalDragDepth.current = 0;
+            setVitalInsertAt(null);
+          }
+        }}
+      >
+        {card.vitalBoxes.map((box, i) => (
+          <div key={box.id} data-flip-id={box.id}>
+            <div
+              className="rounded-full bg-[var(--accent)]"
+              style={{
+                height: 2,
+                margin: "3px 0",
+                visibility: vitalInsertAt === i ? "visible" : "hidden",
+              }}
+            />
+            <div
+              className="flex items-center gap-1.5"
+              style={{ opacity: draggedVitalId === box.id ? 0.4 : 1 }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const before = e.clientY - rect.top < rect.height / 2;
+                setVitalInsertAt(before ? i : i + 1);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                commitVitalMove();
+              }}
+            >
+              <span
+                className="cursor-grab select-none text-[var(--text-muted)] px-0.5"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  setDraggedVitalId(box.id);
+                }}
+                onDragEnd={() => {
+                  // Fires after onDrop's commit in a real drop (a no-op by
+                  // then) as well as after a drop outside any row, where it's
+                  // the only thing that clears the leftover drag state.
+                  vitalDragDepth.current = 0;
+                  setDraggedVitalId(null);
+                  setVitalInsertAt(null);
+                }}
+                aria-hidden
+              >
+                ⠿
+              </span>
+              <input
+                className={inputClass + " flex-[2]"}
+                placeholder="Label"
+                value={box.label}
+                onChange={(e) =>
+                  setVitalBox(box.id, { label: e.target.value })
+                }
+              />
+              <input
+                className={numClass + " flex-1"}
+                type="number"
+                placeholder="Value"
+                value={box.value ?? ""}
+                onChange={(e) => setVitalBoxNum(box.id, e.target.value)}
+              />
+              <select
+                className={inputClass + " flex-1"}
+                value={box.frame}
+                onChange={(e) =>
+                  setVitalBox(box.id, {
+                    frame: e.target.value as (typeof VITAL_FRAME_SHAPES)[number],
+                  })
+                }
+              >
+                {VITAL_FRAME_SHAPES.map((shape) => (
+                  <option key={shape} value={shape}>
+                    {VITAL_FRAME_LABELS[shape]}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                aria-label="Remove vital box"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1"
+                onClick={() => removeVitalBox(box.id)}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+        <div
+          className="rounded-full bg-[var(--accent)]"
+          style={{
+            height: 2,
+            margin: "3px 0",
+            visibility:
+              vitalInsertAt === card.vitalBoxes.length ? "visible" : "hidden",
+          }}
+        />
+        <button
+          type="button"
+          className={inputClass + " mt-1 text-center normal-case"}
+          onClick={addVitalBox}
+        >
+          + Add Vital Box
+        </button>
       </div>
 
       {/* Ability scores */}

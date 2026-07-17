@@ -12,6 +12,7 @@ import type {
   CardToggles,
   DamageTypeKey,
   ResistanceState,
+  VitalBoxConfig,
 } from "@/types/card";
 
 export interface CardUpdater {
@@ -23,6 +24,13 @@ export interface CardUpdater {
   setStat(key: AbilityKey, patch: Partial<AbilityStat>): void;
   setResistance(key: DamageTypeKey, state: ResistanceState): void;
   setToggle<K extends keyof CardToggles>(key: K, value: CardToggles[K]): void;
+  setVitalBox(id: string, patch: Partial<VitalBoxConfig>): void;
+  /** "" clears the box's value to undefined; otherwise parseInt (NaN → undefined). */
+  setVitalBoxNum(id: string, raw: string): void;
+  addVitalBox(): void;
+  removeVitalBox(id: string): void;
+  /** Moves the box with `id` so it sits at `toIndex` in the list. */
+  moveVitalBox(id: string, toIndex: number): void;
 }
 
 /** Builds a set of update helpers bound to a specific card + onChange. Each
@@ -71,7 +79,68 @@ export function createCardUpdater(
     onChange({ ...card, toggles: { ...card.toggles, [key]: value } });
   }
 
-  return { set, patch, setNum, setStat, setResistance, setToggle };
+  function setVitalBox(id: string, patch: Partial<VitalBoxConfig>) {
+    onChange({
+      ...card,
+      vitalBoxes: card.vitalBoxes.map((box) =>
+        box.id === id ? { ...box, ...patch } : box,
+      ),
+    });
+  }
+
+  function setVitalBoxNum(id: string, raw: string) {
+    if (raw === "") {
+      setVitalBox(id, { value: undefined });
+      return;
+    }
+    const parsed = parseInt(raw, 10);
+    setVitalBox(id, { value: Number.isNaN(parsed) ? undefined : parsed });
+  }
+
+  function addVitalBox() {
+    onChange({
+      ...card,
+      vitalBoxes: [
+        ...card.vitalBoxes,
+        { id: crypto.randomUUID(), label: "New", frame: "shield" },
+      ],
+    });
+  }
+
+  function removeVitalBox(id: string) {
+    onChange({
+      ...card,
+      vitalBoxes: card.vitalBoxes.filter((box) => box.id !== id),
+    });
+  }
+
+  function moveVitalBox(id: string, toIndex: number) {
+    const boxes = card.vitalBoxes;
+    const fromIndex = boxes.findIndex((box) => box.id === id);
+    if (fromIndex === -1 || fromIndex === toIndex) return;
+    const next = boxes.slice();
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(
+      Math.max(0, Math.min(toIndex, next.length)),
+      0,
+      moved,
+    );
+    onChange({ ...card, vitalBoxes: next });
+  }
+
+  return {
+    set,
+    patch,
+    setNum,
+    setStat,
+    setResistance,
+    setToggle,
+    setVitalBox,
+    setVitalBoxNum,
+    addVitalBox,
+    removeVitalBox,
+    moveVitalBox,
+  };
 }
 
 export const RESISTANCE_CYCLE: ResistanceState[] = [

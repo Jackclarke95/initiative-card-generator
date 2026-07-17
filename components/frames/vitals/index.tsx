@@ -1,9 +1,9 @@
-// Shield/Heart/SaveBox/Chevron/Hexagon/Orb — each just forwards its own
-// shape data to VitalsFrame, plus whatever layout knobs the caller passes
-// through unchanged. None of them hardcodes tuning for its own shape —
-// e.g. the Heart's narrower base doesn't get special-cased padding here;
-// if a particular value/label overflows a particular shape, the caller
-// renders that instance with its own `labelInset`/`sidePadding`/
+// Shield/Heart/Book/Chevron/Hexagon/Orb/Circle/Square — each just forwards
+// its own shape data to VitalsFrame, plus whatever layout knobs the caller
+// passes through unchanged. None of them hardcodes tuning for its own
+// shape — e.g. the Heart's narrower base doesn't get special-cased padding
+// here; if a particular value/label overflows a particular shape, the
+// caller renders that instance with its own `labelInset`/`sidePadding`/
 // `maxValueSize` override, same as it could for any other shape.
 
 import { VitalsFrame } from "@/components/frames/vitals/VitalsFrame";
@@ -16,20 +16,24 @@ import {
   HEART_PATH,
   HEART_VIEW_BOX,
 } from "@/components/frames/vitals/HeartArt";
-import {
-  SAVE_BOX_PATH,
-  SAVE_BOX_VIEW_BOX,
-} from "@/components/frames/vitals/SaveBoxArt";
+import { BOOK_PATH, BOOK_VIEW_BOX } from "@/components/frames/vitals/BookArt";
 import {
   CHEVRON_PATH,
   CHEVRON_VIEW_BOX,
 } from "@/components/frames/vitals/ChevronArt";
 import {
   HEXAGON_PATH,
-  HEXAGON_RIVETS,
   HEXAGON_VIEW_BOX,
 } from "@/components/frames/vitals/HexagonArt";
 import { ORB_PATH, ORB_VIEW_BOX } from "@/components/frames/vitals/OrbArt";
+import {
+  CIRCLE_PATH,
+  CIRCLE_VIEW_BOX,
+} from "@/components/frames/vitals/CircleArt";
+import {
+  SQUARE_PATH,
+  SQUARE_VIEW_BOX,
+} from "@/components/frames/vitals/SquareArt";
 
 interface VitalProps {
   width: number;
@@ -82,19 +86,13 @@ export function Heart({ width, height, value, label, ...layout }: VitalProps) {
 }
 
 /** Spell Save DC — e.g. "14" over "DC". */
-export function SaveBox({
-  width,
-  height,
-  value,
-  label,
-  ...layout
-}: VitalProps) {
+export function Book({ width, height, value, label, ...layout }: VitalProps) {
   return (
     <VitalsFrame
       width={width}
       height={height}
-      path={SAVE_BOX_PATH}
-      viewBox={SAVE_BOX_VIEW_BOX}
+      path={BOOK_PATH}
+      viewBox={BOOK_VIEW_BOX}
       value={value}
       label={label}
       {...layout}
@@ -137,7 +135,6 @@ export function Hexagon({
       height={height}
       path={HEXAGON_PATH}
       viewBox={HEXAGON_VIEW_BOX}
-      rivets={HEXAGON_RIVETS}
       value={value}
       label={label}
       {...layout}
@@ -153,6 +150,38 @@ export function Orb({ width, height, value, label, ...layout }: VitalProps) {
       height={height}
       path={ORB_PATH}
       viewBox={ORB_VIEW_BOX}
+      value={value}
+      label={label}
+      {...layout}
+    />
+  );
+}
+
+/** Plain circle — no fixed stat, for whatever a caller wants a neutral
+ *  badge for. */
+export function Circle({ width, height, value, label, ...layout }: VitalProps) {
+  return (
+    <VitalsFrame
+      width={width}
+      height={height}
+      path={CIRCLE_PATH}
+      viewBox={CIRCLE_VIEW_BOX}
+      value={value}
+      label={label}
+      {...layout}
+    />
+  );
+}
+
+/** Plain square — no fixed stat, for whatever a caller wants a neutral
+ *  badge for. */
+export function Square({ width, height, value, label, ...layout }: VitalProps) {
+  return (
+    <VitalsFrame
+      width={width}
+      height={height}
+      path={SQUARE_PATH}
+      viewBox={SQUARE_VIEW_BOX}
       value={value}
       label={label}
       {...layout}

@@ -8,7 +8,7 @@
 // nothing in this component, or in any shape's own file, ever branches on
 // which shape it is to compensate.
 
-import { useEditableText } from "@/components/fieldEdit";
+import { useEditableLabelText, useEditableText } from "@/components/fieldEdit";
 
 export const INK = "#111";
 export const LABEL_GREY = "#6b6b6b";
@@ -59,23 +59,52 @@ export function Label({
   position: "top" | "bottom";
   inset?: number;
 }) {
+  const style: React.CSSProperties = {
+    // Block, not the span default of inline: vertical padding on an inline
+    // element is purely a paint-time effect (spec'd to not affect line
+    // height), so it wouldn't budge the box's actual size — that only ever
+    // worked here because the non-editable span sits directly as a flex
+    // item, and flex blockifies its items regardless of their own
+    // `display`. The editable branch below wraps the span in its own div
+    // (for the click-anywhere-to-focus handler), demoting the span to an
+    // ordinary inline child where that blockification no longer applies.
+    display: "block",
+    fontSize: 6.5,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    fontWeight: 600,
+    color: LABEL_GREY,
+    whiteSpace: "pre-line",
+    textAlign: "center",
+    lineHeight: 1.3,
+    [position === "top" ? "paddingTop" : "paddingBottom"]: inset,
+    marginBottom: 3,
+  };
+
+  // In the editable preview a caller can wire up the label caption itself
+  // (not just the value) as an in-place edit target — currently just vital
+  // boxes. `edit` is null everywhere else, so this renders as a plain span
+  // as before.
+  const edit = useEditableLabelText(text);
+  if (!edit) return <span style={style}>{text}</span>;
+
   return (
-    <span
-      style={{
-        fontSize: 6.5,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        fontWeight: 600,
-        color: LABEL_GREY,
-        whiteSpace: "pre-line",
-        textAlign: "center",
-        lineHeight: 1.3,
-        [position === "top" ? "paddingTop" : "paddingBottom"]: inset,
-        marginBottom: 3,
+    <div
+      // Clicking anywhere in the label's own line — including empty space
+      // beside a blank caption — focuses it and drops the caret at the end,
+      // mirroring Frame's value area.
+      onMouseDown={(e) => {
+        if (!(e.target as HTMLElement).isContentEditable) {
+          e.preventDefault();
+          edit.focusEnd();
+        }
       }}
     >
-      {text}
-    </span>
+      <span
+        {...edit.bind}
+        style={{ ...style, outline: "none", cursor: "text" }}
+      />
+    </div>
   );
 }
 
@@ -111,8 +140,16 @@ export function Frame({
   const labelLines = label ? label.text.split("\n").length : 0;
   const labelLineH = 6.5 * 1.3;
   const labelZoneH = label ? labelLineH * labelLines + labelInset : 0;
-  // Leave a modest margin between the value and the frame.
-  const valueAreaH = Math.max(0, height - labelZoneH) * 0.9;
+  const valueMarginBottom = label ? 5 : 0;
+  // The value's own margins (balancing it against the label, plus the
+  // optical nudge) take up real vertical space too — leaving them out of
+  // this budget let the value's rendered box (font size + margins) run
+  // taller than what's actually left after the label, overflowing past the
+  // frame's bottom edge and dragging the label down with it. Leave a modest
+  // margin between the value and the frame on top of that.
+  const valueAreaH =
+    Math.max(0, height - labelZoneH - valueMarginTop - valueMarginBottom) *
+    0.9;
   const hasValue = value !== undefined && value !== null && value !== "";
   const fontSize = fitValueFontSize(
     value,
@@ -135,7 +172,7 @@ export function Frame({
     color: INK,
     whiteSpace: "nowrap",
     marginTop: valueMarginTop,
-    marginBottom: 5,
+    marginBottom: valueMarginBottom,
   };
 
   const valueSpan = edit ? (

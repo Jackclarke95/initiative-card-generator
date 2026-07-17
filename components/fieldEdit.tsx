@@ -1,12 +1,14 @@
 "use client";
 
-// Lets a frame's real value text become directly editable in place, without
-// an overlay input. A parent (EditableValue in InlineEdit.tsx) provides a
-// FieldBinding via context; the text-rendering frame (Frame, NotesFrame)
-// calls useEditableText and spreads the returned props onto its value
-// element, turning that exact element into a contentEditable field. No
-// binding (i.e. not inside the editable preview) → renders as plain text, so
-// exports/measurement/folded previews are unchanged.
+// Lets a frame's real value text — and, separately, its label caption —
+// become directly editable in place, without an overlay input. A parent
+// (EditableValue in InlineEdit.tsx) provides up to two FieldBindings via
+// context, one per slot; the text-rendering frame (Frame, NotesFrame) calls
+// useEditableText / useEditableLabelText and spreads the returned props onto
+// the corresponding element, turning that exact element into a
+// contentEditable field. No binding for a slot (i.e. not inside the editable
+// preview, or the caller didn't wire up that slot) → renders as plain text,
+// so exports/measurement/folded previews are unchanged.
 
 import {
   createContext,
@@ -23,17 +25,24 @@ export interface FieldBinding {
   multiline?: boolean;
 }
 
-const FieldEditContext = createContext<FieldBinding | null>(null);
+/** Up to two independently editable slots per frame — the value (almost
+ *  every frame) and, separately, its caption (vital boxes only, so far). */
+export interface FieldBindings {
+  value?: FieldBinding;
+  label?: FieldBinding;
+}
+
+const FieldEditContext = createContext<FieldBindings | null>(null);
 
 export function FieldEditProvider({
-  binding,
+  bindings,
   children,
 }: {
-  binding: FieldBinding;
+  bindings: FieldBindings;
   children: React.ReactNode;
 }) {
   return (
-    <FieldEditContext.Provider value={binding}>
+    <FieldEditContext.Provider value={bindings}>
       {children}
     </FieldEditContext.Provider>
   );
@@ -45,20 +54,20 @@ interface EditableTextHandle {
     ref: (el: HTMLElement | null) => void;
     contentEditable: "plaintext-only";
     tabIndex: number;
+    "data-field-slot": "value" | "label";
   };
   /** Focus the value element and drop the caret at the end — used when a
    *  click lands beside the glyphs (e.g. an empty field). */
   focusEnd: () => void;
 }
 
-/** When a FieldEditProvider is above this frame, returns props to spread onto
- *  the value element so it edits in place; otherwise null.
- *
- *  The element's text is owned by the DOM (never passed as React children):
- *  we write `value` into it only when it differs from what's shown, so
- *  committing on every keystroke never yanks the caret. */
-export function useEditableText(value: string): EditableTextHandle | null {
-  const binding = useContext(FieldEditContext);
+/** Shared by useEditableText / useEditableLabelText — see either for the
+ *  contract. Takes the resolved binding for its own slot (value or label). */
+function useEditableSlot(
+  binding: FieldBinding | undefined,
+  value: string,
+  slot: "value" | "label",
+): EditableTextHandle | null {
   const nodeRef = useRef<HTMLElement | null>(null);
   const snapshot = useRef("");
 
@@ -75,6 +84,11 @@ export function useEditableText(value: string): EditableTextHandle | null {
       ref: (el) => {
         nodeRef.current = el;
       },
+      // Lets a scroll-to-adjust handler on the whole-frame wrapper (see
+      // EditableValue's `wheelStep`) find the value element specifically —
+      // a vital box's caption is contentEditable too, so `[contenteditable]`
+      // alone wouldn't reliably pick the right one out of the two.
+      "data-field-slot": slot,
       contentEditable: "plaintext-only",
       suppressContentEditableWarning: true,
       role: "textbox",
@@ -119,4 +133,24 @@ export function useEditableText(value: string): EditableTextHandle | null {
       sel?.addRange(range);
     },
   };
+}
+
+/** When a FieldEditProvider above this frame wired up a `value` binding,
+ *  returns props to spread onto the value element so it edits in place;
+ *  otherwise null.
+ *
+ *  The element's text is owned by the DOM (never passed as React children):
+ *  we write `value` into it only when it differs from what's shown, so
+ *  committing on every keystroke never yanks the caret. */
+export function useEditableText(value: string): EditableTextHandle | null {
+  const bindings = useContext(FieldEditContext);
+  return useEditableSlot(bindings?.value, value, "value");
+}
+
+/** Same contract as useEditableText, for a frame's label caption instead of
+ *  its value — a separate slot, so a caller can wire up one, both, or
+ *  neither independently. */
+export function useEditableLabelText(value: string): EditableTextHandle | null {
+  const bindings = useContext(FieldEditContext);
+  return useEditableSlot(bindings?.label, value, "label");
 }

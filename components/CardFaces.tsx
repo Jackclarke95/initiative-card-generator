@@ -1,10 +1,10 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useRef, useState } from "react";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { PALE_GREY } from "@/components/frames/Frame";
 import { Border5e } from "@/components/frames/shared/Border5e";
-import { Chevron, Heart, Hexagon, Orb, SaveBox, Shield } from "@/components/frames/vitals";
+import { VITAL_FRAME_COMPONENTS } from "@/components/frames/vitals/registry";
 import { AbilityScore } from "@/components/frames/ability-scores/AbilityScoreFrame";
 import { SCROLL_STYLES } from "@/components/frames/name";
 import { NotesFrame } from "@/components/frames/notes/NotesFrame";
@@ -15,8 +15,10 @@ import {
   EditableOverlay,
   EditableHit,
   useEditMenu,
+  useGroupedEditMenu,
 } from "@/components/InlineEdit";
 import { nextResistanceState } from "@/lib/cardUpdate";
+import { useFlipAnimation } from "@/components/useFlipAnimation";
 import {
   ABILITY_KEYS,
   ABILITY_LABELS,
@@ -32,11 +34,16 @@ import {
   NOTES_DISPLAY_MODES,
   SCROLL_STYLE_LABELS,
   SCROLL_STYLE_MODES,
+  VITAL_FRAME_LABELS,
+  VITAL_FRAME_SHAPES,
   VITALS_MODE_LABELS,
   VITALS_MODES,
   type CardData,
   type ResistanceState,
   type ScrollStyle,
+  type VitalBoxConfig,
+  type VitalFrameShape,
+  type VitalsDisplayMode,
 } from "@/types/card";
 
 // All class names offered by the inline class-art picker.
@@ -101,43 +108,158 @@ const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
 const PLAYER_BORDER_MARGIN_WIDTH = 4;
 const PLAYER_BORDER_MARGIN_HEIGHT = 6;
 
-type VitalField =
-  | "maxHp"
-  | "ac"
-  | "spellSaveDC"
-  | "passivePerception"
-  | "speed"
-  | "passiveInsight";
+// Right-click a vital box to change its frame shape, mirroring the other
+// section-level display-mode menus.
+const VITAL_FRAME_MENU = VITAL_FRAME_SHAPES.map((shape) => ({
+  value: shape,
+  label: VITAL_FRAME_LABELS[shape],
+}));
 
-interface VitalConfig {
-  field: VitalField;
-  /** The short caption printed on the badge itself, e.g. "HP". */
-  label: string;
-  /** The accessible/editable-field name, e.g. "Max HP". */
-  fieldLabel: string;
-  Component: (props: {
-    width: number;
-    height: number;
-    value?: React.ReactNode;
-    label?: string;
-    sidePadding?: number;
-  }) => React.JSX.Element;
+// One box in the vitals row — set, order, labels, values, and frame shapes
+// all come from `card.vitalBoxes`; this just renders whichever one it's
+// given. A standalone component (rather than inline in a .map) so each
+// box's own right-click menu can hold its own hook state regardless of how
+// many boxes are in the list at a given moment.
+function VitalBox({
+  box,
+  width,
+  height,
+  sidePadding,
+  showLabel,
+  vitalsMode,
+  index,
+  draggedId,
+  onDragStart,
+  onDragEnd,
+  onDropAt,
+}: {
+  box: VitalBoxConfig;
+  width: number;
+  height: number;
+  sidePadding: number;
+  showLabel: boolean;
+  vitalsMode: VitalsDisplayMode;
+  index: number;
+  draggedId: string | null;
+  onDragStart: (id: string) => void;
+  onDragEnd: () => void;
+  onDropAt: (index: number) => void;
+}) {
+  const { editable, update } = useCardEdit();
+  const [dragOver, setDragOver] = useState(false);
+  // dragenter/dragleave bubble from every nested child (the drag handle,
+  // the editable span, its wrapper divs), so moving the pointer between two
+  // of this box's own children fires a dragleave here before the matching
+  // dragenter — a plain boolean would flip dragOver off mid-hover. A depth
+  // counter only clears it once every nested enter has been balanced by a
+  // leave, i.e. the pointer has actually left the box itself.
+  const dragDepth = useRef(0);
+  const Component = VITAL_FRAME_COMPONENTS[box.frame];
+  // Two unrelated settings share this one right-click popup: the frame
+  // shape is per-box, but compactness is section-wide — right-clicking any
+  // single box is the only "right-click a vital" gesture there is, so it
+  // has to be the entry point for both, clearly separated by heading so
+  // picking one doesn't read as only affecting the box you clicked.
+  const frameMenu = useGroupedEditMenu([
+    {
+      heading: "Section Settings",
+      options: VITALS_MENU,
+      value: vitalsMode,
+      onSelect: (v) => update?.setToggle("vitals", v as VitalsDisplayMode),
+    },
+    {
+      heading: "Frame Icon",
+      options: VITAL_FRAME_MENU,
+      value: box.frame,
+      onSelect: (shape) =>
+        update?.setVitalBox(box.id, { frame: shape as VitalFrameShape }),
+    },
+  ]);
+
+  return (
+    <div
+      data-flip-id={box.id}
+      style={{
+        position: "relative",
+        opacity: draggedId === box.id ? 0.4 : 1,
+        outline: dragOver ? "1.5px dashed var(--accent)" : undefined,
+        outlineOffset: 1,
+        borderRadius: 3,
+      }}
+      onContextMenu={frameMenu.onContextMenu}
+      onDragOver={
+        editable
+          ? (e) => {
+              e.preventDefault();
+            }
+          : undefined
+      }
+      onDragEnter={
+        editable
+          ? () => {
+              dragDepth.current += 1;
+              setDragOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={
+        editable
+          ? () => {
+              dragDepth.current -= 1;
+              if (dragDepth.current <= 0) {
+                dragDepth.current = 0;
+                setDragOver(false);
+              }
+            }
+          : undefined
+      }
+      onDrop={
+        editable
+          ? (e) => {
+              e.preventDefault();
+              dragDepth.current = 0;
+              setDragOver(false);
+              onDropAt(index);
+            }
+          : undefined
+      }
+    >
+      <EditableValue
+        commit={(raw) => update?.setVitalBoxNum(box.id, raw)}
+        label={box.label || "Vital box value"}
+        labelCommit={(raw) => update?.setVitalBox(box.id, { label: raw })}
+        labelFieldLabel={`${box.label || "Vital box"} label`}
+        wheelStep={1}
+        forceHighlight={frameMenu.isOpen}
+        overlay={
+          editable && (
+            <span
+              className="vital-drag-handle"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = "move";
+                onDragStart(box.id);
+              }}
+              onDragEnd={onDragEnd}
+              aria-hidden
+            >
+              ⠿
+            </span>
+          )
+        }
+      >
+        <Component
+          value={box.value}
+          label={showLabel ? box.label : undefined}
+          width={width}
+          height={height}
+          sidePadding={sidePadding}
+        />
+      </EditableValue>
+      {frameMenu.menu}
+    </div>
+  );
 }
-
-// One shared box (see `iconH`/`vitalW` in DmFace) and one render path for
-// all six — every badge is treated identically, the art is the only thing
-// that differs between them. Rendered in this order via a 3-column grid,
-// which auto-flows into as many rows as needed — adding a 7th, 8th, 9th
-// entry here just grows the grid, it isn't a hardcoded 2-row/3-column
-// layout.
-const VITALS: VitalConfig[] = [
-  { field: "maxHp", label: "HP", fieldLabel: "Max HP", Component: Heart },
-  { field: "ac", label: "AC", fieldLabel: "AC", Component: Shield },
-  { field: "spellSaveDC", label: "DC", fieldLabel: "Spell save DC", Component: SaveBox },
-  { field: "passivePerception", label: "PP", fieldLabel: "Passive Perception", Component: Hexagon },
-  { field: "speed", label: "Speed", fieldLabel: "Speed", Component: Chevron },
-  { field: "passiveInsight", label: "Insight", fieldLabel: "Passive Insight", Component: Orb },
-];
 
 export function DmFace({ card }: { card: CardData }) {
   const { editable, update } = useCardEdit();
@@ -153,15 +275,15 @@ export function DmFace({ card }: { card: CardData }) {
   // value/label overlay does, keeping every column's frames aligned on
   // one shared centerline) — the art is the only thing that varies.
   //
-  // The minimum width that box could be is whichever of the six shapes
+  // The minimum width that box could be is whichever available shape
   // needs the most room at the shared height:
   const vitalMinW = Math.ceil(
     Math.max(
       iconH * (50 / 57.08), // Shield
-      iconH * (57.6 / 55.08), // Heart / SaveBox
+      iconH * (57.6 / 55.08), // Heart / Book
       iconH * (56.8 / 49.83), // Hexagon
       iconH * (55 / 48), // Chevron — currently the widest
-      iconH, // Orb — 1:1 viewBox
+      iconH, // Orb / Circle / Square — all 1:1 viewBoxes
     ),
   );
   // But rather than spread 3 minimum-width boxes across the row with
@@ -205,13 +327,16 @@ export function DmFace({ card }: { card: CardData }) {
   const dmScrollVariant = toggles.nameScrollDm;
   const showNameOnDm = dmScrollVariant !== "none";
   const DmNameScroll =
-    dmScrollVariant === "none" ? undefined : SCROLL_STYLES[dmScrollVariant].Component;
+    dmScrollVariant === "none"
+      ? undefined
+      : SCROLL_STYLES[dmScrollVariant].Component;
   // The dragon and battle ribbons are noticeably taller than the plain one
   // at the same width — rather than let that squeeze the fixed-size
   // sections below (vitals, abilities, etc.), each of those gets
   // flexShrink: 0 so Notes (flex: 1) is the only thing that gives up
   // space, and the gap between sections tightens up to help it along.
-  const dmScrollTall = dmScrollVariant !== "scroll" && dmScrollVariant !== "none";
+  const dmScrollTall =
+    dmScrollVariant !== "scroll" && dmScrollVariant !== "none";
   const sectionGap = dmScrollTall ? Math.max(1, S.gap - 1) : S.gap;
 
   const abilityMode = toggles.abilityScores;
@@ -236,23 +361,16 @@ export function DmFace({ card }: { card: CardData }) {
     update?.setToggle("notesDisplayMode", v),
   );
 
-  // Makes a vitals badge's number editable in place (inert unless the face
-  // is inside CardEditProvider).
-  const editVital = (
-    field: VitalField,
-    label: string,
-    node: React.ReactNode,
-  ) => (
-    <EditableValue commit={(raw) => update?.setNum(field, raw)} label={label}>
-      {node}
-    </EditableValue>
-  );
+  // Drag-and-drop reordering of the vitals row — a box's own little handle
+  // (see VitalBox) starts the drag; dropping onto another box moves it there.
+  const [draggedVitalId, setDraggedVitalId] = useState<string | null>(null);
+  const vitalsGridRef = useFlipAnimation<HTMLDivElement>();
 
   const sections = [
     showNameOnDm && (
       <div
         key="name"
-        className={editable ? "edit-section" : undefined}
+        className={editable ? `edit-section${nameMenu.menuOpenClass}` : undefined}
         style={{ flexShrink: 0 }}
         onContextMenu={nameMenu.onContextMenu}
       >
@@ -276,7 +394,8 @@ export function DmFace({ card }: { card: CardData }) {
     vitalsMode !== "none" && (
       <div
         key="vitals"
-        className={editable ? "edit-section" : undefined}
+        ref={vitalsGridRef}
+        className={editable ? `edit-section${vitalsMenu.menuOpenClass}` : undefined}
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(3, ${vitalW}px)`,
@@ -285,20 +404,24 @@ export function DmFace({ card }: { card: CardData }) {
         }}
         onContextMenu={vitalsMenu.onContextMenu}
       >
-        {VITALS.map(({ field, label, fieldLabel, Component }) => (
-          <Fragment key={field}>
-            {editVital(
-              field,
-              fieldLabel,
-              <Component
-                value={card[field]}
-                label={showVitalsLabels ? label : undefined}
-                width={vitalW}
-                height={iconH}
-                sidePadding={vitalSidePadding}
-              />,
-            )}
-          </Fragment>
+        {card.vitalBoxes.map((box, i) => (
+          <VitalBox
+            key={box.id}
+            box={box}
+            width={vitalW}
+            height={iconH}
+            sidePadding={vitalSidePadding}
+            showLabel={showVitalsLabels}
+            vitalsMode={vitalsMode}
+            index={i}
+            draggedId={draggedVitalId}
+            onDragStart={setDraggedVitalId}
+            onDragEnd={() => setDraggedVitalId(null)}
+            onDropAt={(toIndex) => {
+              if (draggedVitalId) update?.moveVitalBox(draggedVitalId, toIndex);
+              setDraggedVitalId(null);
+            }}
+          />
         ))}
         {vitalsMenu.menu}
       </div>
@@ -306,7 +429,7 @@ export function DmFace({ card }: { card: CardData }) {
     abilityMode !== "none" && (
       <div
         key="abilities"
-        className={editable ? "edit-section" : undefined}
+        className={editable ? `edit-section${abilitiesMenu.menuOpenClass}` : undefined}
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -320,6 +443,7 @@ export function DmFace({ card }: { card: CardData }) {
             key={key}
             commit={(raw) => update?.setStat(key, { modifier: raw })}
             label={`${ABILITY_LABELS[key]} modifier`}
+            wheelStep={1}
             overlay={
               <EditableHit
                 label={`${ABILITY_LABELS[key]} proficiency`}
@@ -355,7 +479,7 @@ export function DmFace({ card }: { card: CardData }) {
     card.damageDisplayMode !== "none" && (
       <div
         key="defences"
-        className={editable ? "edit-section" : undefined}
+        className={editable ? `edit-section${resistMenu.menuOpenClass}` : undefined}
         style={{
           display: "flex",
           alignItems: "center",
@@ -450,7 +574,7 @@ export function DmFace({ card }: { card: CardData }) {
         {/* Notes — eats whatever vertical space is left at the bottom */}
         {showNotes && (
           <div
-            className={editable ? "edit-section" : undefined}
+            className={editable ? `edit-section${notesMenu.menuOpenClass}` : undefined}
             style={{
               flex: 1,
               minHeight: 0,
@@ -499,7 +623,9 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
   const playerScrollVariant = card.toggles.nameScrollPlayer;
   const showNameOnPlayer = playerScrollVariant !== "none";
   const PlayerNameScroll =
-    playerScrollVariant === "none" ? undefined : SCROLL_STYLES[playerScrollVariant].Component;
+    playerScrollVariant === "none"
+      ? undefined
+      : SCROLL_STYLES[playerScrollVariant].Component;
 
   // Right-click the player-side scroll to switch its style (mirrors the
   // sidebar's "Player Scroll" toggle).
@@ -571,7 +697,7 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
       >
         {showNameOnPlayer && (
           <div
-            className={editable ? "edit-section" : undefined}
+            className={editable ? `edit-section${nameMenu.menuOpenClass}` : undefined}
             style={{ flexShrink: 0, marginTop: 4 }}
             onContextMenu={nameMenu.onContextMenu}
           >
@@ -579,7 +705,10 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
               value={card.characterName}
               commit={(raw) => update?.set("characterName", raw)}
               label="Character name"
-              inputStyle={{ fontSize: 15, top: nameInputTop(playerScrollVariant) }}
+              inputStyle={{
+                fontSize: 15,
+                top: nameInputTop(playerScrollVariant),
+              }}
             >
               {PlayerNameScroll && (
                 <PlayerNameScroll
@@ -593,7 +722,7 @@ export function PlayerFace({ card, rotated = true }: PlayerFaceProps) {
           </div>
         )}
         <div
-          className={editable ? "edit-section" : undefined}
+          className={editable ? `edit-section${artMenu.menuOpenClass}` : undefined}
           style={{
             position: "relative",
             flex: 1,

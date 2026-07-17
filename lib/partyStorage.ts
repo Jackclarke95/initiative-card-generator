@@ -1,6 +1,9 @@
 import type { Party } from "@/types/party";
 
-const STORAGE_KEY = "initiative-cards:state:v1";
+// Bumped to v2 when CardData's fixed vital fields (ac/maxHp/etc.) became the
+// user-configurable vitalBoxes list — old v1 sessions are discarded rather
+// than loaded with a stale shape.
+const STORAGE_KEY = "initiative-cards:state:v2";
 
 export interface PersistedState {
   parties: Party[];

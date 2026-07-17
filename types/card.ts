@@ -31,6 +31,51 @@ export interface CardToggles {
   notesDisplayMode: NotesDisplayMode;
 }
 
+// The vital-badge silhouettes (see components/frames/vitals) — which one a
+// given vital box prints is now a per-box, user-chosen setting rather than
+// fixed per stat.
+export type VitalFrameShape =
+  | "shield"
+  | "heart"
+  | "book"
+  | "chevron"
+  | "hexagon"
+  | "orb"
+  | "circle"
+  | "square";
+
+export const VITAL_FRAME_SHAPES: VitalFrameShape[] = [
+  "shield",
+  "heart",
+  "book",
+  "chevron",
+  "hexagon",
+  "orb",
+  "circle",
+  "square",
+];
+
+export const VITAL_FRAME_LABELS: Record<VitalFrameShape, string> = {
+  shield: "Shield",
+  heart: "Heart",
+  book: "Book",
+  chevron: "Chevron",
+  hexagon: "Hexagon",
+  orb: "Orb",
+  circle: "Circle",
+  square: "Square",
+};
+
+// One badge in the vitals row — the set, order, labels, and frame shapes are
+// all user-configurable; nothing here is tied to a fixed stat name.
+export interface VitalBoxConfig {
+  id: string;
+  /** The short caption printed on the badge itself, e.g. "HP". */
+  label: string;
+  value?: number;
+  frame: VitalFrameShape;
+}
+
 export interface AbilityStat {
   modifier: string;
   proficiency: boolean;
@@ -176,15 +221,9 @@ export interface CardData {
   characterName: string;
   characterClass: string;
 
-  // Vitals — left blank (undefined) to print an empty card.
-  ac?: number;
-  maxHp?: number;
-  speed?: number;
-
-  // Passives
-  passivePerception?: number;
-  passiveInsight?: number;
-  spellSaveDC?: number;
+  // Vitals — an ordered, user-configurable list of badges (AC/HP/etc. by
+  // default, but any label/frame/value combination the user sets up).
+  vitalBoxes: VitalBoxConfig[];
 
   // Ability scores
   stats: AbilityStats;
@@ -206,19 +245,34 @@ export interface CardData {
   toggles: CardToggles;
 }
 
+// The default vitals row — Max HP / AC / Spell Save DC / Passive Perception /
+// Speed / Passive Insight, in this order — used for every new card. Users are
+// free to relabel, reshape, reorder, remove, or add to this from there.
+function defaultVitalBoxes(): VitalBoxConfig[] {
+  return [
+    { id: crypto.randomUUID(), label: "HP", frame: "heart", value: 10 },
+    { id: crypto.randomUUID(), label: "AC", frame: "shield", value: 10 },
+    { id: crypto.randomUUID(), label: "DC", frame: "book", value: 10 },
+    { id: crypto.randomUUID(), label: "PP", frame: "hexagon", value: 10 },
+    { id: crypto.randomUUID(), label: "Speed", frame: "chevron", value: 30 },
+    { id: crypto.randomUUID(), label: "Insight", frame: "orb", value: 10 },
+  ];
+}
+
 export function emptyCard(id: string): CardData {
   return {
     id,
     characterName: "",
     characterClass: "",
     stats: {
-      str: { modifier: "", proficiency: false },
-      dex: { modifier: "", proficiency: false },
-      con: { modifier: "", proficiency: false },
-      int: { modifier: "", proficiency: false },
-      wis: { modifier: "", proficiency: false },
-      cha: { modifier: "", proficiency: false },
+      str: { modifier: "+0", proficiency: false },
+      dex: { modifier: "+0", proficiency: false },
+      con: { modifier: "+0", proficiency: false },
+      int: { modifier: "+0", proficiency: false },
+      wis: { modifier: "+0", proficiency: false },
+      cha: { modifier: "+0", proficiency: false },
     },
+    vitalBoxes: defaultVitalBoxes(),
     resistances: DEFAULT_RESISTANCES,
     damageDisplayMode: "all",
     artMode: "class",

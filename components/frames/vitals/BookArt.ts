@@ -5,7 +5,7 @@
 // shallower spine dip — taller straight sides, gentler curve — than the
 // original.
 
-export const SAVE_BOX_VIEW_BOX = "0 0 57.6 55.08";
+export const BOOK_VIEW_BOX = "0 0 57.6 55.08";
 
-export const SAVE_BOX_PATH =
+export const BOOK_PATH =
   "M28.8,7.4C21.6,3.23,12.8,1.4,4,2.4L4,47.5C12.8,46.5,21.6,48.33,28.8,52.5C36,48.33,44.8,46.5,53.6,47.5L53.6,2.4C44.8,1.4,36,3.23,28.8,7.4Z";
