@@ -193,7 +193,7 @@ export default function CardEditor({
     setResistance,
     setToggle,
     setVitalBox,
-    setVitalBoxNum,
+    setVitalBoxValue,
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
@@ -377,7 +377,10 @@ export default function CardEditor({
           const alignValue = alignOptions.includes(row.align)
             ? row.align
             : alignOptions[0];
-          const boxes = card.vitalBoxes.slice(span.start, span.start + span.count);
+          const boxes = card.vitalBoxes.slice(
+            span.start,
+            span.start + span.count,
+          );
           return (
             <div
               key={rowIndex}
@@ -389,7 +392,9 @@ export default function CardEditor({
                     Row {rowIndex + 1}
                   </span>
                   <select
-                    className={inputClass + " !w-auto py-0.5 text-xs normal-case"}
+                    className={
+                      inputClass + " !w-auto py-0.5 text-xs normal-case"
+                    }
                     value={capacity}
                     onChange={(e) =>
                       setVitalRowColumns(rowIndex, Number(e.target.value))
@@ -441,7 +446,12 @@ export default function CardEditor({
                     className="rounded border border-dashed border-[var(--border)] px-2 py-3 text-center text-xs normal-case text-[var(--text-muted)]"
                     onDragOver={(e) => {
                       e.preventDefault();
-                      updateVitalInsertAt(e.currentTarget, e.clientY, rowIndex, 0);
+                      updateVitalInsertAt(
+                        e.currentTarget,
+                        e.clientY,
+                        rowIndex,
+                        0,
+                      );
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
@@ -470,7 +480,12 @@ export default function CardEditor({
                       style={{ opacity: draggedVitalId === box.id ? 0.4 : 1 }}
                       onDragOver={(e) => {
                         e.preventDefault();
-                        updateVitalInsertAt(e.currentTarget, e.clientY, rowIndex, i);
+                        updateVitalInsertAt(
+                          e.currentTarget,
+                          e.clientY,
+                          rowIndex,
+                          i,
+                        );
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -524,18 +539,18 @@ export default function CardEditor({
                         }
                       />
                       <input
-                        className={numClass + " flex-1"}
-                        type="number"
+                        className={inputClass + " flex-1"}
                         placeholder="Value"
                         value={box.value ?? ""}
-                        onChange={(e) => setVitalBoxNum(box.id, e.target.value)}
+                        onChange={(e) => setVitalBoxValue(box.id, e.target.value)}
                       />
                       <select
                         className={inputClass + " flex-1"}
                         value={box.frame}
                         onChange={(e) =>
                           setVitalBox(box.id, {
-                            frame: e.target.value as (typeof VITAL_FRAME_SHAPES)[number],
+                            frame: e.target
+                              .value as (typeof VITAL_FRAME_SHAPES)[number],
                           })
                         }
                       >

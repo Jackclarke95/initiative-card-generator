@@ -91,8 +91,9 @@ export interface CardUpdater {
   setResistance(key: DamageTypeKey, state: ResistanceState): void;
   setToggle<K extends keyof CardToggles>(key: K, value: CardToggles[K]): void;
   setVitalBox(id: string, patch: Partial<VitalBoxConfig>): void;
-  /** "" clears the box's value to undefined; otherwise parseInt (NaN → undefined). */
-  setVitalBoxNum(id: string, raw: string): void;
+  /** Free text, not just a number (e.g. "12/15", "40*") — "" clears the
+   *  box's value to undefined; anything else is stored as-is. */
+  setVitalBoxValue(id: string, raw: string): void;
   /** Appends a new box to the very end of the list, landing in the last
    *  row (overflowing onto a new row if that row's already full). */
   addVitalBox(): void;
@@ -175,13 +176,8 @@ export function createCardUpdater(
     });
   }
 
-  function setVitalBoxNum(id: string, raw: string) {
-    if (raw === "") {
-      setVitalBox(id, { value: undefined });
-      return;
-    }
-    const parsed = parseInt(raw, 10);
-    setVitalBox(id, { value: Number.isNaN(parsed) ? undefined : parsed });
+  function setVitalBoxValue(id: string, raw: string) {
+    setVitalBox(id, { value: raw === "" ? undefined : raw });
   }
 
   function addVitalBox() {
@@ -298,7 +294,7 @@ export function createCardUpdater(
     setResistance,
     setToggle,
     setVitalBox,
-    setVitalBoxNum,
+    setVitalBoxValue,
     addVitalBox,
     removeVitalBox,
     moveVitalBox,

@@ -58,22 +58,34 @@ interface EditableValueProps {
   /** When set, scrolling anywhere over the frame nudges the value by this
    *  much per wheel notch — e.g. 1 for vitals and ability score modifiers.
    *  Omit for fields where scroll-to-adjust wouldn't make sense (character
-   *  name, notes). A leading +/- in the CURRENT text (not just any field)
-   *  decides the format: "+0"/"-1" step and stay signed (ability scores),
-   *  a plain "10" steps and stays plain (vitals). */
+   *  name, notes). Only applies when the CURRENT text holds exactly one
+   *  uninterrupted run of digits — e.g. "10" or "40*" step fine, but "12/15"
+   *  (unshielded/shielded AC) has two runs and doesn't scroll at all, since
+   *  it'd be ambiguous which one the wheel means. A leading +/- immediately
+   *  before that one run decides the format: "+0"/"-1" step and stay signed
+   *  (ability scores), a plain "10" steps and stays plain (vitals). */
   wheelStep?: number;
 }
 
 /** +1 on "+0" → "+1"; +1 on "-1" → "+0" (D&D never prints "-0"); +1 on the
- *  plain, unsigned "10" a vitals badge uses → "11", no sign added. Whether
- *  to keep a sign is read off the CURRENT text so one wheel handler serves
- *  both without the caller having to say which kind of field it's touching. */
+ *  plain, unsigned "10" a vitals badge uses → "11", no sign added; +1 on
+ *  "40*" → "41*", the surrounding text untouched. Whether to keep a sign is
+ *  read off the CURRENT text so one wheel handler serves both without the
+ *  caller having to say which kind of field it's touching. Text with zero or
+ *  more than one digit run (no number to step, or an ambiguous "12/15") is
+ *  returned unchanged — scrolling is a no-op rather than guessing. */
 function stepNumericText(text: string, delta: number): string {
-  const signed = /^\s*[+-]/.test(text);
-  const parsed = parseInt(text, 10);
-  const next = (Number.isNaN(parsed) ? 0 : parsed) + delta;
-  if (!signed) return String(next);
-  return next >= 0 ? `+${next}` : String(next);
+  const digitRuns = [...text.matchAll(/\d+/g)];
+  if (digitRuns.length !== 1) return text;
+  const [run] = digitRuns;
+  const start = run.index ?? 0;
+  const end = start + run[0].length;
+  const signed = start > 0 && (text[start - 1] === "+" || text[start - 1] === "-");
+  const signStart = signed ? start - 1 : start;
+  const parsed = parseInt(text.slice(signStart, end), 10);
+  const next = parsed + delta;
+  const replacement = !signed ? String(next) : next >= 0 ? `+${next}` : String(next);
+  return text.slice(0, signStart) + replacement + text.slice(end);
 }
 
 export function EditableValue({
