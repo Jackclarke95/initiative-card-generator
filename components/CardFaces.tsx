@@ -23,6 +23,14 @@ import {
   PLAYER_BORDER_MARGIN_WIDTH,
   scrollHeightFor,
 } from "@/lib/cardLayout";
+import {
+  computeVitalRowLayout,
+  maxVitalColumns,
+  VITAL_ICON_H,
+  vitalBoxMetrics,
+  vitalRowGridWidth,
+  vitalRowJustifyContent,
+} from "@/lib/vitalsLayout";
 import { useFlipAnimation } from "@/components/useFlipAnimation";
 import {
   ABILITY_KEYS,
@@ -122,7 +130,6 @@ function VitalBox({
   sidePadding,
   showLabel,
   vitalsMode,
-  index,
   draggedId,
   onDragStart,
   onDragEnd,
@@ -134,11 +141,10 @@ function VitalBox({
   sidePadding: number;
   showLabel: boolean;
   vitalsMode: VitalsDisplayMode;
-  index: number;
   draggedId: string | null;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
-  onDropAt: (index: number) => void;
+  onDropAt: () => void;
 }) {
   const { editable, update } = useCardEdit();
   const [dragOver, setDragOver] = useState(false);
@@ -212,9 +218,10 @@ function VitalBox({
         editable
           ? (e) => {
               e.preventDefault();
+              e.stopPropagation();
               dragDepth.current = 0;
               setDragOver(false);
-              onDropAt(index);
+              onDropAt();
             }
           : undefined
       }
@@ -269,53 +276,24 @@ export function DmFace({ card, width = FACE_W, height = FACE_H }: DmFaceProps) {
   const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
   // The AC shield keeps its official 48:55 aspect ratio; sizes leave room
   // for the full-aspect Name scroll above.
-  const S = { shW: 52, shH: 60, gap: 2 };
+  const S = { shW: 52, gap: 2 };
   // All six stat badges share one height so both rows read as one
   // consistent size — back to the original (pre-unification) size.
-  const iconH = S.shH;
+  const iconH = VITAL_ICON_H;
   // Every vitals badge shares one identical box — same height (iconH) and
   // same width, so a shape whose art is naturally narrower isn't stretched
   // to fill it (it just centers within the shared box, same as the
   // value/label overlay does, keeping every column's frames aligned on
-  // one shared centerline) — the art is the only thing that varies.
-  //
-  // The minimum width that box could be is whichever available shape
-  // needs the most room at the shared height:
-  const vitalMinW = Math.ceil(
-    Math.max(
-      iconH * (50 / 57.08), // Shield
-      iconH * (57.6 / 55.08), // Heart / Book
-      iconH * (56.8 / 49.83), // Hexagon
-      iconH * (55 / 48), // Chevron — currently the widest
-      iconH, // Orb / Circle / Square — all 1:1 viewBoxes
-    ),
-  );
-  // But rather than spread 3 minimum-width boxes across the row with
-  // whatever gap that leaves (the previous approach), the gap is halved
-  // from that first and the boxes themselves grow to reclaim the freed-up
-  // space — tighter gutters, wider (still centered) frames, same total
-  // row width. Row gap matches column gap exactly, so it reads as one
-  // even grid rather than "columns, then separately, rows".
-  // Rounded to whole pixels — fractional CSS dimensions are subject to
-  // subpixel rounding that can get re-snapped differently across repaints
-  // (e.g. one triggered by a nearby caret/focus change needing crisp
-  // rendering), which is exactly the kind of instability that showed up
-  // as vitals badges' values shifting on edit while whole-pixel-sized
-  // Ability Scores never did.
-  //
-  // vitalMinW is a fixed target independent of the card's own width, so a
-  // narrower-than-reference side (e.g. the Bridge preset) can ask for more
-  // room than CONTENT_W actually has — the "ideal" gap above goes
-  // negative, and without a floor, deriving vitalW from that negative gap
-  // would inflate it past CONTENT_W instead of shrinking, overflowing the
-  // card's own border. Clamping the gap to a small positive floor first
-  // means vitalW is always solved to actually fit CONTENT_W, gracefully
-  // compressing the boxes below their "ideal" size on narrow cards rather
-  // than breaking out of it.
-  const MIN_VITAL_GAP = 2;
-  const idealVitalGap = Math.round((CONTENT_W - vitalMinW * 3) / 2 / 2);
-  const vitalGap = Math.max(MIN_VITAL_GAP, idealVitalGap);
-  const vitalW = Math.max(1, Math.round((CONTENT_W - vitalGap * 2) / 3));
+  // one shared centerline) — the art is the only thing that varies. How
+  // many columns actually fit at this width, and the shared box size that
+  // gives them (rounded to whole pixels — fractional CSS dimensions are
+  // subject to subpixel rounding that can get re-snapped differently
+  // across repaints, which is exactly the kind of instability that showed
+  // up as vitals badges' values shifting on edit while whole-pixel-sized
+  // Ability Scores never did), both live in lib/vitalsLayout.ts so the
+  // sidebar form can offer the same column-count ceiling.
+  const maxVitalCols = maxVitalColumns(CONTENT_W, iconH);
+  const { vitalW, vitalGap } = vitalBoxMetrics(CONTENT_W, iconH, maxVitalCols);
   // The value's own available width doesn't need to track the box's full
   // (now wider) width — it only needs to be wide enough that a 3-digit
   // value (e.g. a high max HP) still renders at the full cap size;
@@ -325,6 +303,10 @@ export function DmFace({ card, width = FACE_W, height = FACE_H }: DmFaceProps) {
   // whatever's left of vitalW beyond that becomes side padding instead.
   const vitalMaxValueSize = 26; // matches VitalsFrame's own default cap
   const vitalSidePadding = Math.max(0, Math.round((vitalW - vitalMaxValueSize * 2) / 2));
+  // How card.vitalRows' explicit per-row counts actually render right now —
+  // clamped by however many columns actually fit at this width, splitting a
+  // row into extra chunks if it's currently too wide to show in one.
+  const vitalRowLayout = computeVitalRowLayout(card.vitalRows, maxVitalCols);
 
   const statGap = 4;
 
@@ -413,31 +395,72 @@ export function DmFace({ card, width = FACE_W, height = FACE_H }: DmFaceProps) {
         ref={vitalsGridRef}
         className={editable ? `edit-section${vitalsMenu.menuOpenClass}` : undefined}
         style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(3, ${vitalW}px)`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
           gap: vitalGap,
           flexShrink: 0,
         }}
         onContextMenu={vitalsMenu.onContextMenu}
       >
-        {card.vitalBoxes.map((box, i) => (
-          <VitalBox
-            key={box.id}
-            box={box}
-            width={vitalW}
-            height={iconH}
-            sidePadding={vitalSidePadding}
-            showLabel={showVitalsLabels}
-            vitalsMode={vitalsMode}
-            index={i}
-            draggedId={draggedVitalId}
-            onDragStart={setDraggedVitalId}
-            onDragEnd={() => setDraggedVitalId(null)}
-            onDropAt={(toIndex) => {
-              if (draggedVitalId) update?.moveVitalBox(draggedVitalId, toIndex);
-              setDraggedVitalId(null);
+        {vitalRowLayout.map((chunk, chunkIndex) => (
+          <div
+            key={chunkIndex}
+            style={{
+              display: "flex",
+              // Every row's alignment grid spans the same full width — the
+              // card's own maxVitalCols, not this row's (possibly smaller)
+              // configured column count — so a "2 per row" row on a wider
+              // card still stretches (and its badges still grow) along with
+              // the card, instead of staying pinned to a fixed, narrow span.
+              width: vitalRowGridWidth(maxVitalCols, vitalW, vitalGap),
+              justifyContent: vitalRowJustifyContent(chunk.align),
+              gap: vitalGap,
             }}
-          />
+            onDragOver={editable ? (e) => e.preventDefault() : undefined}
+            onDrop={
+              editable
+                ? (e) => {
+                    e.preventDefault();
+                    if (draggedVitalId) {
+                      update?.moveVitalBox(
+                        draggedVitalId,
+                        chunk.rowIndex,
+                        chunk.rowOffset + chunk.count,
+                      );
+                    }
+                    setDraggedVitalId(null);
+                  }
+                : undefined
+            }
+          >
+            {card.vitalBoxes
+              .slice(chunk.start, chunk.start + chunk.count)
+              .map((box, i) => (
+                <VitalBox
+                  key={box.id}
+                  box={box}
+                  width={vitalW}
+                  height={iconH}
+                  sidePadding={vitalSidePadding}
+                  showLabel={showVitalsLabels}
+                  vitalsMode={vitalsMode}
+                  draggedId={draggedVitalId}
+                  onDragStart={setDraggedVitalId}
+                  onDragEnd={() => setDraggedVitalId(null)}
+                  onDropAt={() => {
+                    if (draggedVitalId) {
+                      update?.moveVitalBox(
+                        draggedVitalId,
+                        chunk.rowIndex,
+                        chunk.rowOffset + i,
+                      );
+                    }
+                    setDraggedVitalId(null);
+                  }}
+                />
+              ))}
+          </div>
         ))}
         {vitalsMenu.menu}
       </div>

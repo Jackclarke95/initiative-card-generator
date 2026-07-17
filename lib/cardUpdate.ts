@@ -10,42 +10,75 @@ import type {
   AbilityStat,
   CardData,
   CardToggles,
-  ScrollStyle,
   DamageTypeKey,
   ResistanceState,
   VitalBoxConfig,
+  VitalRowAlign,
+  VitalRowConfig,
 } from "@/types/card";
 import {
-  inToPx,
-  PLAYER_BORDER_MARGIN_HEIGHT,
-  PX_PER_IN,
-  scrollHeightFor,
-  type SideLayoutConfig,
-} from "@/lib/cardLayout";
+  DEFAULT_VITAL_ROW_ALIGN,
+  DEFAULT_VITAL_ROW_COLUMNS,
+} from "@/lib/vitalsLayout";
 
-type LayoutSide = "player" | "dm";
+// Which row (index into `rows`) owns flat vitalBoxes position `flatIndex`,
+// given each row's own `count` — an existing box's position always falls
+// strictly inside exactly one row's span, so this is unambiguous for real
+// boxes (unlike a *target* position sitting exactly on a row boundary,
+// which is why moves are addressed by (row, local index) rather than a
+// bare flat index — see moveVitalBox).
+function ownerRowIndex(rows: VitalRowConfig[], flatIndex: number): number {
+  let start = 0;
+  for (let i = 0; i < rows.length; i++) {
+    start += rows[i].count;
+    if (flatIndex < start) return i;
+  }
+  return Math.max(0, rows.length - 1);
+}
 
-// Approximates the height a side needs to show just its name banner —
-// mirrors the padding/margins DmFace and PlayerFace themselves use for
-// that section (see components/CardFaces.tsx: DmFace's outer `padding: 8`,
-// PlayerFace's name-section `marginTop: 4` inside its border-inset
-// content box). Not pixel-exact by design — it's a starting point for
-// "Show name only", and the Height field stays freely editable after.
-function nameOnlyHeightIn(
-  side: LayoutSide,
-  widthIn: number,
-  scrollVariant: Exclude<ScrollStyle, "none">,
-): number {
-  const widthPx = inToPx(widthIn);
-  const heightPx =
-    side === "dm"
-      ? scrollHeightFor(scrollVariant, widthPx - 2 - 16) + 16
-      : scrollHeightFor(scrollVariant, widthPx - 40) +
-        4 +
-        8 +
-        2 +
-        PLAYER_BORDER_MARGIN_HEIGHT * 2;
-  return Math.round((heightPx / PX_PER_IN) * 100) / 100;
+// Pushes any row whose `count` exceeds its own `columns` ceiling onto the
+// next row, cascading as far as needed and creating new default rows once
+// it runs off the end — this is the "row got too wide, push the last item
+// onto the next row" behavior, reused by every mutator that can grow a
+// row's count (adding a box, dragging one in, or shrinking a row's own
+// column count below its current occupancy).
+function fixupVitalRowOverflow(rows: VitalRowConfig[]): VitalRowConfig[] {
+  const next: VitalRowConfig[] = [];
+  let carry = 0;
+  // A single forward pass over the FIXED original list, threading any
+  // excess through as a running `carry` rather than mutating a later
+  // index (or pushing new rows) from inside the loop that's iterating —
+  // that indirection was the bug: it let the loop's own bound grow in
+  // step with `i`, so malformed/NaN counts (e.g. from an in-between,
+  // pre-`count`-field session) never satisfied the "no overflow" check
+  // and pushed forever. Any row-count still not consumed after every
+  // existing row spills into new trailing rows below.
+  for (const row of rows) {
+    const count = row.count + carry;
+    if (count > row.columns) {
+      next.push({ ...row, count: row.columns });
+      carry = count - row.columns;
+    } else {
+      next.push({ ...row, count });
+      carry = 0;
+    }
+  }
+  while (carry > 0) {
+    const count = Math.min(carry, DEFAULT_VITAL_ROW_COLUMNS);
+    next.push({ count, columns: DEFAULT_VITAL_ROW_COLUMNS, align: DEFAULT_VITAL_ROW_ALIGN });
+    carry -= count;
+  }
+  return next;
+}
+
+// Drops any row left holding zero boxes (a row emptied out by a removal or
+// a merge) — always leaves at least one row, even an empty one, so there's
+// somewhere for the next box to land.
+function trimEmptyVitalRows(rows: VitalRowConfig[]): VitalRowConfig[] {
+  const next = rows.filter((row) => row.count > 0);
+  return next.length
+    ? next
+    : [{ count: 0, columns: DEFAULT_VITAL_ROW_COLUMNS, align: DEFAULT_VITAL_ROW_ALIGN }];
 }
 
 export interface CardUpdater {
@@ -60,20 +93,31 @@ export interface CardUpdater {
   setVitalBox(id: string, patch: Partial<VitalBoxConfig>): void;
   /** "" clears the box's value to undefined; otherwise parseInt (NaN → undefined). */
   setVitalBoxNum(id: string, raw: string): void;
+  /** Appends a new box to the very end of the list, landing in the last
+   *  row (overflowing onto a new row if that row's already full). */
   addVitalBox(): void;
   removeVitalBox(id: string): void;
-  /** Moves the box with `id` so it sits at `toIndex` in the list. */
-  moveVitalBox(id: string, toIndex: number): void;
-  /** Sets (or, passed undefined, clears) this card's override for one side's
-   *  layout. Clears `layoutOverride` back to undefined entirely once
-   *  neither side is overridden. */
-  setLayoutOverrideSide(side: LayoutSide, value: SideLayoutConfig | undefined): void;
-  /** Hides every other section on `side` and sets its height to fit just
-   *  the name banner — `effectiveSide` is that side's currently-resolved
-   *  config (party default or existing override); this is a shortcut for
-   *  applying the same section-visibility and height settings by hand,
-   *  not a distinct mode — the result stays freely editable afterward. */
-  applyNameOnlyPreset(side: LayoutSide, effectiveSide: SideLayoutConfig): void;
+  /** Moves the box with `id` so it becomes local position `toLocalIndex`
+   *  within row `toRowIndex` (both 0-based) — used for both within-row
+   *  reordering and dragging a box into a different row. Addressed by row
+   *  + local index (not a flat index) because a flat position sitting
+   *  exactly on a row boundary is otherwise ambiguous between "end of this
+   *  row" and "start of the next". Any resulting overflow cascades onto
+   *  subsequent rows exactly like adding a box would. */
+  moveVitalBox(id: string, toRowIndex: number, toLocalIndex: number): void;
+  /** Sets one row's configured column count (clamped to at least 1 — the
+   *  card-width ceiling is enforced by the caller, which offers only the
+   *  options that currently fit). Lowering it below the row's current
+   *  count overflows the excess onto the next row. */
+  setVitalRowColumns(rowIndex: number, columns: number): void;
+  setVitalRowAlign(rowIndex: number, align: VitalRowAlign): void;
+  /** Appends a new, empty row, matching the last row's column count. */
+  addVitalRow(): void;
+  /** Removes a row's own settings — the boxes it held aren't deleted, they
+   *  merge into the next row (or the previous one, if it was the last row),
+   *  overflowing further if that row can't hold them all. No-op if it's
+   *  the only row. */
+  removeVitalRow(rowIndex: number): void;
 }
 
 /** Builds a set of update helpers bound to a specific card + onChange. Each
@@ -141,89 +185,109 @@ export function createCardUpdater(
   }
 
   function addVitalBox() {
+    const vitalBoxes = [
+      ...card.vitalBoxes,
+      { id: crypto.randomUUID(), label: "New", frame: "shield" as const },
+    ];
+    const rows = card.vitalRows.length
+      ? card.vitalRows.slice()
+      : [{ count: 0, columns: DEFAULT_VITAL_ROW_COLUMNS, align: DEFAULT_VITAL_ROW_ALIGN }];
+    const lastIndex = rows.length - 1;
+    rows[lastIndex] = { ...rows[lastIndex], count: rows[lastIndex].count + 1 };
     onChange({
       ...card,
-      vitalBoxes: [
-        ...card.vitalBoxes,
-        { id: crypto.randomUUID(), label: "New", frame: "shield" },
-      ],
+      vitalBoxes,
+      vitalRows: fixupVitalRowOverflow(rows),
     });
   }
 
   function removeVitalBox(id: string) {
+    const fromIndex = card.vitalBoxes.findIndex((box) => box.id === id);
+    if (fromIndex === -1) return;
+    const vitalBoxes = card.vitalBoxes.filter((box) => box.id !== id);
+    const owner = ownerRowIndex(card.vitalRows, fromIndex);
+    const rows = card.vitalRows.map((row, i) =>
+      i === owner ? { ...row, count: row.count - 1 } : row,
+    );
     onChange({
       ...card,
-      vitalBoxes: card.vitalBoxes.filter((box) => box.id !== id),
+      vitalBoxes,
+      vitalRows: trimEmptyVitalRows(rows),
     });
   }
 
-  function moveVitalBox(id: string, toIndex: number) {
+  function moveVitalBox(id: string, toRowIndex: number, toLocalIndex: number) {
     const boxes = card.vitalBoxes;
     const fromIndex = boxes.findIndex((box) => box.id === id);
-    if (fromIndex === -1 || fromIndex === toIndex) return;
+    if (fromIndex === -1) return;
+    const fromRow = ownerRowIndex(card.vitalRows, fromIndex);
+
+    const rowStart = card.vitalRows
+      .slice(0, toRowIndex)
+      .reduce((sum, row) => sum + row.count, 0);
+    const toIndex = rowStart + Math.max(0, toLocalIndex);
+    if (fromIndex === toIndex && fromRow === toRowIndex) return;
+
     const next = boxes.slice();
     const [moved] = next.splice(fromIndex, 1);
-    next.splice(
-      Math.max(0, Math.min(toIndex, next.length)),
-      0,
-      moved,
+    next.splice(Math.max(0, Math.min(toIndex, next.length)), 0, moved);
+
+    let rows = card.vitalRows.slice();
+    rows[fromRow] = { ...rows[fromRow], count: rows[fromRow].count - 1 };
+    rows[toRowIndex] = { ...rows[toRowIndex], count: rows[toRowIndex].count + 1 };
+    rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows));
+
+    onChange({ ...card, vitalBoxes: next, vitalRows: rows });
+  }
+
+  function setVitalRowColumns(rowIndex: number, columns: number) {
+    const clamped = Math.max(1, Math.round(columns));
+    const rows = card.vitalRows.map((row, i) =>
+      i === rowIndex ? { ...row, columns: clamped } : row,
     );
-    onChange({ ...card, vitalBoxes: next });
+    onChange({
+      ...card,
+      vitalRows: fixupVitalRowOverflow(rows),
+    });
   }
 
-  function setLayoutOverrideSide(
-    side: LayoutSide,
-    value: SideLayoutConfig | undefined,
-  ) {
-    const next = { ...card.layoutOverride, [side]: value };
-    if (value === undefined) delete next[side];
-    const layoutOverride = next.player || next.dm ? next : undefined;
-    onChange({ ...card, layoutOverride });
+  function setVitalRowAlign(rowIndex: number, align: VitalRowAlign) {
+    onChange({
+      ...card,
+      vitalRows: card.vitalRows.map((row, i) =>
+        i === rowIndex ? { ...row, align } : row,
+      ),
+    });
   }
 
-  function applyNameOnlyPreset(
-    side: LayoutSide,
-    effectiveSide: SideLayoutConfig,
-  ) {
-    if (side === "dm") {
-      const nameScrollDm =
-        card.toggles.nameScrollDm === "none" ? "scroll" : card.toggles.nameScrollDm;
-      const heightIn = nameOnlyHeightIn("dm", effectiveSide.widthIn, nameScrollDm);
-      onChange({
-        ...card,
-        layoutOverride: {
-          ...card.layoutOverride,
-          dm: { ...effectiveSide, visible: true, preset: "custom", heightIn },
+  function addVitalRow() {
+    const last = card.vitalRows[card.vitalRows.length - 1];
+    onChange({
+      ...card,
+      vitalRows: [
+        ...card.vitalRows,
+        {
+          count: 0,
+          columns: last?.columns ?? DEFAULT_VITAL_ROW_COLUMNS,
+          align: last?.align ?? DEFAULT_VITAL_ROW_ALIGN,
         },
-        damageDisplayMode: "none",
-        toggles: {
-          ...card.toggles,
-          vitals: "none",
-          abilityScores: "none",
-          notesDisplayMode: "none",
-          nameScrollDm,
-        },
-      });
-    } else {
-      const nameScrollPlayer =
-        card.toggles.nameScrollPlayer === "none"
-          ? "dragon"
-          : card.toggles.nameScrollPlayer;
-      const heightIn = nameOnlyHeightIn(
-        "player",
-        effectiveSide.widthIn,
-        nameScrollPlayer,
-      );
-      onChange({
-        ...card,
-        layoutOverride: {
-          ...card.layoutOverride,
-          player: { ...effectiveSide, visible: true, preset: "custom", heightIn },
-        },
-        artMode: "none",
-        toggles: { ...card.toggles, nameScrollPlayer },
-      });
-    }
+      ],
+    });
+  }
+
+  function removeVitalRow(rowIndex: number) {
+    if (card.vitalRows.length <= 1) return;
+    const removed = card.vitalRows[rowIndex];
+    const rest = card.vitalRows.filter((_, i) => i !== rowIndex);
+    const mergeIndex = rowIndex < rest.length ? rowIndex : rest.length - 1;
+    rest[mergeIndex] = {
+      ...rest[mergeIndex],
+      count: rest[mergeIndex].count + removed.count,
+    };
+    onChange({
+      ...card,
+      vitalRows: trimEmptyVitalRows(fixupVitalRowOverflow(rest)),
+    });
   }
 
   return {
@@ -238,8 +302,10 @@ export function createCardUpdater(
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
-    setLayoutOverrideSide,
-    applyNameOnlyPreset,
+    setVitalRowColumns,
+    setVitalRowAlign,
+    addVitalRow,
+    removeVitalRow,
   };
 }
 

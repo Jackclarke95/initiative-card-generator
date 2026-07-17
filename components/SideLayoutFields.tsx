@@ -21,12 +21,6 @@ interface SideLayoutFieldsProps {
   label: string;
   value: SideLayoutConfig;
   onChange: (next: SideLayoutConfig) => void;
-  /** Only passed by the per-card editor — hides every other section on
-   *  this side and sets its height to fit just the name banner. */
-  onApplyNameOnly?: () => void;
-  /** Only passed by the per-card editor, and only while this side is
-   *  actually overridden — clears the override back to the party default. */
-  onResetToDefault?: () => void;
 }
 
 const WIDTH_STEP = 0.05;
@@ -44,8 +38,6 @@ export default function SideLayoutFields({
   label,
   value,
   onChange,
-  onApplyNameOnly,
-  onResetToDefault,
 }: SideLayoutFieldsProps) {
   function setWidth(widthIn: number) {
     onChange({ ...value, preset: "custom", widthIn });
@@ -56,22 +48,7 @@ export default function SideLayoutFields({
 
   return (
     <div className="flex flex-col gap-2">
-      <SectionHeading
-        right={
-          onResetToDefault && (
-            <button
-              type="button"
-              className="text-[10px] normal-case font-normal underline"
-              style={{ color: "var(--text-muted)" }}
-              onClick={onResetToDefault}
-            >
-              Reset to party default
-            </button>
-          )
-        }
-      >
-        {label}
-      </SectionHeading>
+      <SectionHeading>{label}</SectionHeading>
 
       <label className="flex items-center gap-1.5 text-sm text-[var(--text-primary)]">
         <input
@@ -173,16 +150,6 @@ export default function SideLayoutFields({
               />
             </Field>
           </div>
-
-          {onApplyNameOnly && (
-            <button
-              type="button"
-              className={inputClass + " text-center normal-case"}
-              onClick={onApplyNameOnly}
-            >
-              Show name only
-            </button>
-          )}
         </>
       )}
     </div>
