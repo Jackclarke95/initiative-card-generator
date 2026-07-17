@@ -227,7 +227,7 @@ function VitalBox({
       }
     >
       <EditableValue
-        commit={(raw) => update?.setVitalBoxNum(box.id, raw)}
+        commit={(raw) => update?.setVitalBoxValue(box.id, raw)}
         label={box.label || "Vital box value"}
         labelCommit={(raw) => update?.setVitalBox(box.id, { label: raw })}
         labelFieldLabel={`${box.label || "Vital box"} label`}
@@ -301,8 +301,16 @@ export function DmFace({ card, width = FACE_W, height = FACE_H }: DmFaceProps) {
   // just Frame's own width-fit clamp doing its job). Solving
   // maxW*1.5/text.length = cap for text.length=3 gives maxW = cap*2;
   // whatever's left of vitalW beyond that becomes side padding instead.
+  // A little extra on top of that: free-text values ("12/15", "40*") are
+  // wider per character than a bare number reads, and butt up against the
+  // frame's own edge right at the cap size before the length-based shrink
+  // has kicked in — this trims the available width a bit further so it
+  // shrinks sooner, without needing to pad the text with spaces by hand.
   const vitalMaxValueSize = 26; // matches VitalsFrame's own default cap
-  const vitalSidePadding = Math.max(0, Math.round((vitalW - vitalMaxValueSize * 2) / 2));
+  const VITAL_VALUE_EXTRA_INSET = 3;
+  const vitalSidePadding =
+    Math.max(0, Math.round((vitalW - vitalMaxValueSize * 2) / 2)) +
+    VITAL_VALUE_EXTRA_INSET;
   // How card.vitalRows' explicit per-row counts actually render right now —
   // clamped by however many columns actually fit at this width, splitting a
   // row into extra chunks if it's currently too wide to show in one.
@@ -717,6 +725,11 @@ export function PlayerFace({
   const contentW = width - 2 - PLAYER_BORDER_MARGIN_WIDTH * 2;
   const contentH = height - 2 - PLAYER_BORDER_MARGIN_HEIGHT * 2;
   const ART_BOTTOM_MARGIN = 8;
+  // The ornate Border5e frame's ink sits a bit inside the content box's own
+  // edges (it's drawn right up to contentW/contentH, but the art within it
+  // isn't) — without this, art sized to the full content width visually
+  // overlaps the border art on the sides.
+  const ART_SIDE_MARGIN = 16;
 
   return (
     <div
@@ -790,6 +803,8 @@ export function PlayerFace({
             alignItems: "flex-end",
             justifyContent: "center",
             paddingBottom: ART_BOTTOM_MARGIN,
+            paddingLeft: ART_SIDE_MARGIN,
+            paddingRight: ART_SIDE_MARGIN,
             color: "#111",
           }}
           onContextMenu={artMenu.onContextMenu}

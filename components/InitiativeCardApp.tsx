@@ -22,7 +22,9 @@ import { CardEditProvider } from "@/components/CardEditContext";
 import FoldedCardPreview from "@/components/FoldedCardPreview";
 import InfoTooltip from "@/components/InfoTooltip";
 import SegmentedToggle from "@/components/SegmentedToggle";
-import SideLayoutFields, { WidthMismatchWarning } from "@/components/SideLayoutFields";
+import SideLayoutFields, {
+  WidthMismatchWarning,
+} from "@/components/SideLayoutFields";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   contentBoxIn,
@@ -40,7 +42,12 @@ import {
 } from "@/lib/cardLayout";
 import { stepValueOnWheel } from "@/lib/sliderWheel";
 import { PAPER_LABELS, type Margins, type PaperPreset } from "@/lib/paperSizes";
-import { loadPersistedState, savePersistedState } from "@/lib/partyStorage";
+import {
+  loadPersistedState,
+  savePersistedState,
+  type PersistedState,
+} from "@/lib/partyStorage";
+import defaultPartyData from "@/lib/data/defaultParty.json";
 
 type ExportScope = "current" | "all";
 type ExportChoice = ExportFormat | "pdf";
@@ -80,7 +87,8 @@ const PREVIEW_MIN_SCALE = 1;
 // unmemoized; it has to reflect every edit immediately.
 const MeasureSpread = memo(
   CardSpread,
-  (prev, next) => prev.direction === next.direction && prev.layout === next.layout,
+  (prev, next) =>
+    prev.direction === next.direction && prev.layout === next.layout,
 );
 
 function newCard(): CardData {
@@ -98,17 +106,10 @@ function newParty(name: string): Party {
   };
 }
 
+// A pre-filled sample party (see lib/data/defaultParty.json) rather than a
+// blank card — gives a fresh, first-visit session something to look at.
 function defaultParties(): Party[] {
-  const card = newCard();
-  return [
-    {
-      id: crypto.randomUUID(),
-      name: "Untitled Party",
-      cards: [card],
-      activeCardId: card.id,
-      layout: defaultLayoutConfig(),
-    },
-  ];
+  return (defaultPartyData as unknown as PersistedState).parties;
 }
 
 // Sessions persisted before per-side layout config existed won't have a
@@ -178,8 +179,8 @@ export default function InitiativeCardApp() {
     return () => observer.disconnect();
   }, []);
 
-  const [exportScope, setExportScope] = useState<ExportScope>("current");
-  const [exportChoice, setExportChoice] = useState<ExportChoice>("png");
+  const [exportScope, setExportScope] = useState<ExportScope>("all");
+  const [exportChoice, setExportChoice] = useState<ExportChoice>("pdf");
   const [exporting, setExporting] = useState(false);
 
   const [pdfSettings, setPdfSettings] = useState<PdfSettings>({
@@ -402,13 +403,7 @@ export default function InitiativeCardApp() {
     } finally {
       setExporting(false);
     }
-  }, [
-    activeParty.cards,
-    activeCard,
-    exportScope,
-    exportChoice,
-    pdfSettings,
-  ]);
+  }, [activeParty.cards, activeCard, exportScope, exportChoice, pdfSettings]);
 
   return (
     <div
@@ -482,10 +477,18 @@ export default function InitiativeCardApp() {
           }}
         >
           <div ref={rowMeasureRef} style={{ width: "max-content" }}>
-            <MeasureSpread card={activeCard} layout={effectiveLayout} direction="row" />
+            <MeasureSpread
+              card={activeCard}
+              layout={effectiveLayout}
+              direction="row"
+            />
           </div>
           <div ref={columnMeasureRef} style={{ width: "max-content" }}>
-            <MeasureSpread card={activeCard} layout={effectiveLayout} direction="column" />
+            <MeasureSpread
+              card={activeCard}
+              layout={effectiveLayout}
+              direction="column"
+            />
           </div>
         </div>
       </main>
@@ -554,10 +557,10 @@ export default function InitiativeCardApp() {
                   color: "var(--text-primary)",
                 }}
               >
+                <option value="pdf">PDF</option>
                 <option value="svg">SVG</option>
                 <option value="png">PNG</option>
                 <option value="jpeg">JPEG</option>
-                <option value="pdf">PDF</option>
               </select>
               <SegmentedToggle
                 className="flex-1"
@@ -646,9 +649,9 @@ export default function InitiativeCardApp() {
                   >
                     ⚠ {oversizedCardCount} card
                     {oversizedCardCount > 1 ? "s" : ""} won&apos;t fit within
-                    this page size and margins, even rotated. Increase the
-                    page size, shrink the margins, or reduce the card&apos;s
-                    own size.
+                    this page size and margins, even rotated. Increase the page
+                    size, shrink the margins, or reduce the card&apos;s own
+                    size.
                   </p>
                 )}
               </>
@@ -689,10 +692,18 @@ export default function InitiativeCardApp() {
                     max={GUTTER_MAX_CM}
                     step={0.1}
                     value={activeParty.layout.gutterCm}
-                    onChange={(e) => updatePartyGutterCm(parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      updatePartyGutterCm(parseFloat(e.target.value))
+                    }
                     onWheel={(e) =>
                       updatePartyGutterCm(
-                        stepValueOnWheel(e, activeParty.layout.gutterCm, 0.1, 0, GUTTER_MAX_CM),
+                        stepValueOnWheel(
+                          e,
+                          activeParty.layout.gutterCm,
+                          0.1,
+                          0,
+                          GUTTER_MAX_CM,
+                        ),
                       )
                     }
                     className="w-full accent-[var(--accent)]"
@@ -741,6 +752,15 @@ export default function InitiativeCardApp() {
               </>
             )}
           </div>
+
+          {/* Required notice under Wizards of the Coast's Fan Content Policy
+           *  (company.wizards.com/en/legal/fancontentpolicy) — this tool uses
+           *  official class/monster art under that policy. */}
+          <p className="mt-4 text-[10px] leading-snug text-[var(--text-muted)]">
+            Initiative Card Generator is unofficial Fan Content permitted under
+            the Fan Content Policy. Not approved/endorsed by Wizards. Portions
+            of the materials used are property of Wizards of the Coast.
+          </p>
         </div>
       </aside>
 

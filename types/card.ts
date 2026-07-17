@@ -74,7 +74,11 @@ export interface VitalBoxConfig {
   id: string;
   /** The short caption printed on the badge itself, e.g. "HP". */
   label: string;
-  value?: number;
+  /** Free text, not just a number — e.g. "12/15" (unshielded/shielded AC) or
+   *  "40*" (a footnoted speed). Scroll-to-adjust (see InlineEdit's
+   *  stepNumericText) only kicks in when this holds exactly one
+   *  uninterrupted run of digits; otherwise scrolling is a no-op. */
+  value?: string;
   frame: VitalFrameShape;
 }
 
@@ -303,12 +307,12 @@ export interface CardData {
 // free to relabel, reshape, reorder, remove, or add to this from there.
 function defaultVitalBoxes(): VitalBoxConfig[] {
   return [
-    { id: crypto.randomUUID(), label: "HP", frame: "heart", value: 10 },
-    { id: crypto.randomUUID(), label: "AC", frame: "shield", value: 10 },
-    { id: crypto.randomUUID(), label: "DC", frame: "book", value: 10 },
-    { id: crypto.randomUUID(), label: "PP", frame: "hexagon", value: 10 },
-    { id: crypto.randomUUID(), label: "Speed", frame: "chevron", value: 30 },
-    { id: crypto.randomUUID(), label: "Insight", frame: "orb", value: 10 },
+    { id: crypto.randomUUID(), label: "HP", frame: "heart", value: "10" },
+    { id: crypto.randomUUID(), label: "AC", frame: "shield", value: "10" },
+    { id: crypto.randomUUID(), label: "DC", frame: "book", value: "10" },
+    { id: crypto.randomUUID(), label: "PP", frame: "hexagon", value: "10" },
+    { id: crypto.randomUUID(), label: "Speed", frame: "chevron", value: "30" },
+    { id: crypto.randomUUID(), label: "Insight", frame: "orb", value: "10" },
   ];
 }
 
