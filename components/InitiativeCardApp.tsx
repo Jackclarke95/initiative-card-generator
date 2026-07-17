@@ -179,8 +179,8 @@ export default function InitiativeCardApp() {
     return () => observer.disconnect();
   }, []);
 
-  const [exportScope, setExportScope] = useState<ExportScope>("current");
-  const [exportChoice, setExportChoice] = useState<ExportChoice>("png");
+  const [exportScope, setExportScope] = useState<ExportScope>("all");
+  const [exportChoice, setExportChoice] = useState<ExportChoice>("pdf");
   const [exporting, setExporting] = useState(false);
 
   const [pdfSettings, setPdfSettings] = useState<PdfSettings>({
@@ -557,10 +557,10 @@ export default function InitiativeCardApp() {
                   color: "var(--text-primary)",
                 }}
               >
+                <option value="pdf">PDF</option>
                 <option value="svg">SVG</option>
                 <option value="png">PNG</option>
                 <option value="jpeg">JPEG</option>
-                <option value="pdf">PDF</option>
               </select>
               <SegmentedToggle
                 className="flex-1"
