@@ -141,8 +141,13 @@ export function VitalsFrame({
       art={art}
       value={value}
       label={label ? { text: label, position: "bottom" } : undefined}
-      labelInset={labelInset ?? height * 0.16}
+      labelInset={labelInset ?? Math.round(height * 0.16)}
       maxValueSize={maxValueSize}
+      // Frame's default valueMarginTop nudges the value down to visually
+      // balance against a label underneath it — with no label at all
+      // (the "compact" display mode), there's nothing to balance against,
+      // so the value should sit dead-center in the box instead.
+      valueMarginTop={label ? undefined : 0}
     />
   );
 }

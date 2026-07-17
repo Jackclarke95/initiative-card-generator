@@ -88,7 +88,11 @@ function fitValueFontSize(
 ) {
   const text =
     typeof value === "string" || typeof value === "number" ? String(value) : "";
-  if (!text) return cap;
+  // Empty text still respects the height clamp — skipping it here (leaving
+  // only the cap) would make an empty field's placeholder cursor a
+  // different size than the field ever renders at once it has real text,
+  // which is its own source of a layout jump on the first keystroke.
+  if (!text) return Math.max(8, Math.min(cap, maxH));
   const widthFit = (maxW * 1.5) / text.length;
   return Math.max(8, Math.min(cap, maxH, widthFit));
 }
@@ -138,10 +142,6 @@ export function Frame({
       {...edit.bind}
       style={{
         ...valueStyle,
-        display: "block",
-        width: "100%",
-        minHeight: fontSize,
-        textAlign: "center",
         outline: "none",
         cursor: "text",
       }}
@@ -158,7 +158,18 @@ export function Frame({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        overflow: "hidden",
+        // `clip`, not `hidden`: an overflow:hidden box is still a scroll
+        // container — focusing the editable value or placing its caret
+        // makes the browser scroll-the-caret-into-view inside it, and at
+        // line-height 1 the caret's rect (drawn from full font metrics)
+        // pokes past the line box, so that "reveal" nudged the whole
+        // value up a few pixels. The nudge lives in element.scrollTop —
+        // a DOM property — so markup and computed styles compared
+        // byte-identical while the paint differed, and it survived
+        // remounting the span (the offset sat here, on the parent).
+        // overflow:clip clips identically but is NOT a scroll container:
+        // there is no scrollTop to nudge, by definition.
+        overflow: "clip",
       }}
       // Clicking anywhere in the value area (incl. an empty field, which has
       // no glyphs to hit) focuses the editable text and drops the caret at

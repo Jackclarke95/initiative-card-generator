@@ -101,10 +101,6 @@ const DM_SCROLL_W = CONTENT_W; // Name banner on the DM side — full row width
 const PLAYER_BORDER_MARGIN_WIDTH = 4;
 const PLAYER_BORDER_MARGIN_HEIGHT = 6;
 
-/** Fixed-width centering slot: lets two badges with different natural
- *  widths (e.g. Heart vs. Hexagon) share one alignment axis between rows,
- *  by centering each inside the same-width box rather than relying on
- *  their raw widths to match. */
 type VitalField =
   | "maxHp"
   | "ac"
@@ -124,6 +120,7 @@ interface VitalConfig {
     height: number;
     value?: React.ReactNode;
     label?: string;
+    sidePadding?: number;
   }) => React.JSX.Element;
 }
 
@@ -173,8 +170,23 @@ export function DmFace({ card }: { card: CardData }) {
   // space — tighter gutters, wider (still centered) frames, same total
   // row width. Row gap matches column gap exactly, so it reads as one
   // even grid rather than "columns, then separately, rows".
-  const vitalGap = (CONTENT_W - vitalMinW * 3) / 2 / 2;
-  const vitalW = (CONTENT_W - vitalGap * 2) / 3;
+  // Rounded to whole pixels — fractional CSS dimensions are subject to
+  // subpixel rounding that can get re-snapped differently across repaints
+  // (e.g. one triggered by a nearby caret/focus change needing crisp
+  // rendering), which is exactly the kind of instability that showed up
+  // as vitals badges' values shifting on edit while whole-pixel-sized
+  // Ability Scores never did.
+  const vitalGap = Math.round((CONTENT_W - vitalMinW * 3) / 2 / 2);
+  const vitalW = Math.round((CONTENT_W - vitalGap * 2) / 3);
+  // The value's own available width doesn't need to track the box's full
+  // (now wider) width — it only needs to be wide enough that a 3-digit
+  // value (e.g. a high max HP) still renders at the full cap size;
+  // anything longer than that shrinking below the cap is fine (that's
+  // just Frame's own width-fit clamp doing its job). Solving
+  // maxW*1.5/text.length = cap for text.length=3 gives maxW = cap*2;
+  // whatever's left of vitalW beyond that becomes side padding instead.
+  const vitalMaxValueSize = 26; // matches VitalsFrame's own default cap
+  const vitalSidePadding = Math.round((vitalW - vitalMaxValueSize * 2) / 2);
 
   const statGap = 4;
 
@@ -283,6 +295,7 @@ export function DmFace({ card }: { card: CardData }) {
                 label={showVitalsLabels ? label : undefined}
                 width={vitalW}
                 height={iconH}
+                sidePadding={vitalSidePadding}
               />,
             )}
           </Fragment>

@@ -105,7 +105,12 @@ export function useEditableText(value: string): EditableTextHandle | null {
     focusEnd: () => {
       const el = nodeRef.current;
       if (!el) return;
-      el.focus();
+      // preventScroll: focus() otherwise asks every scrollable ancestor —
+      // including overflow:hidden ones, which are still programmatically
+      // scrollable — to bring the element into view. Those invisible
+      // scroll nudges were shifting frame values on focus (scrollTop shows
+      // in no markup or computed style); the frames never need the assist.
+      el.focus({ preventScroll: true });
       const range = document.createRange();
       range.selectNodeContents(el);
       range.collapse(false);

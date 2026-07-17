@@ -62,7 +62,11 @@ export function NotesFrame({
           overflow: "hidden",
         }}
       >
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        {/* clip, not hidden — see Frame.tsx's valueEl: hidden boxes are
+            still scroll containers, and caret reveals can leave a stale
+            scrollTop nudging the content. The editable div inside scrolls
+            on purpose (overflow:auto); this wrapper never should. */}
+        <div style={{ flex: 1, overflow: "clip" }}>
           {edit ? (
             <div
               {...edit.bind}
