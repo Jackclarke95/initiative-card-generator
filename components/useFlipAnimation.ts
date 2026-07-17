@@ -4,7 +4,7 @@
 // with `data-flip-id` moves to a new position — e.g. a drag-and-drop reorder
 // committing a new array order — it slides from its old spot to its new one
 // instead of just snapping there, in both the card preview's vitals grid and
-// the sidebar form's list. Framework-agnostic (plain DOM rects + an
+// the sidebar form's list. Framework-agnostic (plain DOM offsets + an
 // imperative transform), so it works the same whether the reorder came from
 // a CSS grid or a flex column.
 
@@ -16,7 +16,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
  *  where a tracked child's position changed since the last one. */
 export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
   const containerRef = useRef<T | null>(null);
-  const prevRects = useRef<Map<string, DOMRect>>(new Map());
+  const prevOffsets = useRef<Map<string, { left: number; top: number }>>(new Map());
   // The persisted-state load (InitiativeCardApp) can swap a placeholder
   // default card for a saved one right after the initial mount, replacing
   // every id in the list at once — a real reorder never does that (ids stay
@@ -37,19 +37,31 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
     const container = containerRef.current;
     if (!container) return;
     const nodes = container.querySelectorAll<HTMLElement>("[data-flip-id]");
-    const nextRects = new Map<string, DOMRect>();
+    const nextOffsets = new Map<string, { left: number; top: number }>();
 
     nodes.forEach((node) => {
       const id = node.dataset.flipId;
       if (!id) return;
-      const rect = node.getBoundingClientRect();
-      nextRects.set(id, rect);
+
+      // offsetLeft/offsetTop, not getBoundingClientRect: the live preview
+      // renders at a CSS `transform: scale(...)` to fit its pane, and
+      // getBoundingClientRect reports post-scale screen pixels. A delta
+      // measured in THOSE pixels, then fed back in as this element's own
+      // `transform: translate(...)`, gets scaled a SECOND time by that same
+      // ancestor — a box moving one grid row was landing ~25% further than
+      // it should, i.e. this was the "jumps too high, then slides down"
+      // bug. offsetLeft/Top are pure layout metrics, unaffected by any
+      // ancestor's (or this element's own) CSS transform, so the delta they
+      // give is already in this element's own, unscaled coordinate space.
+      const left = node.offsetLeft;
+      const top = node.offsetTop;
+      nextOffsets.set(id, { left, top });
 
       if (!armed.current) return;
-      const prev = prevRects.current.get(id);
+      const prev = prevOffsets.current.get(id);
       if (!prev) return;
-      const dx = prev.left - rect.left;
-      const dy = prev.top - rect.top;
+      const dx = prev.left - left;
+      const dy = prev.top - top;
       if (!dx && !dy) return;
 
       // Jump it back to where it visually was (no transition), then let the
@@ -64,7 +76,7 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
       });
     });
 
-    prevRects.current = nextRects;
+    prevOffsets.current = nextOffsets;
   });
 
   return containerRef;

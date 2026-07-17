@@ -122,6 +122,16 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
   // is when the line should disappear instead of sitting on stale.
   const vitalDragDepth = useRef(0);
 
+  // Shared by a row's own onDragOver and its drag handle's (see below) —
+  // `rowEl` is always the row div itself, whichever element the pointer is
+  // actually over within it.
+  function updateVitalInsertAt(rowEl: HTMLElement | null, clientY: number, i: number) {
+    if (!rowEl) return;
+    const rect = rowEl.getBoundingClientRect();
+    const before = clientY - rect.top < rect.height / 2;
+    setVitalInsertAt(before ? i : i + 1);
+  }
+
   function commitVitalMove() {
     if (draggedVitalId && vitalInsertAt !== null) {
       const fromIndex = card.vitalBoxes.findIndex(
@@ -288,8 +298,18 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
         // Catch-all: the gap between rows (and the insertion-line divs
         // living in it) belongs to no row's own onDragOver, so without this
         // the browser shows its default "not-allowed" cursor there even
-        // though dropping in that gap is exactly what places the line.
+        // though dropping in that gap is exactly what places the line. A
+        // real (continuous, not step-wise) drag crosses these gaps
+        // constantly, so onDrop needs the same catch-all: without it, a
+        // drop landing in a gap looked identical to a valid one (line
+        // showing, cursor allowed) but silently committed nothing — no row
+        // was under the pointer to fire its own onDrop. This one just acts
+        // on whatever `vitalInsertAt` the nearest row already computed.
         onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          commitVitalMove();
+        }}
         onDragEnter={() => {
           vitalDragDepth.current += 1;
         }}
@@ -316,9 +336,7 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
               style={{ opacity: draggedVitalId === box.id ? 0.4 : 1 }}
               onDragOver={(e) => {
                 e.preventDefault();
-                const rect = e.currentTarget.getBoundingClientRect();
-                const before = e.clientY - rect.top < rect.height / 2;
-                setVitalInsertAt(before ? i : i + 1);
+                updateVitalInsertAt(e.currentTarget, e.clientY, i);
               }}
               onDrop={(e) => {
                 e.preventDefault();
@@ -339,6 +357,20 @@ export default function CardEditor({ card, onChange }: CardEditorProps) {
                   vitalDragDepth.current = 0;
                   setDraggedVitalId(null);
                   setVitalInsertAt(null);
+                }}
+                // Being draggable itself, this span doesn't reliably pass
+                // dragover/drop through to the row underneath — hovering (or
+                // dropping) on another row's handle silently did nothing,
+                // which read as "can't reorder past this index" depending on
+                // exactly where the pointer landed. Handling both directly
+                // here, rather than relying on them bubbling up, fixes that.
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  updateVitalInsertAt(e.currentTarget.parentElement, e.clientY, i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  commitVitalMove();
                 }}
                 aria-hidden
               >
