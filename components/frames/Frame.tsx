@@ -135,6 +135,7 @@ export function Frame({
     color: INK,
     whiteSpace: "nowrap",
     marginTop: valueMarginTop,
+    marginBottom: 5,
   };
 
   const valueSpan = edit ? (
