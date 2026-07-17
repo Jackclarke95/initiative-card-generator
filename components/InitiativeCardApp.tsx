@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -54,6 +55,19 @@ const GUTTER_MAX_CM = 3;
 // below that the cards read as tiny rather than just compact.
 const PREVIEW_MAX_SCALE = 2;
 const PREVIEW_MIN_SCALE = 1;
+
+// The two off-screen CardSpreads below exist only to measure the spread's
+// natural footprint (see the ResizeObserver effect) — every card face
+// renders into a fixed FACE_W×FACE_H box regardless of its content (that's
+// the whole point of a print-ready fixed-size card), so that footprint
+// never actually changes on a field edit, a vitals reorder, or a display
+// toggle, only on `direction`. Without this memo they still re-rendered
+// (and re-ran every child's own effects, including the vitals FLIP
+// animation's) on every keystroke or drag, which is where the perceptible
+// lag on those interactions was actually coming from — not the animation
+// itself. The visible, on-screen CardSpread a few lines down is left
+// unmemoized; it has to reflect every edit immediately.
+const MeasureSpread = memo(CardSpread, (prev, next) => prev.direction === next.direction);
 
 function newCard(): CardData {
   return emptyCard(crypto.randomUUID());
@@ -383,10 +397,10 @@ export default function InitiativeCardApp() {
           }}
         >
           <div ref={rowMeasureRef} style={{ width: "max-content" }}>
-            <CardSpread card={activeCard} direction="row" />
+            <MeasureSpread card={activeCard} direction="row" />
           </div>
           <div ref={columnMeasureRef} style={{ width: "max-content" }}>
-            <CardSpread card={activeCard} direction="column" />
+            <MeasureSpread card={activeCard} direction="column" />
           </div>
         </div>
       </main>
