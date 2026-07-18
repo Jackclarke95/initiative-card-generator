@@ -106,6 +106,17 @@ export interface CardUpdater {
    *  row" and "start of the next". Any resulting overflow cascades onto
    *  subsequent rows exactly like adding a box would. */
   moveVitalBox(id: string, toRowIndex: number, toLocalIndex: number): void;
+  /** Moves the box with `id` up or down by exactly one flat position — the
+   *  mobile up/down buttons' equivalent of dragging it past its immediate
+   *  neighbor. Within the same row this is a plain swap (no row counts
+   *  change). Crossing into an adjacent row, it inserts next to whichever
+   *  neighbor it displaced rather than swapping wholesale — except moving
+   *  up into a row that's already at its own column ceiling, where there's
+   *  no forward-cascade mechanism to make room, so it falls back to a
+   *  swap; moving down into a full row inserts anyway and lets the
+   *  existing overflow cascade push that row's last box onward,
+   *  recursively spilling into the row after that if needed. */
+  moveVitalBoxAdjacent(id: string, direction: "up" | "down"): void;
   /** Sets one row's configured column count (clamped to at least 1 — the
    *  card-width ceiling is enforced by the caller, which offers only the
    *  options that currently fit). Lowering it below the row's current
@@ -236,6 +247,63 @@ export function createCardUpdater(
     onChange({ ...card, vitalBoxes: next, vitalRows: rows });
   }
 
+  function moveVitalBoxAdjacent(id: string, direction: "up" | "down") {
+    const boxes = card.vitalBoxes;
+    const fromFlat = boxes.findIndex((box) => box.id === id);
+    if (fromFlat === -1) return;
+    const neighborFlat = direction === "up" ? fromFlat - 1 : fromFlat + 1;
+    if (neighborFlat < 0 || neighborFlat >= boxes.length) return;
+
+    const fromRow = ownerRowIndex(card.vitalRows, fromFlat);
+    const neighborRow = ownerRowIndex(card.vitalRows, neighborFlat);
+
+    // A pure content swap never touches row counts — the two boxes just
+    // trade which flat slot (and therefore which row) they occupy.
+    function swapInPlace() {
+      const next = boxes.slice();
+      [next[fromFlat], next[neighborFlat]] = [
+        next[neighborFlat],
+        next[fromFlat],
+      ];
+      onChange({ ...card, vitalBoxes: next });
+    }
+
+    if (neighborRow === fromRow) {
+      swapInPlace();
+      return;
+    }
+
+    const neighborRowConfig = card.vitalRows[neighborRow];
+    const neighborRowFull = neighborRowConfig.count >= neighborRowConfig.columns;
+    if (direction === "up" && neighborRowFull) {
+      swapInPlace();
+      return;
+    }
+
+    // Insert next to the neighbor it displaced — before it going up, after
+    // it going down. Removing at fromFlat first means splicing back in at
+    // the neighbor's own (pre-removal) flat index lands on the correct
+    // side in both directions: if fromFlat is later than neighborFlat, the
+    // neighbor's position is untouched by the removal, so inserting there
+    // pushes it forward (after); if fromFlat is earlier, the neighbor has
+    // already shifted back by one, so the same index now lands just past
+    // it (also after) — one flat-index compare short of duplicating this
+    // per direction.
+    const next = boxes.slice();
+    const [moved] = next.splice(fromFlat, 1);
+    next.splice(neighborFlat, 0, moved);
+
+    let rows = card.vitalRows.slice();
+    rows[fromRow] = { ...rows[fromRow], count: rows[fromRow].count - 1 };
+    rows[neighborRow] = {
+      ...rows[neighborRow],
+      count: rows[neighborRow].count + 1,
+    };
+    rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows));
+
+    onChange({ ...card, vitalBoxes: next, vitalRows: rows });
+  }
+
   function setVitalRowColumns(rowIndex: number, columns: number) {
     const clamped = Math.max(1, Math.round(columns));
     const rows = card.vitalRows.map((row, i) =>
@@ -298,6 +366,7 @@ export function createCardUpdater(
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
+    moveVitalBoxAdjacent,
     setVitalRowColumns,
     setVitalRowAlign,
     addVitalRow,

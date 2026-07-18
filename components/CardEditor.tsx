@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { Party } from "@/types/party";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/DamageTypeBadge";
+import PartySelector from "@/components/PartySelector";
+import CardList from "@/components/CardList";
 import SegmentedToggle from "@/components/SegmentedToggle";
 import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
 import { inToPx, type LayoutConfig } from "@/lib/cardLayout";
@@ -45,6 +48,20 @@ interface CardEditorProps {
   /** This card's resolved Player/DM layout — party default merged with
    *  whatever this card overrides. */
   effectiveLayout: LayoutConfig;
+  /** Party/card selection, shown at the top of the form — this is the one
+   *  place both the desktop left rail and the mobile "Character" tab
+   *  offer it, so which card is being edited is always in view alongside
+   *  the fields editing it. */
+  parties: Party[];
+  activeParty: Party;
+  onSelectParty: (id: string) => void;
+  onAddParty: () => void;
+  onRenameParty: (id: string, name: string) => void;
+  onRequestDeleteParty: (id: string) => void;
+  onSelectCard: (id: string) => void;
+  onAddCard: () => void;
+  onRemoveCard: (id: string) => void;
+  onResetCard: () => void;
 }
 
 // ── Small form helpers ────────────────────────────────────────────────
@@ -119,6 +136,16 @@ export default function CardEditor({
   card,
   onChange,
   effectiveLayout,
+  parties,
+  activeParty,
+  onSelectParty,
+  onAddParty,
+  onRenameParty,
+  onRequestDeleteParty,
+  onSelectCard,
+  onAddCard,
+  onRemoveCard,
+  onResetCard,
 }: CardEditorProps) {
   const [draggingArt, setDraggingArt] = useState(false);
   const [draggedVitalId, setDraggedVitalId] = useState<string | null>(null);
@@ -197,6 +224,7 @@ export default function CardEditor({
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
+    moveVitalBoxAdjacent,
     setVitalRowColumns,
     setVitalRowAlign,
     addVitalRow,
@@ -215,7 +243,26 @@ export default function CardEditor({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
+    <>
+      <PartySelector
+        parties={parties}
+        activePartyId={activeParty.id}
+        onSelect={onSelectParty}
+        onAdd={onAddParty}
+        onRename={onRenameParty}
+        onRequestDelete={onRequestDeleteParty}
+      />
+
+      <CardList
+        cards={activeParty.cards}
+        activeId={card.id}
+        onSelect={onSelectCard}
+        onAdd={onAddCard}
+        onRemove={onRemoveCard}
+        onReset={onResetCard}
+      />
+
+      <div className="flex flex-col px-4 py-4 gap-1 text-[var(--text-primary)]">
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
       <Field label="Name">
@@ -493,7 +540,7 @@ export default function CardEditor({
                       }}
                     >
                       <span
-                        className="cursor-grab select-none text-[var(--text-muted)] px-0.5"
+                        className="hidden lg:inline cursor-grab select-none text-[var(--text-muted)] px-0.5"
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = "move";
@@ -530,6 +577,30 @@ export default function CardEditor({
                       >
                         ⠿
                       </span>
+                      {/* Touch devices can't reliably drag-and-drop, so below
+                          the lg breakpoint these buttons stand in for the
+                          drag handle above — swap with the box above/below
+                          (see moveVitalBoxAdjacent for the cross-row rules). */}
+                      <div className="flex lg:hidden items-center gap-1">
+                        <button
+                          type="button"
+                          aria-label="Move vital box up"
+                          disabled={span.start + i === 0}
+                          className="flex items-center justify-center w-6 h-6 rounded text-sm leading-none text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
+                          onClick={() => moveVitalBoxAdjacent(box.id, "up")}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move vital box down"
+                          disabled={span.start + i === card.vitalBoxes.length - 1}
+                          className="flex items-center justify-center w-6 h-6 rounded text-sm leading-none text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
+                          onClick={() => moveVitalBoxAdjacent(box.id, "down")}
+                        >
+                          ▼
+                        </button>
+                      </div>
                       <input
                         className={inputClass + " flex-[2]"}
                         placeholder="Label"
@@ -725,6 +796,7 @@ export default function CardEditor({
           onChange={(e) => set("notes", e.target.value)}
         />
       </Field>
-    </div>
+      </div>
+    </>
   );
 }
