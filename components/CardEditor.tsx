@@ -431,6 +431,7 @@ export default function CardEditor({
           return (
             <div
               key={rowIndex}
+              data-flip-height-id={`row-${rowIndex}`}
               className="flex flex-col gap-1 rounded border border-[var(--border)] p-1.5"
             >
               <div className="flex items-center justify-between gap-2">

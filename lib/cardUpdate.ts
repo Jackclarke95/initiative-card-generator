@@ -108,14 +108,18 @@ export interface CardUpdater {
   moveVitalBox(id: string, toRowIndex: number, toLocalIndex: number): void;
   /** Moves the box with `id` up or down by exactly one flat position — the
    *  mobile up/down buttons' equivalent of dragging it past its immediate
-   *  neighbor. Within the same row this is a plain swap (no row counts
-   *  change). Crossing into an adjacent row, it inserts next to whichever
-   *  neighbor it displaced rather than swapping wholesale — except moving
-   *  up into a row that's already at its own column ceiling, where there's
-   *  no forward-cascade mechanism to make room, so it falls back to a
-   *  swap; moving down into a full row inserts anyway and lets the
-   *  existing overflow cascade push that row's last box onward,
-   *  recursively spilling into the row after that if needed. */
+   *  neighbor. Within the same row this is a plain swap. Crossing into an
+   *  adjacent row, the box is by definition already sitting right at that
+   *  row's boundary, so it just joins it — becoming its new last member
+   *  going up, or new first member going down — without physically
+   *  reordering anything, only the row/column boundary between the two
+   *  groups shifts by one box. The one exception is moving up into a row
+   *  that's already at its own column ceiling, where there's no
+   *  backward-cascade mechanism to make room, so it falls back to a swap
+   *  with that row's last box instead; moving down into a full row joins
+   *  it anyway and lets the existing overflow cascade push that row's own
+   *  last box onward, recursively spilling into the row after that if
+   *  needed. */
   moveVitalBoxAdjacent(id: string, direction: "up" | "down"): void;
   /** Sets one row's configured column count (clamped to at least 1 — the
    *  card-width ceiling is enforced by the caller, which offers only the
@@ -280,19 +284,16 @@ export function createCardUpdater(
       return;
     }
 
-    // Insert next to the neighbor it displaced — before it going up, after
-    // it going down. Removing at fromFlat first means splicing back in at
-    // the neighbor's own (pre-removal) flat index lands on the correct
-    // side in both directions: if fromFlat is later than neighborFlat, the
-    // neighbor's position is untouched by the removal, so inserting there
-    // pushes it forward (after); if fromFlat is earlier, the neighbor has
-    // already shifted back by one, so the same index now lands just past
-    // it (also after) — one flat-index compare short of duplicating this
-    // per direction.
-    const next = boxes.slice();
-    const [moved] = next.splice(fromFlat, 1);
-    next.splice(neighborFlat, 0, moved);
-
+    // Crossing a row boundary, `fromFlat` is — by construction — always
+    // the very first or last item of its own row (that's the only way its
+    // flat-adjacent neighbor can belong to a different row at all), which
+    // means it's already sitting exactly where "the new last item of the
+    // row above" or "the new first item of the row below" would put it.
+    // So `vitalBoxes` doesn't move at all here — only the row boundary
+    // between the two groups does, by reassigning one box's worth of
+    // count from one row to the other (and, if that overflows the target
+    // row's own column cap on the way down, cascading the excess onward
+    // exactly like adding a box would).
     let rows = card.vitalRows.slice();
     rows[fromRow] = { ...rows[fromRow], count: rows[fromRow].count - 1 };
     rows[neighborRow] = {
@@ -301,7 +302,7 @@ export function createCardUpdater(
     };
     rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows));
 
-    onChange({ ...card, vitalBoxes: next, vitalRows: rows });
+    onChange({ ...card, vitalRows: rows });
   }
 
   function setVitalRowColumns(rowIndex: number, columns: number) {
