@@ -2,11 +2,12 @@ import type { Party } from "@/types/party";
 
 // Bumped to v2 when CardData's fixed vital fields (ac/maxHp/etc.) became the
 // user-configurable vitalBoxes list, to v3 when the new required vitalRows
-// field (row/column grouping for that list) was added, and to v4 when each
+// field (row/column grouping for that list) was added, to v4 when each
 // row's shape changed again (an explicit `count`, and align values renamed
-// left/right/center/justify) — old sessions are discarded rather than
-// loaded with a stale shape.
-const STORAGE_KEY = "initiative-cards:state:v4";
+// left/right/center/justify), and to v5 when the per-row `columns` cap was
+// dropped (every row now just holds as many boxes as fit the card's width)
+// — old sessions are discarded rather than loaded with a stale shape.
+const STORAGE_KEY = "initiative-cards:state:v5";
 
 export interface PersistedState {
   parties: Party[];

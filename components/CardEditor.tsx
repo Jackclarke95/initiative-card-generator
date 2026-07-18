@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { Party } from "@/types/party";
 import { CLASS_LOGO_MAP } from "@/components/ClassLogos";
 import { DAMAGE_TYPE_REACT_ICONS } from "@/components/DamageTypeBadge";
+import PartySelector from "@/components/PartySelector";
+import CardList from "@/components/CardList";
 import SegmentedToggle from "@/components/SegmentedToggle";
 import { createCardUpdater, nextResistanceState } from "@/lib/cardUpdate";
 import { inToPx, type LayoutConfig } from "@/lib/cardLayout";
@@ -45,6 +48,20 @@ interface CardEditorProps {
   /** This card's resolved Player/DM layout — party default merged with
    *  whatever this card overrides. */
   effectiveLayout: LayoutConfig;
+  /** Party/card selection, shown at the top of the form — this is the one
+   *  place both the desktop left rail and the mobile "Character" tab
+   *  offer it, so which card is being edited is always in view alongside
+   *  the fields editing it. */
+  parties: Party[];
+  activeParty: Party;
+  onSelectParty: (id: string) => void;
+  onAddParty: () => void;
+  onRenameParty: (id: string, name: string) => void;
+  onRequestDeleteParty: (id: string) => void;
+  onSelectCard: (id: string) => void;
+  onAddCard: () => void;
+  onRemoveCard: (id: string) => void;
+  onResetCard: () => void;
 }
 
 // ── Small form helpers ────────────────────────────────────────────────
@@ -119,6 +136,16 @@ export default function CardEditor({
   card,
   onChange,
   effectiveLayout,
+  parties,
+  activeParty,
+  onSelectParty,
+  onAddParty,
+  onRenameParty,
+  onRequestDeleteParty,
+  onSelectCard,
+  onAddCard,
+  onRemoveCard,
+  onResetCard,
 }: CardEditorProps) {
   const [draggingArt, setDraggingArt] = useState(false);
   const [draggedVitalId, setDraggedVitalId] = useState<string | null>(null);
@@ -187,6 +214,9 @@ export default function CardEditor({
     setVitalInsertAt(null);
   }
 
+  const dmWidthPx = inToPx(effectiveLayout.dm.widthIn);
+  const maxVitalCols = maxVitalColumns(dmWidthPx - 2 - 16, VITAL_ICON_H);
+
   const {
     set,
     setStat,
@@ -197,14 +227,12 @@ export default function CardEditor({
     addVitalBox,
     removeVitalBox,
     moveVitalBox,
-    setVitalRowColumns,
+    moveVitalBoxAdjacent,
     setVitalRowAlign,
     addVitalRow,
     removeVitalRow,
-  } = createCardUpdater(card, onChange);
+  } = createCardUpdater(card, onChange, maxVitalCols);
 
-  const dmWidthPx = inToPx(effectiveLayout.dm.widthIn);
-  const maxVitalCols = maxVitalColumns(dmWidthPx - 2 - 16, VITAL_ICON_H);
   const vitalSpans = vitalRowSpans(card.vitalRows);
 
   function handleArtUpload(file: File | undefined) {
@@ -215,7 +243,26 @@ export default function CardEditor({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto px-4 py-4 gap-1 text-[var(--text-primary)]">
+    <>
+      <PartySelector
+        parties={parties}
+        activePartyId={activeParty.id}
+        onSelect={onSelectParty}
+        onAdd={onAddParty}
+        onRename={onRenameParty}
+        onRequestDelete={onRequestDeleteParty}
+      />
+
+      <CardList
+        cards={activeParty.cards}
+        activeId={card.id}
+        onSelect={onSelectCard}
+        onAdd={onAddCard}
+        onRemove={onRemoveCard}
+        onReset={onResetCard}
+      />
+
+      <div className="flex flex-col px-4 py-4 gap-1 text-[var(--text-primary)]">
       {/* Identity */}
       <SectionHeading>Identity</SectionHeading>
       <Field label="Name">
@@ -366,12 +413,9 @@ export default function CardEditor({
       >
         {card.vitalRows.map((row, rowIndex) => {
           const span = vitalSpans[rowIndex];
-          const capacity = Math.max(1, Math.min(row.columns, maxVitalCols));
-          // "Full" is judged against the card's overall max columns, not
-          // this row's own (possibly smaller) column count — every row's
-          // alignment grid spans the same full card width (see CardFaces),
-          // so a "2 per row" row on a wider card is never actually full and
-          // always keeps its alignment choice.
+          // A row is always exactly as wide as the card allows — there's no
+          // user-configurable per-row cap — so "full" just means it's
+          // holding as many boxes as currently fit.
           const full = span.count >= maxVitalCols;
           const alignOptions = availableVitalRowAligns(span.count);
           const alignValue = alignOptions.includes(row.align)
@@ -384,6 +428,7 @@ export default function CardEditor({
           return (
             <div
               key={rowIndex}
+              data-flip-height-id={`row-${rowIndex}`}
               className="flex flex-col gap-1 rounded border border-[var(--border)] p-1.5"
             >
               <div className="flex items-center justify-between gap-2">
@@ -391,23 +436,6 @@ export default function CardEditor({
                   <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
                     Row {rowIndex + 1}
                   </span>
-                  <select
-                    className={
-                      inputClass + " !w-auto py-0.5 text-xs normal-case"
-                    }
-                    value={capacity}
-                    onChange={(e) =>
-                      setVitalRowColumns(rowIndex, Number(e.target.value))
-                    }
-                  >
-                    {Array.from({ length: maxVitalCols }, (_, n) => n + 1).map(
-                      (n) => (
-                        <option key={n} value={n}>
-                          {n} per row
-                        </option>
-                      ),
-                    )}
-                  </select>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {!full && (
@@ -493,7 +521,7 @@ export default function CardEditor({
                       }}
                     >
                       <span
-                        className="cursor-grab select-none text-[var(--text-muted)] px-0.5"
+                        className="hidden lg:inline cursor-grab select-none text-[var(--text-muted)] px-0.5"
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = "move";
@@ -530,6 +558,30 @@ export default function CardEditor({
                       >
                         ⠿
                       </span>
+                      {/* Touch devices can't reliably drag-and-drop, so below
+                          the lg breakpoint these buttons stand in for the
+                          drag handle above — swap with the box above/below
+                          (see moveVitalBoxAdjacent for the cross-row rules). */}
+                      <div className="flex lg:hidden items-center gap-1">
+                        <button
+                          type="button"
+                          aria-label="Move vital box up"
+                          disabled={span.start + i === 0}
+                          className="flex items-center justify-center w-6 h-6 rounded text-sm leading-none text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
+                          onClick={() => moveVitalBoxAdjacent(box.id, "up")}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move vital box down"
+                          disabled={span.start + i === card.vitalBoxes.length - 1}
+                          className="flex items-center justify-center w-6 h-6 rounded text-sm leading-none text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
+                          onClick={() => moveVitalBoxAdjacent(box.id, "down")}
+                        >
+                          ▼
+                        </button>
+                      </div>
                       <input
                         className={inputClass + " flex-[2]"}
                         placeholder="Label"
@@ -725,6 +777,7 @@ export default function CardEditor({
           onChange={(e) => set("notes", e.target.value)}
         />
       </Field>
-    </div>
+      </div>
+    </>
   );
 }

@@ -28,15 +28,25 @@ export function useCardEdit(): CardEditContextValue {
 export function CardEditProvider({
   card,
   onChange,
+  maxVitalColumns,
   children,
 }: {
   card: CardData;
   onChange: (card: CardData) => void;
+  /** How many vital columns actually fit at this card's current DM-face
+   *  width — see lib/vitalsLayout.ts's maxVitalColumns. Threaded through to
+   *  createCardUpdater so inline edits (drag-reordering vitals on the DM
+   *  face) cascade row overflow against the same ceiling the sidebar form
+   *  uses. */
+  maxVitalColumns: number;
   children: React.ReactNode;
 }) {
   const value = useMemo<CardEditContextValue>(
-    () => ({ editable: true, update: createCardUpdater(card, onChange) }),
-    [card, onChange],
+    () => ({
+      editable: true,
+      update: createCardUpdater(card, onChange, maxVitalColumns),
+    }),
+    [card, onChange, maxVitalColumns],
   );
   return (
     <CardEditContext.Provider value={value}>

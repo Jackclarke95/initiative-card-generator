@@ -110,21 +110,15 @@ export const VITAL_ROW_ALIGNS: VitalRowAlign[] = [
 // One row of the vitals section — `vitalBoxes` stays one flat, ordered
 // list; these just describe how it's chopped into rows. `count` is how many
 // boxes (in list order) actually sit in this row right now — an explicit,
-// independently adjustable number, not derived from `columns` — so one row
-// can sit short of its own column count while a later row is completely
-// full (e.g. row 1 holds just 1 badge, row 2 holds a full 3, row 3 holds
-// 2). `columns` is the ceiling `count` can't exceed before the excess
-// spills onto the next row; it's the user's intent independent of the
-// card's current width — lib/vitalsLayout.ts clamps it against however many
-// actually fit at render time, so widening the card later can hand a row
-// back boxes that overflowed off it purely for width reasons. It does NOT
-// set this row's own alignment grid width — every row aligns against the
-// card's full width (its overall max column count), so a "2 per row" row
-// still spans (and grows with) the whole card rather than a fixed, narrow
-// slice of it.
+// independently adjustable number, so one row can sit short of a full row
+// while a later row is completely full (e.g. row 1 holds just 1 badge, row
+// 2 holds a full 3, row 3 holds 2). There's no user-configurable per-row
+// column cap — a row always holds as many boxes as currently fit at the
+// card's width (see lib/vitalsLayout.ts's maxVitalColumns), spilling any
+// excess onto the next row; a shorter row is achieved by moving boxes to
+// another row, not by capping this one below what fits.
 export interface VitalRowConfig {
   count: number;
-  columns: number;
   align: VitalRowAlign;
 }
 
@@ -331,8 +325,8 @@ export function emptyCard(id: string): CardData {
     },
     vitalBoxes: defaultVitalBoxes(),
     vitalRows: [
-      { count: 3, columns: 3, align: "justify" },
-      { count: 3, columns: 3, align: "justify" },
+      { count: 3, align: "justify" },
+      { count: 3, align: "justify" },
     ],
     resistances: DEFAULT_RESISTANCES,
     damageDisplayMode: "all",

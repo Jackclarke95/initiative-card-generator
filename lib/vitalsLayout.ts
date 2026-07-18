@@ -7,7 +7,6 @@
 
 import type { VitalRowAlign, VitalRowConfig } from "@/types/card";
 
-export const DEFAULT_VITAL_ROW_COLUMNS = 3;
 export const DEFAULT_VITAL_ROW_ALIGN: VitalRowAlign = "justify";
 
 // Shared height every vitals badge renders at on the DM face — the sidebar
@@ -153,7 +152,7 @@ export interface VitalRowLayout {
    *  renders as more than one chunk (see below). */
   count: number;
   /** How many boxes this chunk can hold before the rest spill into another
-   *  chunk/row — min(row.columns, maxColumns). This is NOT the alignment
+   *  chunk/row — the card's current maxColumns. This is NOT the alignment
    *  grid width (see vitalRowGridWidth, which always uses the card's full
    *  maxColumns instead); it only governs overflow-splitting. */
   capacity: number;
@@ -171,12 +170,11 @@ export interface VitalRowLayout {
 /** Turns the stored, explicit-count `rows` into what actually renders right
  *  now: each row's `count` clamped by however many columns actually fit at
  *  the current width (`maxColumns`), splitting a row that's wider than that
- *  into extra chunks purely for this one render — this is the width half of
- *  "push the last badge onto the next row" (the other half, a row
- *  outgrowing its own configured `columns`, is handled once, up front, by
- *  lib/cardUpdate.ts, so `rows` here should already satisfy count<=columns
- *  for every row). Purely derived — never mutates or persists what it's
- *  given. */
+ *  into extra chunks purely for this one render — this is "push the last
+ *  badge onto the next row" entirely; there's no separate per-row column
+ *  cap to enforce (see lib/cardUpdate.ts, which cascades overflow using this
+ *  same `maxColumns` at edit time). Purely derived — never mutates or
+ *  persists what it's given. */
 export function computeVitalRowLayout(
   rows: VitalRowConfig[],
   maxColumns: number = Infinity,
@@ -184,7 +182,7 @@ export function computeVitalRowLayout(
   const layout: VitalRowLayout[] = [];
   let start = 0;
   rows.forEach((row, rowIndex) => {
-    const capacity = Math.max(1, Math.min(row.columns, maxColumns));
+    const capacity = Math.max(1, maxColumns);
     let placed = 0;
     while (placed < row.count) {
       const count = Math.min(row.count - placed, capacity);

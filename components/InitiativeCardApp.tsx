@@ -12,36 +12,34 @@ import {
 import { type CardData, emptyCard } from "@/types/card";
 import type { Party } from "@/types/party";
 import CardEditor from "@/components/CardEditor";
-import CardList from "@/components/CardList";
-import PartySelector from "@/components/PartySelector";
 import ConfirmModal from "@/components/ConfirmModal";
 import NamePartyModal from "@/components/NamePartyModal";
 import ExportArea from "@/components/ExportArea";
 import CardSpread from "@/components/CardSpread";
+import { PlayerFace, DmFace } from "@/components/CardFaces";
 import { CardEditProvider } from "@/components/CardEditContext";
-import FoldedCardPreview from "@/components/FoldedCardPreview";
-import InfoTooltip from "@/components/InfoTooltip";
-import SegmentedToggle from "@/components/SegmentedToggle";
-import SideLayoutFields, {
-  WidthMismatchWarning,
-} from "@/components/SideLayoutFields";
-import ThemeToggle from "@/components/ThemeToggle";
+import PrintExportPanel, {
+  type ExportChoice,
+  type ExportScope,
+  type PdfSettings,
+} from "@/components/PrintExportPanel";
+import MobileTabBar, { type MobileTab } from "@/components/MobileTabBar";
 import {
   contentBoxIn,
   exportCard,
   exportAllCards,
   exportAllCardsAsPdf,
   fitsPage,
-  type ExportFormat,
 } from "@/lib/exportCard";
 import {
   defaultLayoutConfig,
+  inToPx,
   resolveLayout,
   unitFootprintIn,
   type SideLayoutConfig,
 } from "@/lib/cardLayout";
-import { stepValueOnWheel } from "@/lib/sliderWheel";
-import { PAPER_LABELS, type Margins, type PaperPreset } from "@/lib/paperSizes";
+import { maxVitalColumns, VITAL_ICON_H } from "@/lib/vitalsLayout";
+import type { Margins, PaperPreset } from "@/lib/paperSizes";
 import {
   loadPersistedState,
   savePersistedState,
@@ -49,23 +47,7 @@ import {
 } from "@/lib/partyStorage";
 import defaultPartyData from "@/lib/data/defaultParty.json";
 
-type ExportScope = "current" | "all";
-type ExportChoice = ExportFormat | "pdf";
 type MarginSide = keyof Margins;
-
-interface PdfSettings {
-  paper: PaperPreset;
-  margins: Margins;
-}
-
-const MARGIN_SIDES: { side: MarginSide; label: string }[] = [
-  { side: "top", label: "Top" },
-  { side: "bottom", label: "Bottom" },
-  { side: "left", label: "Left" },
-  { side: "right", label: "Right" },
-];
-
-const GUTTER_MAX_CM = 3;
 
 // The center preview scales the whole card spread up or down to fill
 // whatever space is available: never bigger than the original
@@ -118,6 +100,93 @@ function normalizeParty(party: Party): Party {
   return party.layout ? party : { ...party, layout: defaultLayoutConfig() };
 }
 
+// Mobile "Player Face"/"DM Face" tabs — a single face scaled to exactly
+// fill the viewport's width, whichever way that goes: shrinking a card
+// that's wider than the screen, but also growing one that's narrower,
+// rather than leaving it stranded at true size with empty margin on
+// either side. Growing can make a card taller than the screen, which is
+// fine — it just scrolls vertically. Rendered outside any CardEditProvider
+// (the default context is `{ editable: false }`), so unlike the desktop
+// center preview it's read-only — purely a reflection of the form's
+// current state.
+function MobileFacePreview({
+  card,
+  layout,
+  face,
+}: {
+  card: CardData;
+  layout: SideLayoutConfig;
+  face: "player" | "dm";
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const width = inToPx(layout.widthIn);
+  const height = inToPx(layout.heightIn);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !layout.visible) return;
+
+    const recompute = () => {
+      // clientWidth includes this element's own left/right padding (the
+      // "small margin" around the card) — subtract it back out so the
+      // card is sized to the space actually left over, not the padding
+      // along with it.
+      const style = getComputedStyle(el);
+      const availW =
+        el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      if (!availW) return;
+      setScale(availW / width);
+    };
+
+    recompute();
+    const observer = new ResizeObserver(recompute);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [width, layout.visible]);
+
+  if (!layout.visible) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8 text-center">
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          The {face === "player" ? "player" : "DM"} side is hidden. Enable it
+          under the &quot;{face === "player" ? "Player" : "DM"} side&quot;
+          layout controls on the Print &amp; Export tab.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-y-auto flex justify-center p-4"
+    >
+      {/* Outer box is sized to the scaled-down footprint so the flex
+          container's centering and scroll height are computed against
+          what's actually visible — a bare CSS transform leaves the
+          pre-transform (full) size in the layout, which would center
+          against a box wider than the screen and clip the result. */}
+      <div style={{ width: width * scale, height: height * scale }}>
+        <div
+          style={{
+            width,
+            height,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
+        >
+          {face === "player" ? (
+            <PlayerFace card={card} rotated={false} width={width} height={height} />
+          ) : (
+            <DmFace card={card} width={width} height={height} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InitiativeCardApp() {
   const [parties, setParties] = useState<Party[]>(() => {
     const persisted = loadPersistedState();
@@ -130,6 +199,10 @@ export default function InitiativeCardApp() {
     }
     return persisted?.parties[0]?.id ?? parties[0].id;
   });
+
+  // Mobile (<lg) layout only: which of the four panes desktop shows side
+  // by side is currently on screen.
+  const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
 
   // Live preview sizing: measure the available box in the center pane
   // against the spread's natural (unscaled) footprint in both a
@@ -216,6 +289,16 @@ export default function InitiativeCardApp() {
   );
   const bothSidesVisible =
     effectiveLayout.player.visible && effectiveLayout.dm.visible;
+
+  // How many vital badges actually fit per row at this card's DM-face
+  // width — the same ceiling CardEditor's sidebar form computes, so an
+  // inline drag-reorder on the live preview cascades row overflow
+  // identically to an edit made from the sidebar.
+  const maxVitalCols = useMemo(
+    () =>
+      maxVitalColumns(inToPx(effectiveLayout.dm.widthIn) - 2 - 16, VITAL_ICON_H),
+    [effectiveLayout.dm.widthIn],
+  );
 
   // How many cards in the party won't fit the current PDF page size and
   // margins, even rotated — computed from each card's own configured
@@ -405,364 +488,187 @@ export default function InitiativeCardApp() {
     }
   }, [activeParty.cards, activeCard, exportScope, exportChoice, pdfSettings]);
 
+  // Party/card selection lives at the top of the form now — shared by the
+  // desktop left rail's CardEditor and the mobile "Character" tab's.
+  const cardEditorProps = {
+    card: activeCard,
+    onChange: handleChange,
+    effectiveLayout,
+    parties,
+    activeParty,
+    onSelectParty: setActivePartyId,
+    onAddParty: handleAddParty,
+    onRenameParty: handleRenameParty,
+    onRequestDeleteParty: (id: string) => {
+      const party = parties.find((p) => p.id === id);
+      if (party) setPartyPendingDelete(party);
+    },
+    onSelectCard: handleSelectCard,
+    onAddCard: handleAddCard,
+    onRemoveCard: handleRemoveCard,
+    onResetCard: () => setConfirmingResetCard(true),
+  };
+
+  // Print & Export panel props are identical for the desktop rail and the
+  // mobile tab — built once and spread into both.
+  const printExportPanelProps = {
+    activeParty,
+    activeCard,
+    effectiveLayout,
+    bothSidesVisible,
+    oversizedCardCount,
+    exportChoice,
+    exportScope,
+    exporting,
+    pdfSettings,
+    onFormatChange: handleFormatChange,
+    onExportScopeChange: setExportScope,
+    onExport: handleExport,
+    onSetMargin: setMargin,
+    onSetPaper: (paper: PaperPreset) =>
+      setPdfSettings((prev) => ({ ...prev, paper })),
+    onUpdateLayoutSide: updatePartyLayoutSide,
+    onUpdateGutterCm: updatePartyGutterCm,
+  };
+
   return (
-    <div
-      className="flex h-screen overflow-hidden"
-      style={{ background: "var(--background)" }}
-    >
-      {/* Left: card configuration */}
-      <aside
-        className="flex flex-col w-[28.6rem] shrink-0 border-r overflow-hidden"
-        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+    <>
+      {/* Desktop (lg and up): three panes side by side, unchanged. */}
+      <div
+        className="hidden lg:flex h-screen overflow-hidden"
+        style={{ background: "var(--background)" }}
       >
-        <div
-          className="px-4 py-3 border-b shrink-0"
-          style={{ borderColor: "var(--border)" }}
+        {/* Left: card configuration */}
+        <aside
+          className="flex flex-col w-[28.6rem] shrink-0 border-r overflow-hidden"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
         >
-          <h1
-            className="text-sm font-bold tracking-wide"
-            style={{ color: "var(--accent)" }}
+          <div
+            className="px-4 py-3 border-b shrink-0"
+            style={{ borderColor: "var(--border)" }}
           >
-            Initiative Cards
-          </h1>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            D&amp;D 5e DM Screen
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <CardEditor
-            card={activeCard}
-            onChange={handleChange}
-            effectiveLayout={effectiveLayout}
-          />
-        </div>
-      </aside>
-
-      {/* Center: live preview — scaled to fill whatever space is
-          available, side by side or stacked, whichever renders bigger. */}
-      <main className="flex-1 overflow-auto p-8">
-        <div
-          ref={previewBoxRef}
-          className="w-full h-full flex items-center justify-center"
-        >
-          <div style={{ transform: `scale(${previewLayout.scale})` }}>
-            <CardEditProvider card={activeCard} onChange={handleChange}>
-              <CardSpread
-                card={activeCard}
-                layout={effectiveLayout}
-                direction={previewLayout.direction}
-              />
-            </CardEditProvider>
-          </div>
-        </div>
-
-        {/* Off-screen, unscaled copies used only to measure the
-            spread's natural footprint in each direction. The wrapper is
-            pinned to zero size with overflow hidden so it can never
-            grow the page's scrollable area; each measured child gets an
-            explicit max-content width so it reports its true natural
-            size instead of being squeezed to fit the zero-width
-            wrapper. */}
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: 0,
-            height: 0,
-            overflow: "hidden",
-            visibility: "hidden",
-            pointerEvents: "none",
-          }}
-        >
-          <div ref={rowMeasureRef} style={{ width: "max-content" }}>
-            <MeasureSpread
-              card={activeCard}
-              layout={effectiveLayout}
-              direction="row"
-            />
-          </div>
-          <div ref={columnMeasureRef} style={{ width: "max-content" }}>
-            <MeasureSpread
-              card={activeCard}
-              layout={effectiveLayout}
-              direction="column"
-            />
-          </div>
-        </div>
-      </main>
-
-      {/* Right: page & export configuration */}
-      <aside
-        className="flex flex-col w-[23.4rem] shrink-0 border-l overflow-hidden"
-        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
-      >
-        <div
-          className="px-4 py-3 border-b shrink-0 flex items-start justify-between gap-2"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <div>
-            <h2
+            <h1
               className="text-sm font-bold tracking-wide"
               style={{ color: "var(--accent)" }}
             >
-              Print &amp; Export
-            </h2>
+              Initiative Cards
+            </h1>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Fold layout, paper, and file output
+              D&amp;D 5e DM Screen
             </p>
           </div>
-          <ThemeToggle />
-        </div>
 
-        <PartySelector
-          parties={parties}
-          activePartyId={activeParty.id}
-          onSelect={setActivePartyId}
-          onAdd={handleAddParty}
-          onRename={handleRenameParty}
-          onRequestDelete={(id) => {
-            const party = parties.find((p) => p.id === id);
-            if (party) setPartyPendingDelete(party);
-          }}
-        />
-
-        <CardList
-          cards={activeParty.cards}
-          activeId={activeCard.id}
-          onSelect={handleSelectCard}
-          onAdd={handleAddCard}
-          onRemove={handleRemoveCard}
-          onReset={() => setConfirmingResetCard(true)}
-        />
-
-        <div className="px-4 py-4 flex flex-col gap-4 overflow-y-auto">
-          <div className="flex flex-col gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-widest"
-              style={{ color: "var(--accent)" }}
-            >
-              Export As
-            </span>
-            <div className="flex items-center gap-1.5">
-              <select
-                value={exportChoice}
-                onChange={(e) =>
-                  handleFormatChange(e.target.value as ExportChoice)
-                }
-                className="bg-[var(--surface-raised)] border rounded px-1.5 py-1.5 text-xs uppercase"
-                style={{
-                  borderColor: "var(--border)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                <option value="pdf">PDF</option>
-                <option value="svg">SVG</option>
-                <option value="png">PNG</option>
-                <option value="jpeg">JPEG</option>
-              </select>
-              <SegmentedToggle
-                className="flex-1"
-                options={[
-                  {
-                    value: "current",
-                    label: "Current Card",
-                    disabled: exportChoice === "pdf",
-                  },
-                  { value: "all", label: "All Cards" },
-                ]}
-                value={exportScope}
-                onChange={setExportScope}
-              />
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="px-2.5 py-1.5 rounded text-xs font-semibold transition-colors disabled:opacity-50"
-                style={{ background: "var(--accent)", color: "#fff" }}
-              >
-                {exporting ? "…" : "Export"}
-              </button>
-            </div>
-
-            {exportChoice === "pdf" && (
-              <>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <label className="flex flex-col gap-0.5 col-span-2">
-                    <span
-                      className="text-[10px] uppercase tracking-wide"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      Page size
-                    </span>
-                    <select
-                      value={pdfSettings.paper}
-                      onChange={(e) =>
-                        setPdfSettings((prev) => ({
-                          ...prev,
-                          paper: e.target.value as PaperPreset,
-                        }))
-                      }
-                      className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                      style={{
-                        borderColor: "var(--border)",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {(Object.keys(PAPER_LABELS) as PaperPreset[]).map((p) => (
-                        <option key={p} value={p}>
-                          {PAPER_LABELS[p]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {MARGIN_SIDES.map(({ side, label }) => (
-                    <label key={side} className="flex flex-col gap-0.5">
-                      <span
-                        className="text-[10px] uppercase tracking-wide"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        {label} margin (cm)
-                      </span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={5}
-                        step={0.1}
-                        value={pdfSettings.margins[side]}
-                        onChange={(e) =>
-                          setMargin(side, parseFloat(e.target.value) || 0)
-                        }
-                        className="bg-[var(--surface-raised)] border rounded px-1.5 py-1 text-xs"
-                        style={{
-                          borderColor: "var(--border)",
-                          color: "var(--text-primary)",
-                        }}
-                      />
-                    </label>
-                  ))}
-                </div>
-                {oversizedCardCount > 0 && (
-                  <p
-                    className="text-[11px] leading-snug"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    ⚠ {oversizedCardCount} card
-                    {oversizedCardCount > 1 ? "s" : ""} won&apos;t fit within
-                    this page size and margins, even rotated. Increase the page
-                    size, shrink the margins, or reduce the card&apos;s own
-                    size.
-                  </p>
-                )}
-              </>
-            )}
+          <div className="flex-1 overflow-y-auto">
+            <CardEditor {...cardEditorProps} />
           </div>
+        </aside>
 
+        {/* Center: live preview — scaled to fill whatever space is
+            available, side by side or stacked, whichever renders bigger. */}
+        <main className="flex-1 overflow-auto p-8">
           <div
-            className="pt-3 border-t flex flex-col gap-4"
-            style={{ borderColor: "var(--border)" }}
+            ref={previewBoxRef}
+            className="w-full h-full flex items-center justify-center"
           >
-            <SideLayoutFields
-              label="Player side"
-              value={activeParty.layout.player}
-              onChange={(next) => updatePartyLayoutSide("player", next)}
-            />
-            <SideLayoutFields
-              label="DM side"
-              value={activeParty.layout.dm}
-              onChange={(next) => updatePartyLayoutSide("dm", next)}
-            />
-
-            {/* The fold and its gutter only mean anything once both sides
-                are actually present — a single visible side just *is* the
-                card, with nothing to fold against. */}
-            {bothSidesVisible && (
-              <>
-                <label className="flex flex-col gap-0.5">
-                  <span
-                    className="flex items-center gap-1 text-[10px] uppercase tracking-wide"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    Fold gutter: {activeParty.layout.gutterCm.toFixed(1)} cm
-                    <InfoTooltip text="Sets the blank strip between the two faces so the printed sheet folds around the thickness of your DM screen. Leave at 0 for a flat, two-sided card with no gap." />
-                  </span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={GUTTER_MAX_CM}
-                    step={0.1}
-                    value={activeParty.layout.gutterCm}
-                    onChange={(e) =>
-                      updatePartyGutterCm(parseFloat(e.target.value))
-                    }
-                    onWheel={(e) =>
-                      updatePartyGutterCm(
-                        stepValueOnWheel(
-                          e,
-                          activeParty.layout.gutterCm,
-                          0.1,
-                          0,
-                          GUTTER_MAX_CM,
-                        ),
-                      )
-                    }
-                    className="w-full accent-[var(--accent)]"
-                  />
-                </label>
-                <div className="flex justify-center items-start gap-10">
-                  <div className="flex flex-col items-center gap-2">
-                    <span
-                      className="text-[10px] uppercase tracking-wide"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      Player side
-                    </span>
-                    <FoldedCardPreview
-                      card={activeCard}
-                      gutterHeightCm={effectiveLayout.gutterCm}
-                      maxGutterHeightCm={GUTTER_MAX_CM}
-                      widthIn={effectiveLayout.player.widthIn}
-                      heightIn={effectiveLayout.player.heightIn}
-                      backWidthIn={effectiveLayout.dm.widthIn}
-                      backHeightIn={effectiveLayout.dm.heightIn}
-                      face="player"
-                    />
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <span
-                      className="text-[10px] uppercase tracking-wide"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      DM side
-                    </span>
-                    <FoldedCardPreview
-                      card={activeCard}
-                      gutterHeightCm={effectiveLayout.gutterCm}
-                      maxGutterHeightCm={GUTTER_MAX_CM}
-                      widthIn={effectiveLayout.dm.widthIn}
-                      heightIn={effectiveLayout.dm.heightIn}
-                      backWidthIn={effectiveLayout.player.widthIn}
-                      backHeightIn={effectiveLayout.player.heightIn}
-                      face="dm"
-                      mirrored
-                    />
-                  </div>
-                </div>
-                <WidthMismatchWarning layout={activeParty.layout} />
-              </>
-            )}
+            <div style={{ transform: `scale(${previewLayout.scale})` }}>
+              <CardEditProvider
+                card={activeCard}
+                onChange={handleChange}
+                maxVitalColumns={maxVitalCols}
+              >
+                <CardSpread
+                  card={activeCard}
+                  layout={effectiveLayout}
+                  direction={previewLayout.direction}
+                />
+              </CardEditProvider>
+            </div>
           </div>
 
-          {/* Required notice under Wizards of the Coast's Fan Content Policy
-           *  (company.wizards.com/en/legal/fancontentpolicy) — this tool uses
-           *  official class/monster art under that policy. */}
-          <p className="mt-4 text-[10px] leading-snug text-[var(--text-muted)]">
-            Initiative Card Generator is unofficial Fan Content permitted under
-            the Fan Content Policy. Not approved/endorsed by Wizards. Portions
-            of the materials used are property of Wizards of the Coast.
-          </p>
-        </div>
-      </aside>
+          {/* Off-screen, unscaled copies used only to measure the
+              spread's natural footprint in each direction. The wrapper is
+              pinned to zero size with overflow hidden so it can never
+              grow the page's scrollable area; each measured child gets an
+              explicit max-content width so it reports its true natural
+              size instead of being squeezed to fit the zero-width
+              wrapper. */}
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: 0,
+              height: 0,
+              overflow: "hidden",
+              visibility: "hidden",
+              pointerEvents: "none",
+            }}
+          >
+            <div ref={rowMeasureRef} style={{ width: "max-content" }}>
+              <MeasureSpread
+                card={activeCard}
+                layout={effectiveLayout}
+                direction="row"
+              />
+            </div>
+            <div ref={columnMeasureRef} style={{ width: "max-content" }}>
+              <MeasureSpread
+                card={activeCard}
+                layout={effectiveLayout}
+                direction="column"
+              />
+            </div>
+          </div>
+        </main>
+
+        {/* Right: page & export configuration */}
+        <aside
+          className="flex flex-col w-[23.4rem] shrink-0 border-l overflow-hidden"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        >
+          <PrintExportPanel {...printExportPanelProps} />
+        </aside>
+      </div>
+
+      {/* Mobile (below lg): one pane at a time, switched via tabs — the
+          preview tabs are read-only (rendered outside CardEditProvider)
+          and just reflect whatever the two form tabs currently hold. Each
+          face renders at true size and is bound by the viewport's width;
+          taller cards scroll rather than shrink. */}
+      <div
+        className="flex lg:hidden flex-col h-screen overflow-hidden"
+        style={{ background: "var(--background)" }}
+      >
+        <MobileTabBar active={mobileTab} onChange={setMobileTab} />
+
+        {mobileTab === "edit" && (
+          <div className="flex-1 overflow-y-auto">
+            <CardEditor {...cardEditorProps} />
+          </div>
+        )}
+
+        {mobileTab === "player" && (
+          <MobileFacePreview
+            card={activeCard}
+            layout={effectiveLayout.player}
+            face="player"
+          />
+        )}
+
+        {mobileTab === "dm" && (
+          <MobileFacePreview
+            card={activeCard}
+            layout={effectiveLayout.dm}
+            face="dm"
+          />
+        )}
+
+        {mobileTab === "export" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <PrintExportPanel {...printExportPanelProps} />
+          </div>
+        )}
+      </div>
 
       <ExportArea cards={activeParty.cards} party={activeParty} />
 
@@ -795,6 +701,6 @@ export default function InitiativeCardApp() {
           onCancel={() => setNamingPartyId(null)}
         />
       )}
-    </div>
+    </>
   );
 }

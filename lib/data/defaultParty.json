@@ -49,8 +49,8 @@
             }
           ],
           "vitalRows": [
-            { "count": 2, "columns": 3, "align": "justify" },
-            { "count": 3, "columns": 3, "align": "justify" }
+            { "count": 2, "align": "justify" },
+            { "count": 3, "align": "justify" }
           ],
           "resistances": {
             "bludgeoning": "resistant",
@@ -131,8 +131,8 @@
             }
           ],
           "vitalRows": [
-            { "count": 3, "columns": 3, "align": "justify" },
-            { "count": 3, "columns": 3, "align": "justify" }
+            { "count": 3, "align": "justify" },
+            { "count": 3, "align": "justify" }
           ],
           "resistances": {
             "bludgeoning": "resistant",
@@ -213,8 +213,8 @@
             }
           ],
           "vitalRows": [
-            { "count": 3, "columns": 3, "align": "justify" },
-            { "count": 3, "columns": 3, "align": "justify" }
+            { "count": 3, "align": "justify" },
+            { "count": 3, "align": "justify" }
           ],
           "resistances": {
             "bludgeoning": "neither",
@@ -289,8 +289,8 @@
             }
           ],
           "vitalRows": [
-            { "count": 2, "columns": 3, "align": "center" },
-            { "count": 3, "columns": 3, "align": "justify" }
+            { "count": 2, "align": "center" },
+            { "count": 3, "align": "justify" }
           ],
           "resistances": {
             "bludgeoning": "neither",

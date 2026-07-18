@@ -7,13 +7,23 @@
 // the sidebar form's list. Framework-agnostic (plain DOM offsets + an
 // imperative transform), so it works the same whether the reorder came from
 // a CSS grid or a flex column.
+//
+// A second, independent marker — `data-flip-height-id` — smooths a
+// container's own size change instead of its position (e.g. a vitals row's
+// bordered box growing or shrinking as boxes are added, removed, or moved
+// in or out of it). CSS can't transition to/from `height: auto` directly,
+// so this measures the old and new pixel heights itself and animates
+// between those two concrete values, releasing back to auto afterward so
+// later content changes still size naturally.
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 /** Attach the returned ref to the list's container; give each direct
- *  reorderable child a stable `data-flip-id` (its item's own id). Call
- *  unconditionally on every render — it only actually animates the renders
- *  where a tracked child's position changed since the last one. */
+ *  reorderable child a stable `data-flip-id` (its item's own id), and/or
+ *  give any descendant whose own size should smooth out a stable
+ *  `data-flip-height-id`. Call unconditionally on every render — it only
+ *  actually animates the renders where a tracked element's position or
+ *  height changed since the last one. */
 export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
   const containerRef = useRef<T | null>(null);
   const prevOffsets = useRef<Map<string, { left: number; top: number }>>(new Map());
@@ -23,6 +33,21 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
   // box's offset without changing their relative order at all). Only the
   // former should slide; the latter should just snap to its new spot.
   const prevOrder = useRef<string[]>([]);
+  // Which direct container element each id rendered under last time — a
+  // box moving into a different row's own wrapper (e.g. the vitals
+  // up/down buttons joining it to the row above/below) doesn't always
+  // change the flat id sequence at all: if it's already sitting right at
+  // that row's boundary, it can rejoin as the row's new last/first member
+  // with no other box's relative order changing either, so the sequence
+  // check alone would misread it as an incidental shift. A parent change
+  // is never incidental — a resize or toggle elsewhere never reparents
+  // anything — so it's an unconditional second signal for "this reordered."
+  const prevParents = useRef<Map<string, Element | null>>(new Map());
+  // Last measured height of each `data-flip-height-id` element — unlike
+  // position, a height change is never incidental (nothing but a real
+  // content change resizes a specific element), so this animates
+  // unconditionally on any difference, with no sequence/parent gating.
+  const prevHeights = useRef<Map<string, number>>(new Map());
   // The persisted-state load (InitiativeCardApp) can swap a placeholder
   // default card for a saved one right after the initial mount, replacing
   // every id in the list at once — a real reorder never does that (ids stay
@@ -44,13 +69,26 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
     if (!container) return;
     const nodes = container.querySelectorAll<HTMLElement>("[data-flip-id]");
     const nextOffsets = new Map<string, { left: number; top: number }>();
+    const nextParents = new Map<string, Element | null>();
     const nextOrder: string[] = [];
+    let parentChanged = false;
     nodes.forEach((node) => {
-      if (node.dataset.flipId) nextOrder.push(node.dataset.flipId);
+      const id = node.dataset.flipId;
+      if (!id) return;
+      nextOrder.push(id);
+      nextParents.set(id, node.parentElement);
+      if (
+        prevParents.current.has(id) &&
+        prevParents.current.get(id) !== node.parentElement
+      ) {
+        parentChanged = true;
+      }
     });
-    // Same ids, same sequence → nothing was actually reordered, whatever
-    // moved was pushed around by something else entirely.
+    // Same ids, same sequence, same parents → nothing was actually
+    // reordered, whatever moved was pushed around by something else
+    // entirely.
     const reordered =
+      parentChanged ||
       nextOrder.length !== prevOrder.current.length ||
       nextOrder.some((id, i) => id !== prevOrder.current[i]);
 
@@ -93,6 +131,46 @@ export function useFlipAnimation<T extends HTMLElement = HTMLElement>() {
 
     prevOffsets.current = nextOffsets;
     prevOrder.current = nextOrder;
+    prevParents.current = nextParents;
+
+    const heightNodes =
+      container.querySelectorAll<HTMLElement>("[data-flip-height-id]");
+    const nextHeights = new Map<string, number>();
+    heightNodes.forEach((node) => {
+      const id = node.dataset.flipHeightId;
+      if (!id) return;
+      const height = node.offsetHeight;
+      nextHeights.set(id, height);
+
+      if (!armed.current) return;
+      const prevHeight = prevHeights.current.get(id);
+      if (prevHeight === undefined || prevHeight === height) return;
+
+      // CSS can't transition to/from `auto`, so pin it to the old pixel
+      // height (no transition, hidden overflow so the new content isn't
+      // visible squeezed into the wrong size for a frame), force the
+      // reflow that needs to stick, then transition to the new height and
+      // release back to auto once it arrives — so a later change (adding
+      // another box, text wrapping, …) still sizes naturally instead of
+      // being stuck at this one fixed value.
+      node.style.overflow = "hidden";
+      node.style.transition = "none";
+      node.style.height = `${prevHeight}px`;
+      node.getBoundingClientRect();
+      requestAnimationFrame(() => {
+        node.style.transition = "height 300ms ease";
+        node.style.height = `${height}px`;
+      });
+      const releaseToAuto = (e: TransitionEvent) => {
+        if (e.propertyName !== "height") return;
+        node.style.height = "";
+        node.style.overflow = "";
+        node.style.transition = "";
+        node.removeEventListener("transitionend", releaseToAuto);
+      };
+      node.addEventListener("transitionend", releaseToAuto);
+    });
+    prevHeights.current = nextHeights;
   });
 
   return containerRef;
