@@ -214,6 +214,9 @@ export default function CardEditor({
     setVitalInsertAt(null);
   }
 
+  const dmWidthPx = inToPx(effectiveLayout.dm.widthIn);
+  const maxVitalCols = maxVitalColumns(dmWidthPx - 2 - 16, VITAL_ICON_H);
+
   const {
     set,
     setStat,
@@ -225,14 +228,11 @@ export default function CardEditor({
     removeVitalBox,
     moveVitalBox,
     moveVitalBoxAdjacent,
-    setVitalRowColumns,
     setVitalRowAlign,
     addVitalRow,
     removeVitalRow,
-  } = createCardUpdater(card, onChange);
+  } = createCardUpdater(card, onChange, maxVitalCols);
 
-  const dmWidthPx = inToPx(effectiveLayout.dm.widthIn);
-  const maxVitalCols = maxVitalColumns(dmWidthPx - 2 - 16, VITAL_ICON_H);
   const vitalSpans = vitalRowSpans(card.vitalRows);
 
   function handleArtUpload(file: File | undefined) {
@@ -413,12 +413,9 @@ export default function CardEditor({
       >
         {card.vitalRows.map((row, rowIndex) => {
           const span = vitalSpans[rowIndex];
-          const capacity = Math.max(1, Math.min(row.columns, maxVitalCols));
-          // "Full" is judged against the card's overall max columns, not
-          // this row's own (possibly smaller) column count — every row's
-          // alignment grid spans the same full card width (see CardFaces),
-          // so a "2 per row" row on a wider card is never actually full and
-          // always keeps its alignment choice.
+          // A row is always exactly as wide as the card allows — there's no
+          // user-configurable per-row cap — so "full" just means it's
+          // holding as many boxes as currently fit.
           const full = span.count >= maxVitalCols;
           const alignOptions = availableVitalRowAligns(span.count);
           const alignValue = alignOptions.includes(row.align)
@@ -439,23 +436,6 @@ export default function CardEditor({
                   <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
                     Row {rowIndex + 1}
                   </span>
-                  <select
-                    className={
-                      inputClass + " !w-auto py-0.5 text-xs normal-case"
-                    }
-                    value={capacity}
-                    onChange={(e) =>
-                      setVitalRowColumns(rowIndex, Number(e.target.value))
-                    }
-                  >
-                    {Array.from({ length: maxVitalCols }, (_, n) => n + 1).map(
-                      (n) => (
-                        <option key={n} value={n}>
-                          {n} per row
-                        </option>
-                      ),
-                    )}
-                  </select>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {!full && (

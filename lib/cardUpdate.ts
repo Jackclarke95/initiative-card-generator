@@ -16,10 +16,7 @@ import type {
   VitalRowAlign,
   VitalRowConfig,
 } from "@/types/card";
-import {
-  DEFAULT_VITAL_ROW_ALIGN,
-  DEFAULT_VITAL_ROW_COLUMNS,
-} from "@/lib/vitalsLayout";
+import { DEFAULT_VITAL_ROW_ALIGN } from "@/lib/vitalsLayout";
 
 // Which row (index into `rows`) owns flat vitalBoxes position `flatIndex`,
 // given each row's own `count` — an existing box's position always falls
@@ -36,13 +33,18 @@ function ownerRowIndex(rows: VitalRowConfig[], flatIndex: number): number {
   return Math.max(0, rows.length - 1);
 }
 
-// Pushes any row whose `count` exceeds its own `columns` ceiling onto the
-// next row, cascading as far as needed and creating new default rows once
-// it runs off the end — this is the "row got too wide, push the last item
-// onto the next row" behavior, reused by every mutator that can grow a
-// row's count (adding a box, dragging one in, or shrinking a row's own
-// column count below its current occupancy).
-function fixupVitalRowOverflow(rows: VitalRowConfig[]): VitalRowConfig[] {
+// Pushes any row whose `count` exceeds however many columns actually fit at
+// the card's current width onto the next row, cascading as far as needed
+// and creating new default rows once it runs off the end — this is the
+// "row got too wide, push the last item onto the next row" behavior, reused
+// by every mutator that can grow a row's count (adding a box, dragging one
+// in). There's no separate per-row column cap anymore — every row's ceiling
+// is just `maxColumns`, the same one lib/vitalsLayout.ts's
+// computeVitalRowLayout uses to split an overflowing row for rendering.
+function fixupVitalRowOverflow(
+  rows: VitalRowConfig[],
+  maxColumns: number,
+): VitalRowConfig[] {
   const next: VitalRowConfig[] = [];
   let carry = 0;
   // A single forward pass over the FIXED original list, threading any
@@ -55,17 +57,17 @@ function fixupVitalRowOverflow(rows: VitalRowConfig[]): VitalRowConfig[] {
   // existing row spills into new trailing rows below.
   for (const row of rows) {
     const count = row.count + carry;
-    if (count > row.columns) {
-      next.push({ ...row, count: row.columns });
-      carry = count - row.columns;
+    if (count > maxColumns) {
+      next.push({ ...row, count: maxColumns });
+      carry = count - maxColumns;
     } else {
       next.push({ ...row, count });
       carry = 0;
     }
   }
   while (carry > 0) {
-    const count = Math.min(carry, DEFAULT_VITAL_ROW_COLUMNS);
-    next.push({ count, columns: DEFAULT_VITAL_ROW_COLUMNS, align: DEFAULT_VITAL_ROW_ALIGN });
+    const count = Math.min(carry, maxColumns);
+    next.push({ count, align: DEFAULT_VITAL_ROW_ALIGN });
     carry -= count;
   }
   return next;
@@ -76,9 +78,7 @@ function fixupVitalRowOverflow(rows: VitalRowConfig[]): VitalRowConfig[] {
 // somewhere for the next box to land.
 function trimEmptyVitalRows(rows: VitalRowConfig[]): VitalRowConfig[] {
   const next = rows.filter((row) => row.count > 0);
-  return next.length
-    ? next
-    : [{ count: 0, columns: DEFAULT_VITAL_ROW_COLUMNS, align: DEFAULT_VITAL_ROW_ALIGN }];
+  return next.length ? next : [{ count: 0, align: DEFAULT_VITAL_ROW_ALIGN }];
 }
 
 export interface CardUpdater {
@@ -121,13 +121,8 @@ export interface CardUpdater {
    *  last box onward, recursively spilling into the row after that if
    *  needed. */
   moveVitalBoxAdjacent(id: string, direction: "up" | "down"): void;
-  /** Sets one row's configured column count (clamped to at least 1 — the
-   *  card-width ceiling is enforced by the caller, which offers only the
-   *  options that currently fit). Lowering it below the row's current
-   *  count overflows the excess onto the next row. */
-  setVitalRowColumns(rowIndex: number, columns: number): void;
   setVitalRowAlign(rowIndex: number, align: VitalRowAlign): void;
-  /** Appends a new, empty row, matching the last row's column count. */
+  /** Appends a new, empty row. */
   addVitalRow(): void;
   /** Removes a row's own settings — the boxes it held aren't deleted, they
    *  merge into the next row (or the previous one, if it was the last row),
@@ -143,6 +138,10 @@ export interface CardUpdater {
 export function createCardUpdater(
   card: CardData,
   onChange: (card: CardData) => void,
+  /** How many vital columns actually fit at the card's current width — the
+   *  single ceiling every row's `count` is cascaded against; there's no
+   *  longer a separate, user-configurable per-row cap. */
+  maxVitalColumns: number,
 ): CardUpdater {
   function set<K extends keyof CardData>(key: K, value: CardData[K]) {
     onChange({ ...card, [key]: value });
@@ -202,13 +201,13 @@ export function createCardUpdater(
     ];
     const rows = card.vitalRows.length
       ? card.vitalRows.slice()
-      : [{ count: 0, columns: DEFAULT_VITAL_ROW_COLUMNS, align: DEFAULT_VITAL_ROW_ALIGN }];
+      : [{ count: 0, align: DEFAULT_VITAL_ROW_ALIGN }];
     const lastIndex = rows.length - 1;
     rows[lastIndex] = { ...rows[lastIndex], count: rows[lastIndex].count + 1 };
     onChange({
       ...card,
       vitalBoxes,
-      vitalRows: fixupVitalRowOverflow(rows),
+      vitalRows: fixupVitalRowOverflow(rows, maxVitalColumns),
     });
   }
 
@@ -246,7 +245,7 @@ export function createCardUpdater(
     let rows = card.vitalRows.slice();
     rows[fromRow] = { ...rows[fromRow], count: rows[fromRow].count - 1 };
     rows[toRowIndex] = { ...rows[toRowIndex], count: rows[toRowIndex].count + 1 };
-    rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows));
+    rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows, maxVitalColumns));
 
     onChange({ ...card, vitalBoxes: next, vitalRows: rows });
   }
@@ -278,7 +277,7 @@ export function createCardUpdater(
     }
 
     const neighborRowConfig = card.vitalRows[neighborRow];
-    const neighborRowFull = neighborRowConfig.count >= neighborRowConfig.columns;
+    const neighborRowFull = neighborRowConfig.count >= maxVitalColumns;
     if (direction === "up" && neighborRowFull) {
       swapInPlace();
       return;
@@ -300,20 +299,9 @@ export function createCardUpdater(
       ...rows[neighborRow],
       count: rows[neighborRow].count + 1,
     };
-    rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows));
+    rows = trimEmptyVitalRows(fixupVitalRowOverflow(rows, maxVitalColumns));
 
     onChange({ ...card, vitalRows: rows });
-  }
-
-  function setVitalRowColumns(rowIndex: number, columns: number) {
-    const clamped = Math.max(1, Math.round(columns));
-    const rows = card.vitalRows.map((row, i) =>
-      i === rowIndex ? { ...row, columns: clamped } : row,
-    );
-    onChange({
-      ...card,
-      vitalRows: fixupVitalRowOverflow(rows),
-    });
   }
 
   function setVitalRowAlign(rowIndex: number, align: VitalRowAlign) {
@@ -333,7 +321,6 @@ export function createCardUpdater(
         ...card.vitalRows,
         {
           count: 0,
-          columns: last?.columns ?? DEFAULT_VITAL_ROW_COLUMNS,
           align: last?.align ?? DEFAULT_VITAL_ROW_ALIGN,
         },
       ],
@@ -351,7 +338,7 @@ export function createCardUpdater(
     };
     onChange({
       ...card,
-      vitalRows: trimEmptyVitalRows(fixupVitalRowOverflow(rest)),
+      vitalRows: trimEmptyVitalRows(fixupVitalRowOverflow(rest, maxVitalColumns)),
     });
   }
 
@@ -368,7 +355,6 @@ export function createCardUpdater(
     removeVitalBox,
     moveVitalBox,
     moveVitalBoxAdjacent,
-    setVitalRowColumns,
     setVitalRowAlign,
     addVitalRow,
     removeVitalRow,

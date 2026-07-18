@@ -38,6 +38,7 @@ import {
   unitFootprintIn,
   type SideLayoutConfig,
 } from "@/lib/cardLayout";
+import { maxVitalColumns, VITAL_ICON_H } from "@/lib/vitalsLayout";
 import type { Margins, PaperPreset } from "@/lib/paperSizes";
 import {
   loadPersistedState,
@@ -288,6 +289,16 @@ export default function InitiativeCardApp() {
   );
   const bothSidesVisible =
     effectiveLayout.player.visible && effectiveLayout.dm.visible;
+
+  // How many vital badges actually fit per row at this card's DM-face
+  // width — the same ceiling CardEditor's sidebar form computes, so an
+  // inline drag-reorder on the live preview cascades row overflow
+  // identically to an edit made from the sidebar.
+  const maxVitalCols = useMemo(
+    () =>
+      maxVitalColumns(inToPx(effectiveLayout.dm.widthIn) - 2 - 16, VITAL_ICON_H),
+    [effectiveLayout.dm.widthIn],
+  );
 
   // How many cards in the party won't fit the current PDF page size and
   // margins, even rotated — computed from each card's own configured
@@ -560,7 +571,11 @@ export default function InitiativeCardApp() {
             className="w-full h-full flex items-center justify-center"
           >
             <div style={{ transform: `scale(${previewLayout.scale})` }}>
-              <CardEditProvider card={activeCard} onChange={handleChange}>
+              <CardEditProvider
+                card={activeCard}
+                onChange={handleChange}
+                maxVitalColumns={maxVitalCols}
+              >
                 <CardSpread
                   card={activeCard}
                   layout={effectiveLayout}
